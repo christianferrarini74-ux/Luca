@@ -27,6 +27,15 @@ class LucaSessionTests(unittest.TestCase):
         self.assertEqual(answer.text, "Il sole produce luce.")
         self.assertEqual(len(answer.trace), 4)
 
+    def test_compatible_facts_are_returned_together(self) -> None:
+        session = LucaSession.open(self.database, self.seed)
+        session.handle("Luca ricorda che il sole produce luce")
+        session.handle("Luca ricorda che il sole produce calore")
+        answer = session.handle("Cosa produce il sole?")
+        session.close()
+        self.assertEqual(answer.text, "Il sole produce luce e calore.")
+        self.assertEqual(len(answer.trace), 7)
+
     def test_duplicate_lesson_is_not_silently_duplicated(self) -> None:
         session = LucaSession.open(self.database, self.seed)
         self.assertEqual(session.handle("Luca ricorda che il sole produce luce").text, "Ho registrato la conoscenza.")
