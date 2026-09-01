@@ -19,6 +19,7 @@ The CPU coordinates work and consolidation. GPU workers are optional accelerator
 
 Read [the architecture](docs/architecture.md) and [the experimental protocol](docs/experiments.md) before extending the system.
 The first controlled Italian seed is described in [the curriculum specification](docs/curriculum.md).
+The project's purpose and evidence-based milestones are set out in [the vision](docs/vision.md) and [the roadmap](docs/roadmap.md).
 
 ## Current experiment
 

@@ -4,6 +4,10 @@
 
 Luca works on cells. An edge is never a hidden claim, label, or unit of truth; it is only a stable directed address between two cells.
 
+LUCA is not a language model with a graph attached. Its persistent memory is
+the cognitive substrate; language models and retrieval systems may support it,
+but they never replace its durable knowledge path.
+
 ```text
 CELL  = persistent content and cognitive state
 EDGE  = source_id : target_id
@@ -38,6 +42,10 @@ VRAM
 ```
 
 SSD is authoritative. RAM is a mutable operational cache. VRAM contains disposable snapshots; a GPU cannot commit a change to the brain.
+
+This is a design requirement, not a late optimisation. Thought algorithms must
+use IDs, region loads, explicit budgets, and cache-aware working sets rather
+than assuming the brain has been fully preloaded into RAM or VRAM.
 
 ## Thought lifecycle
 
