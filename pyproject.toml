@@ -1,0 +1,8 @@
+[project]
+name = "luca-memory"
+version = "0.1.0"
+description = "Baseline experiment for Luca's persistent graph memory"
+requires-python = ">=3.11"
+
+[tool.unittest]
+start-directory = "tests"
