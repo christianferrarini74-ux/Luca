@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "cases": [
+    {"question": "Come ti chiami?", "expected": "Mi chiamo Luca."},
+    {"question": "Chi è il tuo creatore?", "expected": "Il mio creatore è Christian."},
+    {"question": "Cosa scalda il sole?", "expected": "Il sole scalda pelle."},
+    {"question": "Cosa scalda il forno?", "expected": "Il forno scalda pane."},
+    {"question": "Cosa raffredda il ghiaccio?", "expected": "Il ghiaccio raffredda acqua."},
+    {"question": "Qual è il colore del fuoco?", "expected": "Non conosco ancora questa forma di domanda."}
+  ]
+}

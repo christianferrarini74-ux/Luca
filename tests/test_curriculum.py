@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from luca_memory import ItalianSeedInterface, MemoryStore, load_curriculum
+from luca_memory import ItalianSeedInterface, MemoryStore, ThoughtBudget, ThoughtEngine, ThoughtRequest, load_curriculum
 
 
 class CurriculumTests(unittest.TestCase):
@@ -24,6 +24,18 @@ class CurriculumTests(unittest.TestCase):
         answer = self.interface.answer("Qual è il colore del fuoco?")
         self.assertEqual(answer.text, "Non conosco ancora questa forma di domanda.")
         self.assertEqual(answer.trace, ())
+
+    def test_shared_relation_cell_routes_to_analogous_experiences(self) -> None:
+        scalda_id = self.curriculum.id_for("scalda")
+        thought = ThoughtEngine(self.store).run(
+            ThoughtRequest((scalda_id,), ThoughtBudget(max_depth=2, ram_cells=50, ram_edges=100, vram_cells=50))
+        )
+        expected_sources = {
+            self.curriculum.id_for("fuoco"),
+            self.curriculum.id_for("sole"),
+            self.curriculum.id_for("forno"),
+        }
+        self.assertTrue(expected_sources.issubset(thought.context_cells))
 
 
 if __name__ == "__main__":

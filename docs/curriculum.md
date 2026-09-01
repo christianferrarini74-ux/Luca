@@ -46,6 +46,17 @@ python -m luca_memory.demo "Chi è il tuo creatore?"
 python -m luca_memory.demo "Cosa produce il fuoco?"
 ```
 
+Le verifiche, conservate separatamente dalle lezioni, si eseguono così:
+
+```powershell
+python -m luca_memory.evaluate
+```
+
+Il primo set include tre esperienze analoghe che convergono su `scalda`
+(`fuoco`, `sole`, `forno`) e due esperienze contrastive (`raffredda`,
+`bagna`). Questo permette già di misurare la navigazione topologica prima
+di introdurre un indice associativo.
+
 ## Prossima espansione
 
 Il prossimo curriculum deve aggiungere esperienze analoghe, controesempi, domande di verifica non identiche alle lezioni e provenienza per ogni asserto. Solo allora potremo valutare il recupero associativo lontano senza confonderlo con la semplice ripetizione.

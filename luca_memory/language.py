@@ -44,7 +44,8 @@ class ItalianSeedInterface:
         self.curriculum = curriculum
 
     def answer(self, question: str) -> Answer:
-        intent = self._intents.get(self._normalise(question))
+        normalised = self._normalise(question)
+        intent = self._intents.get(normalised) or self._object_question(normalised)
         if intent is None:
             return Answer("Non conosco ancora questa forma di domanda.", ())
         subject_id = self.curriculum.id_for(intent.subject)
@@ -56,8 +57,32 @@ class ItalianSeedInterface:
                 continue
             object_id = int(assertion["object_id"])
             object_label = str(cell_payload(self.store, object_id)["label"])
-            return Answer(intent.renderer.format(object=object_label), (subject_id, assertion_id, predicate_id, object_id))
+            subject_label = str(cell_payload(self.store, subject_id)["label"])
+            predicate_label = str(cell_payload(self.store, predicate_id)["label"])
+            return Answer(
+                intent.renderer.format(subject=subject_label, predicate=predicate_label, object=object_label),
+                (subject_id, assertion_id, predicate_id, object_id),
+            )
         return Answer("Non possiedo ancora una risposta verificata.", (subject_id, predicate_id))
+
+    def _object_question(self, normalised: str) -> Intent | None:
+        """Interpret ``Cosa <predicato> il <soggetto>?`` from known cell forms."""
+        match = re.fullmatch(r"cosa (scalda|raffredda|bagna|produce) il (.+)", normalised)
+        if match is None:
+            return None
+        predicate_form, subject_form = match.groups()
+        subject = self._concept_for_form(subject_form)
+        predicate = self._concept_for_form(predicate_form)
+        if subject is None or predicate is None:
+            return None
+        return Intent(subject, predicate, "Il {subject} {predicate} {object}.")
+
+    def _concept_for_form(self, form: str) -> str | None:
+        for slug, cell_id in self.curriculum.ids.items():
+            payload = cell_payload(self.store, cell_id)
+            if payload.get("kind") == "concept" and form in payload.get("forms", []):
+                return slug
+        return None
 
     @staticmethod
     def _normalise(text: str) -> str:
