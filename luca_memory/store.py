@@ -67,6 +67,35 @@ class MemoryStore:
             (cell.id, cell.content, cell.created_at),
         )
 
+    def next_cell_id(self) -> int:
+        row = self.connection.execute("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM cells").fetchone()
+        return int(row["next_id"])
+
+    def has_cells(self) -> bool:
+        return self.connection.execute("SELECT EXISTS(SELECT 1 FROM cells)").fetchone()[0] == 1
+
+    def add_alias(self, alias: str, cell_id: int) -> None:
+        self.connection.execute(
+            "INSERT OR IGNORE INTO cell_aliases (alias, cell_id) VALUES (?, ?)",
+            (alias, cell_id),
+        )
+
+    def cell_by_alias(self, alias: str) -> Cell | None:
+        row = self.connection.execute(
+            """SELECT cells.* FROM cell_aliases
+               JOIN cells ON cells.id = cell_aliases.cell_id
+               WHERE cell_aliases.alias = ?""",
+            (alias,),
+        ).fetchone()
+        return Cell(row["id"], row["content"], row["created_at"]) if row else None
+
+    def record_event(self, kind: str, payload: bytes, occurred_at: int) -> int:
+        cursor = self.connection.execute(
+            "INSERT INTO memory_events (kind, payload, occurred_at) VALUES (?, ?, ?)",
+            (kind, payload, occurred_at),
+        )
+        return int(cursor.lastrowid)
+
     def add_edge(self, edge: Edge) -> None:
         self.connection.execute(
             "INSERT INTO edges (source_id, target_id) VALUES (?, ?)",
@@ -119,5 +148,17 @@ class MemoryStore:
 
             CREATE INDEX IF NOT EXISTS edges_by_target
                 ON edges (target_id, source_id);
+
+            CREATE TABLE IF NOT EXISTS cell_aliases (
+                alias    TEXT PRIMARY KEY,
+                cell_id  INTEGER NOT NULL REFERENCES cells(id)
+            ) STRICT;
+
+            CREATE TABLE IF NOT EXISTS memory_events (
+                id           INTEGER PRIMARY KEY,
+                kind         TEXT NOT NULL,
+                payload      BLOB NOT NULL,
+                occurred_at  INTEGER NOT NULL
+            ) STRICT;
             """
         )

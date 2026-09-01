@@ -17,8 +17,8 @@ class Answer:
 
 @dataclass(frozen=True, slots=True)
 class Intent:
-    subject: str
-    predicate: str
+    subject: str | int
+    predicate: str | int
     renderer: str
 
 
@@ -48,8 +48,8 @@ class ItalianSeedInterface:
         intent = self._intents.get(normalised) or self._object_question(normalised)
         if intent is None:
             return Answer("Non conosco ancora questa forma di domanda.", ())
-        subject_id = self.curriculum.id_for(intent.subject)
-        predicate_id = self.curriculum.id_for(intent.predicate)
+        subject_id = self._id_for(intent.subject)
+        predicate_id = self._id_for(intent.predicate)
         for edge in self.store.outgoing(subject_id):
             assertion_id = edge.target_id
             assertion = cell_payload(self.store, assertion_id)
@@ -77,12 +77,14 @@ class ItalianSeedInterface:
             return None
         return Intent(subject, predicate, "Il {subject} {predicate} {object}.")
 
-    def _concept_for_form(self, form: str) -> str | None:
-        for slug, cell_id in self.curriculum.ids.items():
-            payload = cell_payload(self.store, cell_id)
-            if payload.get("kind") == "concept" and form in payload.get("forms", []):
-                return slug
-        return None
+    def _concept_for_form(self, form: str) -> int | None:
+        cell = self.store.cell_by_alias(form)
+        if cell is None or cell_payload(self.store, cell.id).get("kind") != "concept":
+            return None
+        return cell.id
+
+    def _id_for(self, reference: str | int) -> int:
+        return reference if isinstance(reference, int) else self.curriculum.id_for(reference)
 
     @staticmethod
     def _normalise(text: str) -> str:

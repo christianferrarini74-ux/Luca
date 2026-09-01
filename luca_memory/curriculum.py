@@ -41,6 +41,10 @@ def load_curriculum(store: MemoryStore, path: str | Path) -> Curriculum:
                 payload["predicate_id"] = ids[payload.pop("predicate")]
                 payload["object_id"] = ids[payload.pop("object")]
             store.add_cell(Cell(ids[item["slug"]], json.dumps(payload, ensure_ascii=False, sort_keys=True).encode(), created_at))
+            if item.get("kind") == "concept":
+                store.add_alias(item["slug"], ids[item["slug"]])
+                for form in item.get("forms", []):
+                    store.add_alias(form, ids[item["slug"]])
 
         for item in cells:
             if item.get("kind") != "assertion":
@@ -57,6 +61,13 @@ def load_curriculum(store: MemoryStore, path: str | Path) -> Curriculum:
             for source_id, target_id in sorted(addresses):
                 store.add_edge(Edge(source_id, target_id))
 
+    return Curriculum(document["version"], document["language"], ids)
+
+
+def curriculum_from_file(path: str | Path) -> Curriculum:
+    """Read the stable ID map of a curriculum without writing to a store."""
+    document = json.loads(Path(path).read_text(encoding="utf-8"))
+    ids = {item["slug"]: number for number, item in enumerate(document["cells"], start=1)}
     return Curriculum(document["version"], document["language"], ids)
 
 

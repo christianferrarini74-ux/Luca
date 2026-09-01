@@ -51,6 +51,28 @@ python -m unittest discover -s tests -v
 python -m luca_memory.demo "Come ti chiami?"
 ```
 
+## Run the persistent conversation demonstrator
+
+```powershell
+python -m luca_memory.chat --database .\luca.sqlite
+```
+
+Try this short dialogue:
+
+```text
+Parlami del sole.
+Luca, ricorda che il sole produce luce.
+E cosa produce?
+```
+
+Close the program with `esci`, run it again with the same database, then ask:
+
+```text
+Cosa produce il sole?
+```
+
+The learned assertion is stored in the database with a trace and an append-only event entry.
+
 ## Status
 
 This is an intentionally replaceable SQLite baseline. It validates data access and thought budgets before we commit to a custom page format, a cache policy, GPU runtime, or associative index.

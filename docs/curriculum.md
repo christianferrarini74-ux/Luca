@@ -60,3 +60,18 @@ di introdurre un indice associativo.
 ## Prossima espansione
 
 Il prossimo curriculum deve aggiungere esperienze analoghe, controesempi, domande di verifica non identiche alle lezioni e provenienza per ogni asserto. Solo allora potremo valutare il recupero associativo lontano senza confonderlo con la semplice ripetizione.
+
+## Istruzione persistente nel dimostratore
+
+`python -m luca_memory.chat --database .\luca.sqlite` avvia una sessione
+persistente. Per ora accetta un linguaggio di istruzione volutamente piccolo:
+
+```text
+Luca, ricorda che il sole produce luce.
+Luca, ricorda che il ghiaccio raffredda bevanda.
+```
+
+Ogni istruzione crea o riusa le celle-concetto, crea un asserto con
+provenienza `user`, aggiunge gli indirizzi, e registra un evento append-only.
+La conoscenza è poi disponibile anche dopo il riavvio. La grammatica è un
+confine esplicito del primo dimostratore, non una pretesa di linguaggio libero.

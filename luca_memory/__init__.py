@@ -2,8 +2,10 @@
 
 from .store import Cell, Edge, MemoryStore
 from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest, ThoughtResult
-from .curriculum import Curriculum, load_curriculum
+from .curriculum import Curriculum, curriculum_from_file, load_curriculum
 from .language import Answer, ItalianSeedInterface
+from .memory import MemoryEditor, RememberedAssertion
+from .session import LucaSession, SessionReply
 
 __all__ = [
     "Cell",
@@ -15,6 +17,11 @@ __all__ = [
     "ThoughtResult",
     "Curriculum",
     "load_curriculum",
+    "curriculum_from_file",
     "Answer",
     "ItalianSeedInterface",
+    "MemoryEditor",
+    "RememberedAssertion",
+    "LucaSession",
+    "SessionReply",
 ]
