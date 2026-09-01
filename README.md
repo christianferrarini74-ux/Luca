@@ -18,6 +18,7 @@ VRAM  the smallest, highest-priority working set for one thought
 The CPU coordinates work and consolidation. GPU workers are optional accelerators: the CPU reference implementation remains the semantic baseline, and GPUs never write directly to persistent memory.
 
 Read [the architecture](docs/architecture.md) and [the experimental protocol](docs/experiments.md) before extending the system.
+The first controlled Italian seed is described in [the curriculum specification](docs/curriculum.md).
 
 ## Current experiment
 
@@ -41,6 +42,12 @@ python -m luca_memory.benchmark
 
 ```powershell
 python -m unittest discover -s tests -v
+```
+
+## Try the initial Italian seed
+
+```powershell
+python -m luca_memory.demo "Come ti chiami?"
 ```
 
 ## Status

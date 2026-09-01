@@ -1,0 +1,22 @@
+{
+  "version": "0.1.0",
+  "language": "it",
+  "cells": [
+    {"slug": "luca", "kind": "concept", "label": "Luca"},
+    {"slug": "christian", "kind": "concept", "label": "Christian"},
+    {"slug": "nome", "kind": "concept", "label": "nome"},
+    {"slug": "creatore", "kind": "concept", "label": "creatore"},
+    {"slug": "fuoco", "kind": "concept", "label": "fuoco"},
+    {"slug": "is", "kind": "concept", "label": "è"},
+    {"slug": "fenomeno", "kind": "concept", "label": "un fenomeno"},
+    {"slug": "produce", "kind": "concept", "label": "produce"},
+    {"slug": "calore", "kind": "concept", "label": "calore"},
+    {"slug": "scalda", "kind": "concept", "label": "scalda"},
+    {"slug": "oggetti", "kind": "concept", "label": "oggetti"},
+    {"slug": "luca_nome", "kind": "assertion", "subject": "luca", "predicate": "nome", "object": "luca"},
+    {"slug": "luca_creatore", "kind": "assertion", "subject": "luca", "predicate": "creatore", "object": "christian"},
+    {"slug": "fuoco_e", "kind": "assertion", "subject": "fuoco", "predicate": "is", "object": "fenomeno"},
+    {"slug": "fuoco_produce_calore", "kind": "assertion", "subject": "fuoco", "predicate": "produce", "object": "calore"},
+    {"slug": "fuoco_scalda_oggetti", "kind": "assertion", "subject": "fuoco", "predicate": "scalda", "object": "oggetti"}
+  ]
+}

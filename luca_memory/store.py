@@ -73,6 +73,12 @@ class MemoryStore:
             (edge.source_id, edge.target_id),
         )
 
+    def cell(self, cell_id: int) -> Cell | None:
+        row = self.connection.execute(
+            "SELECT * FROM cells WHERE id = ?", (cell_id,)
+        ).fetchone()
+        return Cell(row["id"], row["content"], row["created_at"]) if row else None
+
     def edge(self, source_id: int, target_id: int) -> Edge | None:
         row = self.connection.execute(
             "SELECT * FROM edges WHERE source_id = ? AND target_id = ?",
