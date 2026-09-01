@@ -18,22 +18,18 @@ class Cell:
 
 @dataclass(frozen=True, slots=True)
 class Edge:
+    """A pure, directed address between two cells."""
+
     source_id: int
     target_id: int
-    relation_type: int
-    strength: float
-    created_at: int
-    last_activated: int
-    activation_count: int
 
 
 class MemoryStore:
     """Persistent graph with exact, outgoing, and incoming edge access paths.
 
     The ordered pair ``(source_id, target_id)`` is the edge's physical address.
-    Edges between the same ordered pair are intentionally unique in this first
-    experiment. If evidence later requires parallel edges, ``relation_type``
-    can be promoted into the key without changing the access strategy.
+    Edges intentionally contain no semantic type or mutable cognitive state:
+    Luca works on cells; edges only make those cells addressable.
     """
 
     def __init__(self, database: str | Path) -> None:
@@ -73,19 +69,8 @@ class MemoryStore:
 
     def add_edge(self, edge: Edge) -> None:
         self.connection.execute(
-            """INSERT INTO edges
-               (source_id, target_id, relation_type, strength, created_at,
-                last_activated, activation_count)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                edge.source_id,
-                edge.target_id,
-                edge.relation_type,
-                edge.strength,
-                edge.created_at,
-                edge.last_activated,
-                edge.activation_count,
-            ),
+            "INSERT INTO edges (source_id, target_id) VALUES (?, ?)",
+            (edge.source_id, edge.target_id),
         )
 
     def edge(self, source_id: int, target_id: int) -> Edge | None:
@@ -109,15 +94,7 @@ class MemoryStore:
 
     @staticmethod
     def _edge_from_row(row: sqlite3.Row) -> Edge:
-        return Edge(
-            source_id=row["source_id"],
-            target_id=row["target_id"],
-            relation_type=row["relation_type"],
-            strength=row["strength"],
-            created_at=row["created_at"],
-            last_activated=row["last_activated"],
-            activation_count=row["activation_count"],
-        )
+        return Edge(source_id=row["source_id"], target_id=row["target_id"])
 
     def _create_schema(self) -> None:
         self.connection.executescript(
@@ -129,13 +106,8 @@ class MemoryStore:
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS edges (
-                source_id          INTEGER NOT NULL REFERENCES cells(id),
-                target_id          INTEGER NOT NULL REFERENCES cells(id),
-                relation_type      INTEGER NOT NULL,
-                strength           REAL NOT NULL CHECK (strength >= 0.0),
-                created_at         INTEGER NOT NULL,
-                last_activated     INTEGER NOT NULL,
-                activation_count   INTEGER NOT NULL CHECK (activation_count >= 0),
+                source_id  INTEGER NOT NULL REFERENCES cells(id),
+                target_id  INTEGER NOT NULL REFERENCES cells(id),
                 PRIMARY KEY (source_id, target_id)
             ) WITHOUT ROWID, STRICT;
 

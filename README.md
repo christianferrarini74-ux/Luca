@@ -1,23 +1,27 @@
 # Luca
 
-Luca is an experimental project exploring an explicit, persistent memory rather than a pre-trained language model.
+Luca is an experimental project exploring an explicit, persistent memory rather than a pre-trained language model. Every major claim must earn its place through a small, reproducible experiment.
 
-The first experiment is deliberately narrow: validate the storage core for **cells** and directed **edges**.  The questions are practical:
+## The working model
 
-- Can an edge be found directly from `(source_id, target_id)`?
-- Can every outgoing edge `A:*` be read efficiently?
-- Can every incoming edge `*:B` be read efficiently?
-- What are the write, lookup, scan, and on-disk costs at increasing scale?
+- **Cells** contain Luca's knowledge and state: concepts, experiences, hypotheses, evidence, and conclusions.
+- **Edges** contain no semantic payload. They are directed addresses between cells, identified by `(source_id, target_id)`.
+- The direct graph is Luca's certain navigation: `A:*` finds routes out of a cell and `*:B` finds routes into it.
+- A later associative index may suggest distant candidates, but only the explicit graph may verify a proposed connection.
 
-This repository currently contains only that foundation. It does not contain an agent, a user interface, an LLM, or an associative/vector index.
+```text
+SSD   complete persistent brain
+RAM   active context + topological neighbourhood
+VRAM  the smallest, highest-priority working set for one thought
+```
 
-## Model
+The CPU coordinates work and consolidation. GPU workers are optional accelerators: the CPU reference implementation remains the semantic baseline, and GPUs never write directly to persistent memory.
 
-- A **cell** is an atomic, persisted item of memory, addressed by a compact positive integer.
-- An **edge** is a directed relation between two cells. Its physical address is the ordered pair `(source_id, target_id)`.
-- The primary storage index serves exact lookup and outgoing traversal. A secondary index on `target_id` serves incoming traversal.
+Read [the architecture](docs/architecture.md) and [the experimental protocol](docs/experiments.md) before extending the system.
 
-The design intentionally leaves relation-space search for a later experiment. It must not be introduced before the deterministic graph core has been measured.
+## Current experiment
+
+The current code validates deterministic graph access and provides a CPU reference for a bounded local thought: activate seed cells, expand through incoming and outgoing addresses, score the discovered context, and retain a smaller VRAM-sized focus. It contains no LLM, embedding model, GPU dependency, or associative index yet.
 
 ## Run a small benchmark
 
@@ -41,4 +45,4 @@ python -m unittest discover -s tests -v
 
 ## Status
 
-This is an intentionally replaceable baseline implemented with SQLite. It validates the data model and access patterns before we commit to a custom page format, a cache policy, or an associative relation index.
+This is an intentionally replaceable SQLite baseline. It validates data access and thought budgets before we commit to a custom page format, a cache policy, GPU runtime, or associative index.

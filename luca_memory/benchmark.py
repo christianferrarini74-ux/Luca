@@ -8,6 +8,7 @@ import random
 import time
 
 from .store import Cell, Edge, MemoryStore
+from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest
 
 
 def parse_args() -> argparse.Namespace:
@@ -16,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--edges", type=int, default=10_000_000)
     parser.add_argument("--database", type=Path, default=Path("luca-benchmark.sqlite"))
     parser.add_argument("--queries", type=int, default=1_000)
+    parser.add_argument("--depth", type=int, default=3, help="Maximum local thought depth")
     return parser.parse_args()
 
 
@@ -50,7 +52,7 @@ def main() -> None:
         with store.transaction():
             for number in range(args.edges):
                 source, target = edge_for(number, args.cells)
-                store.add_edge(Edge(source, target, 1, 1.0, now, now, 0))
+                store.add_edge(Edge(source, target))
         edge_seconds = seconds_since(edge_started)
 
         probes = random.Random(0).sample(range(args.edges), min(args.queries, args.edges))
@@ -67,6 +69,11 @@ def main() -> None:
         incoming_started = time.perf_counter()
         incoming = store.incoming(target)
         incoming_seconds = seconds_since(incoming_started)
+        thought_started = time.perf_counter()
+        thought = ThoughtEngine(store).run(
+            ThoughtRequest((source,), ThoughtBudget(max_depth=args.depth, ram_cells=5_000, ram_edges=20_000, vram_cells=512))
+        )
+        thought_seconds = seconds_since(thought_started)
 
     size = args.database.stat().st_size
     print(f"cells: {args.cells:,} in {cell_seconds:.3f}s")
@@ -74,6 +81,7 @@ def main() -> None:
     print(f"exact lookups: {len(probes):,} in {exact_seconds:.3f}s ({exact_seconds / len(probes) * 1e6:.1f} us/lookup)")
     print(f"outgoing {source}: {len(outgoing):,} edges in {outgoing_seconds * 1e3:.3f} ms")
     print(f"incoming {target}: {len(incoming):,} edges in {incoming_seconds * 1e3:.3f} ms")
+    print(f"local thought: {len(thought.context_cells):,} cells, {len(thought.context_edges):,} edges, {len(thought.vram_focus):,} VRAM candidates in {thought_seconds * 1e3:.3f} ms")
     print(f"database: {size / 1_000_000:.2f} MB at {args.database}")
 
 
