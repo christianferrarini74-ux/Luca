@@ -8,6 +8,7 @@ import re
 import time
 
 from .curriculum import cell_payload
+from .protocol import MemoryProposal
 from .store import Cell, Edge, MemoryStore
 
 
@@ -51,6 +52,13 @@ class MemoryEditor:
                 self.store.add_edge(Edge(source_id, target_id))
             self.store.record_event("remember", self._event_payload(assertion_id, source), now)
         return RememberedAssertion(assertion_id, subject_id, predicate_id, object_id, True)
+
+    def consolidate(self, proposal: MemoryProposal) -> tuple[RememberedAssertion, ...]:
+        """Apply an adapter proposal only through the Core's write path."""
+        intent = proposal.intent
+        if intent.kind != "remember" or not intent.subject or not intent.predicate:
+            raise ValueError("Unsupported memory proposal.")
+        return tuple(self.remember(intent.subject, intent.predicate, object_, proposal.source) for object_ in intent.objects)
 
     def facts_about(self, subject_id: int) -> list[RememberedAssertion]:
         facts = []

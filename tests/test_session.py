@@ -1,7 +1,23 @@
 from pathlib import Path
 import unittest
 
-from luca_memory import LucaSession
+from luca_memory import LanguageIntent, LucaSession
+
+
+class TeachingAdapter:
+    """Minimal stand-in for a future local micro-LLM adapter."""
+
+    def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
+        if text == "memorizza il fatto":
+            return LanguageIntent(
+                "remember",
+                text,
+                subject="sole",
+                predicate="produce",
+                objects=("luce", "calore"),
+                confidence=0.98,
+            )
+        return LanguageIntent("ask", text, question="cosa produce il sole")
 
 
 class LucaSessionTests(unittest.TestCase):
@@ -41,6 +57,15 @@ class LucaSessionTests(unittest.TestCase):
         self.assertEqual(session.handle("Luca ricorda che il sole produce luce").text, "Ho registrato la conoscenza.")
         self.assertEqual(session.handle("Luca ricorda che il sole produce luce").text, "Ho già questa conoscenza.")
         session.close()
+
+    def test_a_language_adapter_can_be_replaced_without_changing_memory(self) -> None:
+        session = LucaSession.open(self.database, self.seed, adapter=TeachingAdapter())
+        learned = session.handle("memorizza il fatto")
+        answer = session.handle("domanda libera")
+        session.close()
+
+        self.assertEqual(learned.text, "Ho registrato la conoscenza.")
+        self.assertEqual(answer.text, "Il sole produce luce e calore.")
 
 
 if __name__ == "__main__":

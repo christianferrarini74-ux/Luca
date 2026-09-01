@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import re
 
 from .curriculum import cell_payload, curriculum_from_file, load_curriculum
+from .adapters import LanguageAdapter, RuleAdapter
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
 from .store import MemoryStore
+from .protocol import EvidenceBundle
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,39 +22,39 @@ class SessionReply:
 class LucaSession:
     """Maintains only a small ephemeral dialogue state; knowledge stays on disk."""
 
-    def __init__(self, store: MemoryStore, seed_path: str | Path) -> None:
+    def __init__(self, store: MemoryStore, seed_path: str | Path, adapter: LanguageAdapter | None = None) -> None:
         self.store = store
         self.curriculum = curriculum_from_file(seed_path)
         self.language = ItalianSeedInterface(store, self.curriculum)
         self.editor = MemoryEditor(store)
+        self.adapter = adapter or RuleAdapter()
         self.current_subject_id: int | None = None
 
     @classmethod
-    def open(cls, database: str | Path, seed_path: str | Path) -> "LucaSession":
+    def open(cls, database: str | Path, seed_path: str | Path, adapter: LanguageAdapter | None = None) -> "LucaSession":
         store = MemoryStore(database)
         if not store.has_cells():
             load_curriculum(store, seed_path)
-        return cls(store, seed_path)
+        return cls(store, seed_path, adapter)
 
     def close(self) -> None:
         self.store.close()
 
     def handle(self, text: str) -> SessionReply:
-        normalised = self._normalise(text)
-        if normalised in {"ciao", "ciao luca", "buongiorno luca"}:
+        current_subject = self._current_subject_label()
+        intent = self.adapter.interpret(text, current_subject)
+        if intent.kind == "greet":
             return SessionReply("Ciao Christian. Sono Luca.")
+        if intent.kind == "remember":
+            remembered = self.editor.consolidate(intent.proposal())
+            first = remembered[0]
+            self.current_subject_id = first.subject_id
+            detail = "Ho già questa conoscenza." if all(not item.created for item in remembered) else "Ho registrato la conoscenza."
+            trace = tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
+            return SessionReply(detail, trace)
 
-        lesson = self._parse_lesson(normalised)
-        if lesson is not None:
-            subject, predicate, object_ = lesson
-            remembered = self.editor.remember(subject, predicate, object_)
-            self.current_subject_id = remembered.subject_id
-            detail = "Ho già questa conoscenza." if not remembered.created else "Ho registrato la conoscenza."
-            return SessionReply(detail, (remembered.subject_id, remembered.assertion_id, remembered.predicate_id, remembered.object_id))
-
-        if normalised.startswith("parlami del ") or normalised.startswith("parlami di "):
-            subject_form = normalised.removeprefix("parlami del ").removeprefix("parlami di ")
-            subject = self.store.cell_by_alias(subject_form)
+        if intent.kind == "describe" and intent.subject:
+            subject = self.store.cell_by_alias(intent.subject)
             if subject is None:
                 return SessionReply("Non possiedo ancora conoscenze su questo argomento.")
             self.current_subject_id = subject.id
@@ -70,27 +71,16 @@ class LucaSession:
             label = str(cell_payload(self.store, subject.id)["label"])
             return SessionReply(f"So che {label} " + " e ".join(phrases) + ".", tuple(trace))
 
-        if normalised in {"e cosa produce", "e cosa produce il"} and self.current_subject_id is not None:
-            subject = str(cell_payload(self.store, self.current_subject_id)["label"])
-            return self._answer(f"cosa produce il {subject}")
-
-        return self._answer(normalised)
+        return self._answer(intent.question or text)
 
     def _answer(self, question: str) -> SessionReply:
         answer = self.language.answer(question)
         if answer.trace:
             self.current_subject_id = answer.trace[0]
-        return SessionReply(answer.text, answer.trace)
+        bundle = EvidenceBundle(answer.text, answer.trace, answer.trace[1::3] if answer.trace else ())
+        return SessionReply(bundle.text, bundle.trace)
 
-    @staticmethod
-    def _parse_lesson(text: str) -> tuple[str, str, str] | None:
-        match = re.fullmatch(
-            r"(?:luca )?ricorda che (?:il |la |l )?(.+?) (scalda|produce|raffredda|bagna) (?:il |la |l |gli |le )?(.+)",
-            text,
-        )
-        return match.groups() if match else None
-
-    @staticmethod
-    def _normalise(text: str) -> str:
-        lowered = text.lower().replace("è", "e")
-        return re.sub(r"[^a-z0-9 ]+", "", lowered).strip()
+    def _current_subject_label(self) -> str | None:
+        if self.current_subject_id is None:
+            return None
+        return str(cell_payload(self.store, self.current_subject_id)["label"])

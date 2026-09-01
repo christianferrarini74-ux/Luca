@@ -6,6 +6,8 @@ from .curriculum import Curriculum, curriculum_from_file, load_curriculum
 from .language import Answer, ItalianSeedInterface
 from .memory import MemoryEditor, RememberedAssertion
 from .session import LucaSession, SessionReply
+from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
+from .adapters import LanguageAdapter, RuleAdapter
 
 __all__ = [
     "Cell",
@@ -24,4 +26,9 @@ __all__ = [
     "RememberedAssertion",
     "LucaSession",
     "SessionReply",
+    "EvidenceBundle",
+    "LanguageIntent",
+    "MemoryProposal",
+    "LanguageAdapter",
+    "RuleAdapter",
 ]
