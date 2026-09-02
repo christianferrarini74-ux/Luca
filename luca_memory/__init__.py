@@ -7,7 +7,7 @@ from .language import Answer, ItalianSeedInterface
 from .memory import MemoryEditor, RememberedAssertion
 from .session import LucaSession, SessionReply
 from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
-from .adapters import LanguageAdapter, RuleAdapter
+from .adapters import LMStudioAdapter, LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
 
 __all__ = [
     "Cell",
@@ -30,5 +30,7 @@ __all__ = [
     "LanguageIntent",
     "MemoryProposal",
     "LanguageAdapter",
+    "LanguageAdapterUnavailable",
+    "LMStudioAdapter",
     "RuleAdapter",
 ]

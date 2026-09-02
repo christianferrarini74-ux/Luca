@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+import json
+from typing import Any, Protocol
 import re
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 from .protocol import LanguageIntent
 
 
 class LanguageAdapter(Protocol):
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent: ...
+
+
+class LanguageAdapterUnavailable(RuntimeError):
+    """The optional local language service cannot currently be reached."""
 
 
 class RuleAdapter:
@@ -44,3 +51,124 @@ class RuleAdapter:
     def _normalise(text: str) -> str:
         lowered = text.lower().replace("è", "e")
         return re.sub(r"[^a-z0-9 ]+", "", lowered).strip()
+
+
+class LMStudioAdapter:
+    """Local, optional interpreter served by LM Studio's OpenAI-compatible API."""
+
+    DEFAULT_BASE_URL = "http://127.0.0.1:1234/v1"
+    DEFAULT_MODEL = "gemma-3-1B-it-QAT-GGUF"
+    _KINDS = {"greet", "ask", "describe", "remember", "unknown"}
+
+    def __init__(
+        self,
+        base_url: str = DEFAULT_BASE_URL,
+        model: str = DEFAULT_MODEL,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+
+    def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": self._system_instruction(current_subject)},
+                {"role": "user", "content": text},
+            ],
+            "temperature": 0,
+            "max_tokens": 160,
+            "stream": False,
+            "response_format": self._response_format(),
+        }
+        response = self._post(payload)
+        try:
+            content = response["choices"][0]["message"]["content"]
+            decoded = json.loads(content)
+        except (IndexError, KeyError, TypeError, json.JSONDecodeError) as error:
+            raise LanguageAdapterUnavailable("LM Studio returned an invalid language intent.") from error
+        return self._intent_from_json(decoded, text)
+
+    def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        request = Request(
+            f"{self.base_url}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310 -- configured localhost endpoint
+                return json.loads(response.read().decode("utf-8"))
+        except (URLError, OSError, json.JSONDecodeError) as error:
+            raise LanguageAdapterUnavailable(
+                f"LM Studio is unavailable at {self.base_url}. Start its local server and load {self.model}."
+            ) from error
+
+    @classmethod
+    def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:
+        if not isinstance(value, dict):
+            raise LanguageAdapterUnavailable("LM Studio did not return a JSON object.")
+        kind = value.get("kind")
+        if kind not in cls._KINDS:
+            raise LanguageAdapterUnavailable("LM Studio returned an unsupported intent kind.")
+        subject = cls._label(value.get("subject"))
+        predicate = cls._label(value.get("predicate"))
+        objects_value = value.get("objects", [])
+        if not isinstance(objects_value, list):
+            raise LanguageAdapterUnavailable("LM Studio returned invalid intent objects.")
+        objects = tuple(label for item in objects_value if (label := cls._label(item)))
+        question = cls._text(value.get("question"))
+        confidence = value.get("confidence", 0.0)
+        if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+            confidence = 0.0
+        ambiguity = cls._text(value.get("ambiguity"))
+        if kind == "remember" and (not subject or not predicate or not objects):
+            raise LanguageAdapterUnavailable("LM Studio proposed an incomplete lesson; nothing was stored.")
+        return LanguageIntent(kind, original_text, subject, predicate, objects, question, float(confidence), ambiguity)
+
+    @staticmethod
+    def _label(value: object) -> str | None:
+        text = LMStudioAdapter._text(value)
+        if text is None or not re.fullmatch(r"[a-zàèéìòóù0-9 ]{1,80}", text.lower()):
+            return None
+        return text.lower()
+
+    @staticmethod
+    def _text(value: object) -> str | None:
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    @staticmethod
+    def _system_instruction(current_subject: str | None) -> str:
+        context = current_subject or "nessuno"
+        return (
+            "Sei l'interprete linguistico locale di Luca, non la sua memoria. "
+            "Rispondi esclusivamente con JSON conforme allo schema. Non aggiungere fatti. "
+            "Estrai una lezione solo se l'utente dice chiaramente 'Luca, ricorda ...'. "
+            "Normalizza soggetto, predicato e oggetti in italiano minuscolo, senza articoli. "
+            f"Il soggetto conversazionale corrente e: {context}."
+        )
+
+    @staticmethod
+    def _response_format() -> dict[str, object]:
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "luca_language_intent",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "kind": {"type": "string", "enum": ["greet", "ask", "describe", "remember", "unknown"]},
+                        "subject": {"type": ["string", "null"]},
+                        "predicate": {"type": ["string", "null"]},
+                        "objects": {"type": "array", "items": {"type": "string"}},
+                        "question": {"type": ["string", "null"]},
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "ambiguity": {"type": ["string", "null"]},
+                    },
+                    "required": ["kind", "subject", "predicate", "objects", "question", "confidence", "ambiguity"],
+                    "additionalProperties": False,
+                },
+            },
+        }

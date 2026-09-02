@@ -58,6 +58,17 @@ python -m luca_memory.demo "Come ti chiami?"
 python -m luca_memory.chat --database .\luca.sqlite
 ```
 
+To use the optional local Gemma interpreter, first load
+`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server. Then run:
+
+```powershell
+python -m luca_memory.chat --database .\luca.sqlite --adapter gemma
+```
+
+The default endpoint is `http://127.0.0.1:1234/v1`. Luca never contacts this
+service unless `--adapter gemma` is specified. If LM Studio is unavailable,
+Luca stops with a clear error and does not write a partial lesson.
+
 Try this short dialogue:
 
 ```text
