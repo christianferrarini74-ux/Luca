@@ -30,6 +30,17 @@ async function loadState(): Promise<RuntimeState> {
   return response.json();
 }
 
+async function greetLuca(): Promise<ChatPayload> {
+  const response = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: "Ciao" }),
+  });
+  const payload = (await response.json()) as ChatPayload;
+  if (!response.ok) throw new Error(payload.error || "Luca non ha potuto salutare.");
+  return payload;
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [state, setState] = useState<RuntimeState>(emptyState);
@@ -45,6 +56,11 @@ export default function Home() {
       .then((nextState) => {
         setState(nextState);
         setLoading(false);
+        return greetLuca();
+      })
+      .then((payload) => {
+        setMessages([{ role: "Luca", text: payload.reply.text }]);
+        setState(payload.state);
       })
       .catch((reason: Error) => {
         setError(reason.message);
