@@ -9,13 +9,14 @@ browser GUI → API HTTP locale → LucaSession / MemorySearch / LLM Connector
 L'API Python si avvia con:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter rules
+python -m luca_memory
 ```
 
-Il percorso opzionale Gemma usa:
+Il percorso opzionale Gemma si seleziona impostando
+`runtime.language_adapter: gemma` in `config.yaml`; il punto di avvio resta lo stesso:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter gemma
+python -m luca_memory
 ```
 
 Il frontend Vite si avvia separatamente dalla cartella `gui/`:

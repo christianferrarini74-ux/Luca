@@ -62,14 +62,15 @@ python -m luca_memory.chat --database .\luca.sqlite
 ```
 
 To use the optional local Gemma interpreter, first load
-`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server. Then run:
+`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server. Set
+`runtime.language_adapter: gemma` in `config.yaml` for the real runtime.
 
 ```powershell
-python -m luca_memory.chat --database .\luca.sqlite --adapter gemma
+python -m luca_memory
 ```
 
-The default endpoint is `http://127.0.0.1:1234/v1`. Luca never contacts this
-service unless `--adapter gemma` is specified. If LM Studio is unavailable,
+The endpoint and model are configured under `llm.runtimes` in `config.yaml`.
+Luca never contacts LM Studio while the configured adapter is `rules`. If LM Studio is unavailable,
 Luca stops with a clear error and does not write a partial lesson.
 
 Try this short dialogue:
@@ -96,13 +97,14 @@ runtime and does not contain memory or language logic.
 Start the backend from the repository root:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter rules
+python -m luca_memory
 ```
 
-For the local Gemma adapter, start LM Studio first and use:
+For the local Gemma adapter, start LM Studio first, set
+`runtime.language_adapter: gemma` in `config.yaml`, and use the same command:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter gemma
+python -m luca_memory
 ```
 
 In a second terminal, start the frontend:

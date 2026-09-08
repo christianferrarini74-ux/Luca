@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
 from pathlib import Path
 import threading
@@ -11,30 +10,29 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from .adapters import LanguageAdapter, LMStudioAdapter, RuleAdapter
+from .config import load_config
 from .curriculum import cell_payload
 from .memory import MemoryEditor
 from .search import MemorySearch
 from .session import LucaSession, SessionReply
 
 
-@dataclass(frozen=True, slots=True)
-class ApiConfig:
-    database: Path
-    seed: Path
-    adapter_name: str
-    host: str
-    port: int
-
-
 class LucaRuntime:
     """Own Luca's session; the frontend receives snapshots, never the store."""
 
-    def __init__(self, config: ApiConfig) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
+        storage = config["storage"]
+        runtime_config = config["runtime"]
+        adapter_name = str(runtime_config["language_adapter"])
+        assignment = str(runtime_config.get("adapter_role", "orchestrator"))
         adapter: LanguageAdapter = (
-            LMStudioAdapter() if config.adapter_name == "gemma" else RuleAdapter()
+            LMStudioAdapter.from_config(config, assignment=assignment)
+            if adapter_name == "gemma"
+            else RuleAdapter()
         )
         self.config = config
-        self.session = LucaSession.open(config.database, config.seed, adapter=adapter)
+        self.database = Path(storage["database"])
+        self.session = LucaSession.open(self.database, storage["seed"], adapter=adapter)
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
         self._lock = threading.RLock()
@@ -63,11 +61,11 @@ class LucaRuntime:
                     facts.append({"predicate": str(predicate), "object": str(object_label)})
                 memory.append({"id": result.cell.id, "label": label, "facts": facts})
 
-            database_size = self.config.database.stat().st_size if self.config.database.exists() else 0
+            database_size = self.database.stat().st_size if self.database.exists() else 0
             active_cells = sorted(set(self._last_trace))
             return {
                 "status": "ready",
-                "adapter": self.config.adapter_name,
+                "adapter": self.config["runtime"]["language_adapter"],
                 "memory": memory,
                 "storage": {
                     "ssd_bytes": database_size,
@@ -136,29 +134,27 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
 
-def create_server(config: ApiConfig) -> ThreadingHTTPServer:
+def create_server(config: dict[str, Any]) -> ThreadingHTTPServer:
     runtime = LucaRuntime(config)
 
     class BoundApiHandler(ApiHandler):
         pass
 
     BoundApiHandler.runtime = runtime
-    server = ThreadingHTTPServer((config.host, config.port), BoundApiHandler)
+    api_config = config["runtime"]["api"]
+    server = ThreadingHTTPServer((api_config["host"], api_config["port"]), BoundApiHandler)
     server.runtime = runtime  # type: ignore[attr-defined]
     return server
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--database", type=Path, default=Path("luca.sqlite"))
-    parser.add_argument("--seed", type=Path, default=Path(__file__).parent.parent / "seed" / "italian_base_v0.json")
-    parser.add_argument("--adapter", choices=("rules", "gemma"), default="rules")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--config", type=Path, default=Path("config.yaml"))
     args = parser.parse_args()
-    config = ApiConfig(args.database, args.seed, args.adapter, args.host, args.port)
+    config = load_config(args.config)
     server = create_server(config)
-    print(f"Luca API ready at http://{args.host}:{args.port}")
+    api_config = config["runtime"]["api"]
+    print(f"Luca API ready at http://{api_config['host']}:{api_config['port']}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

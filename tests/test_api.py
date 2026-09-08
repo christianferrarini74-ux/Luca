@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from luca_memory.api import ApiConfig, LucaRuntime
+from luca_memory.api import LucaRuntime
 
 
 class LucaRuntimeApiTests(unittest.TestCase):
@@ -9,7 +9,12 @@ class LucaRuntimeApiTests(unittest.TestCase):
         self.database = Path(__file__).parent / "api-runtime.sqlite"
         self.database.unlink(missing_ok=True)
         seed = Path(__file__).parent.parent / "seed" / "italian_base_v0.json"
-        self.runtime = LucaRuntime(ApiConfig(self.database, seed, "rules", "127.0.0.1", 8765))
+        self.runtime = LucaRuntime(
+            {
+                "storage": {"database": str(self.database), "seed": str(seed)},
+                "runtime": {"language_adapter": "rules", "adapter_role": "orchestrator"},
+            }
+        )
 
     def tearDown(self) -> None:
         self.runtime.close()

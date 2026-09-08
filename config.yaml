@@ -1,0 +1,28 @@
+storage:
+  database: luca.sqlite
+  seed: seed/italian_base_v0.json
+
+runtime:
+  language_adapter: rules
+  adapter_role: orchestrator
+  api:
+    host: 127.0.0.1
+    port: 8765
+
+llm:
+  active_runtime: local
+  runtimes:
+    local:
+      providers:
+        lm_studio:
+          kind: openai_compatible
+          base_url: http://127.0.0.1:1234/v1
+      agents:
+        orchestrator:
+          provider: lm_studio
+          model: gemma-3-1B-it-QAT-GGUF
+          temperature: 0.0
+          timeout_seconds: 30
+
+frontend:
+  api_url: http://127.0.0.1:8765

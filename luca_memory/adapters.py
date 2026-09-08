@@ -64,11 +64,14 @@ class LMStudioAdapter:
         base_url: str = DEFAULT_BASE_URL,
         model: str = DEFAULT_MODEL,
         timeout_seconds: float = 30.0,
+        *,
+        connector: LLMConnector | None = None,
+        assignment: str = "orchestrator",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
-        self.connector = LLMConnector(
+        self.connector = connector or LLMConnector(
             {
                 "llm": {
                     "active_runtime": "local",
@@ -92,6 +95,28 @@ class LMStudioAdapter:
                 }
             }
         )
+        self.assignment = assignment
+
+    @classmethod
+    def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> "LMStudioAdapter":
+        """Build the adapter from the active LLM runtime in config.yaml."""
+
+        connector = LLMConnector(config)
+        profile = connector.profile_for(assignment)
+        if profile.provider_kind != "openai_compatible":
+            raise LLMConfigurationError(
+                "The selected Luca language adapter requires an openai_compatible provider."
+            )
+        base_url = str(profile.provider_config.get("base_url") or "").strip()
+        if not base_url:
+            raise LLMConfigurationError("The selected LLM provider does not define base_url.")
+        return cls(
+            base_url=base_url,
+            model=profile.model,
+            timeout_seconds=profile.timeout_seconds,
+            connector=connector,
+            assignment=assignment,
+        )
 
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
         payload = {
@@ -106,7 +131,7 @@ class LMStudioAdapter:
             "response_format": self._response_format(),
         }
         try:
-            content = self.connector.create_chat_model().complete(
+            content = self.connector.create_chat_model(self.assignment).complete(
                 payload["messages"],
                 response_format=payload["response_format"],
                 max_tokens=payload["max_tokens"],

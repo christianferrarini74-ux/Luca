@@ -52,14 +52,16 @@ python -m luca_memory.chat --database .\luca.sqlite
 ```
 
 Per usare l'interprete locale Gemma tramite LM Studio, caricare
-`gemma-3-1B-it-QAT-GGUF`, avviare il server locale e usare:
+`gemma-3-1B-it-QAT-GGUF`, avviare il server locale e impostare
+`runtime.language_adapter: gemma` in `config.yaml`.
 
 ```powershell
-python -m luca_memory.chat --database .\luca.sqlite --adapter gemma
+python -m luca_memory
 ```
 
-L'endpoint predefinito è `http://127.0.0.1:1234/v1`. Luca non contatta il
-servizio senza `--adapter gemma`; se LM Studio non è disponibile, non viene
+Endpoint e modello sono configurati nella sezione `llm.runtimes` di
+`config.yaml`. Luca non contatta LM Studio quando l'adapter configurato è
+`rules`; se LM Studio non è disponibile, non viene
 scritta alcuna lezione parziale.
 
 ## Avviare la dashboard reale
@@ -70,13 +72,14 @@ locale e non contiene la logica della memoria o del linguaggio.
 Avviare il backend dalla radice del repository:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter rules
+python -m luca_memory
 ```
 
-Per usare l'adapter Gemma locale, avviare prima LM Studio e usare:
+Per usare l'adapter Gemma locale, avviare prima LM Studio, impostare
+`runtime.language_adapter: gemma` in `config.yaml` e usare lo stesso comando:
 
 ```powershell
-python -m luca_memory.api --database .\luca.sqlite --adapter gemma
+python -m luca_memory
 ```
 
 In un secondo terminale avviare il frontend:
