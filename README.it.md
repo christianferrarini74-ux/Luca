@@ -62,6 +62,34 @@ L'endpoint predefinito è `http://127.0.0.1:1234/v1`. Luca non contatta il
 servizio senza `--adapter gemma`; se LM Studio non è disponibile, non viene
 scritta alcuna lezione parziale.
 
+## Avviare la dashboard reale
+
+La GUI è solo un frontend. Visualizza lo stato restituito dal runtime Python
+locale e non contiene la logica della memoria o del linguaggio.
+
+Avviare il backend dalla radice del repository:
+
+```powershell
+python -m luca_memory.api --database .\luca.sqlite --adapter rules
+```
+
+Per usare l'adapter Gemma locale, avviare prima LM Studio e usare:
+
+```powershell
+python -m luca_memory.api --database .\luca.sqlite --adapter gemma
+```
+
+In un secondo terminale avviare il frontend:
+
+```powershell
+cd gui
+npm run dev
+```
+
+La dashboard chiama `http://127.0.0.1:8765/api` per la chat e gli snapshot del
+runtime. Il backend resta l'unico componente autorizzato ad accedere alla
+memoria di Luca e al connector LLM.
+
 ## Stato
 
 Questa è una baseline SQLite sostituibile. Valida accesso ai dati, budget del

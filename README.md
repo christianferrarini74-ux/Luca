@@ -88,6 +88,34 @@ Cosa produce il sole?
 
 The learned assertion is stored in the database with a trace and an append-only event entry.
 
+## Run the real dashboard
+
+The GUI is a frontend only. It renders state returned by Luca's local Python
+runtime and does not contain memory or language logic.
+
+Start the backend from the repository root:
+
+```powershell
+python -m luca_memory.api --database .\luca.sqlite --adapter rules
+```
+
+For the local Gemma adapter, start LM Studio first and use:
+
+```powershell
+python -m luca_memory.api --database .\luca.sqlite --adapter gemma
+```
+
+In a second terminal, start the frontend:
+
+```powershell
+cd gui
+npm run dev
+```
+
+The dashboard calls `http://127.0.0.1:8765/api` for chat and runtime
+snapshots. The backend remains the only component allowed to access Luca's
+memory and LLM connector.
+
 ## Status
 
 This is an intentionally replaceable SQLite baseline. It validates data access and thought budgets before we commit to a custom page format, a cache policy, GPU runtime, or associative index.
