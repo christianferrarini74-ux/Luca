@@ -1,22 +1,22 @@
-# Luca: curriculum iniziale
+# Luca: initial curriculum
 
-## Scopo
+## Purpose
 
-Luca non parte da una memoria completamente vuota. Riceve un seme linguistico e concettuale limitato, verificabile e separato dal motore di ragionamento.
+Luca does not start with completely empty memory. It receives a limited, verifiable linguistic and conceptual seed that is separate from the reasoning engine.
 
-Un'AI esterna potrà preparare materiale didattico, ma non entrerà nel ciclo di risposta di Luca. Il suo output sarà importabile solo se espresso in questo formato leggibile e sottoposto a revisione.
+An external AI may prepare teaching material, but it will not enter Luca's answer loop. Its output is importable only when expressed in this readable format and reviewed.
 
-## Principi
+## Principles
 
-- Ogni elemento insegnato è una cella con contenuto, tipo e provenienza espliciti.
-- Un fatto è una cella di tipo `assertion`; contiene gli indirizzi di soggetto, predicato e oggetto.
-- Gli archi restano indirizzi senza semantica: soggetto → asserto e asserto → componenti.
-- Le domande di prova sono separate dalle lezioni.
-- Ogni risposta deve riportare la traccia di celle che l'ha resa possibile.
+- Every taught item is a cell with explicit content, type, and provenance.
+- A fact is an `assertion` cell containing addresses to its subject, predicate, and object.
+- Edges remain semantic-free addresses: subject → assertion and assertion → components.
+- Evaluation questions are separate from lessons.
+- Every answer must report the trace of cells that made it possible.
 
-## Formato
+## Format
 
-Il file JSON contiene un `version`, una `language` e una lista ordinata di celle. Gli `slug` sono indirizzi leggibili solo nel curriculum; al caricamento diventano ID numerici compatti.
+The JSON file contains a `version`, a `language`, and an ordered list of cells. Slugs are human-readable addresses used only in the curriculum; on load they become compact numeric IDs.
 
 ```json
 {"slug": "fuoco", "kind": "concept", "label": "fuoco"}
@@ -24,7 +24,7 @@ Il file JSON contiene un `version`, una `language` e una lista ordinata di celle
 {"slug": "fuoco_produce_calore", "kind": "assertion", "subject": "fuoco", "predicate": "produce", "object": "calore"}
 ```
 
-Il caricatore crea gli archi seguenti:
+The loader creates these edges:
 
 ```text
 fuoco → fuoco_produce_calore
@@ -32,13 +32,13 @@ fuoco_produce_calore → produce
 fuoco_produce_calore → calore
 ```
 
-In questo modo l'asserto è una cella su cui Luca può lavorare, mentre gli archi servono soltanto alla navigazione.
+This makes the assertion a cell Luca can work with, while edges serve navigation only.
 
-## Primo confine linguistico
+## First language boundary
 
-`ItalianSeedInterface` è intenzionalmente una grammatica a regole piccola. Riconosce poche domande italiane di identità e mondo fisico e le trasforma in un obiettivo di recupero dal grafo. Non è un modello linguistico e non deve essere presentata come comprensione generale del linguaggio.
+`ItalianSeedInterface` is intentionally a small rule grammar. It recognises a few Italian identity and physical-world questions and turns them into graph-retrieval targets. It is not a language model and must not be presented as general language understanding.
 
-Per eseguire il seme iniziale:
+To run the initial seed:
 
 ```powershell
 python -m luca_memory.demo "Come ti chiami?"
@@ -46,32 +46,32 @@ python -m luca_memory.demo "Chi è il tuo creatore?"
 python -m luca_memory.demo "Cosa produce il fuoco?"
 ```
 
-Le verifiche, conservate separatamente dalle lezioni, si eseguono così:
+Evaluation cases, stored separately from lessons, run as follows:
 
 ```powershell
 python -m luca_memory.evaluate
 ```
 
-Il primo set include tre esperienze analoghe che convergono su `scalda`
-(`fuoco`, `sole`, `forno`) e due esperienze contrastive (`raffredda`,
-`bagna`). Questo permette già di misurare la navigazione topologica prima
-di introdurre un indice associativo.
+The first set includes three analogous experiences converging on `scalda`
+(`fuoco`, `sole`, `forno`) and two contrastive experiences (`raffredda`,
+`bagna`). This already makes it possible to measure topological navigation
+before introducing an associative index.
 
-## Prossima espansione
+## Next expansion
 
-Il prossimo curriculum deve aggiungere esperienze analoghe, controesempi, domande di verifica non identiche alle lezioni e provenienza per ogni asserto. Solo allora potremo valutare il recupero associativo lontano senza confonderlo con la semplice ripetizione.
+The next curriculum should add analogous experiences, counterexamples, evaluation questions that differ from the lessons, and provenance for every assertion. Only then can we evaluate distant associative retrieval without confusing it with simple repetition.
 
-## Istruzione persistente nel dimostratore
+## Persistent instruction in the demonstrator
 
-`python -m luca_memory.chat --database .\luca.sqlite` avvia una sessione
-persistente. Per ora accetta un linguaggio di istruzione volutamente piccolo:
+`python -m luca_memory.chat --database .\luca.sqlite` starts a persistent
+session. For now it accepts an intentionally small instruction language:
 
 ```text
 Luca, ricorda che il sole produce luce.
 Luca, ricorda che il ghiaccio raffredda bevanda.
 ```
 
-Ogni istruzione crea o riusa le celle-concetto, crea un asserto con
-provenienza `user`, aggiunge gli indirizzi, e registra un evento append-only.
-La conoscenza è poi disponibile anche dopo il riavvio. La grammatica è un
-confine esplicito del primo dimostratore, non una pretesa di linguaggio libero.
+Each instruction creates or reuses concept cells, creates an assertion with
+`user` provenance, adds the addresses, and records an append-only event.
+The knowledge remains available after restart. The grammar is an explicit
+boundary of the first demonstrator, not a claim of free-form language support.

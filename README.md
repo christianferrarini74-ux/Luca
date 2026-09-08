@@ -1,5 +1,7 @@
 # Luca
 
+[English](README.md) | [Italiano](README.it.md)
+
 Luca is an experimental project exploring an explicit, persistent memory rather than a pre-trained language model. Every major claim must earn its place through a small, reproducible experiment.
 
 ## The working model

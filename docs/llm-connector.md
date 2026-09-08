@@ -1,11 +1,12 @@
 # LLM Connector
 
-Luca usa `luca_memory.llm.LLMConnector` come confine unico tra il Core e i
-motori linguistici. Il Core non conosce URL, API key o protocollo del provider.
+Luca uses `luca_memory.llm.LLMConnector` as the single boundary between the
+Core and language engines. The Core does not know provider URLs, API keys, or
+wire protocols.
 
-## Configurazione
+## Configuration
 
-La configurazione segue la stessa separazione usata nel progetto Cesare:
+Configuration follows the same separation used by the Cesare project:
 
 ```python
 config = {
@@ -37,13 +38,13 @@ config = {
 }
 ```
 
-I provider remoti compatibili con OpenAI richiedono un endpoint HTTPS e una
-chiave esplicita tramite `api_key` oppure `api_key_env`. Sono disponibili i
-kind `openai`, `xai`, `mistral`, `deepseek`, `qwen`, `moonshot` e `zhipu`.
+Remote OpenAI-compatible providers require an HTTPS endpoint and an explicit
+key through `api_key` or `api_key_env`. The supported kinds are `openai`,
+`xai`, `mistral`, `deepseek`, `qwen`, `moonshot`, and `zhipu`.
 
-## Confini
+## Boundaries
 
-- Il connector crea il client, ma non avvia processi o modelli.
-- Un provider propone solo testo; l'adapter linguistico valida il JSON.
-- Il Core di Luca resta l'unico proprietario della memoria persistente.
-- Aggiungere un provider non richiede modifiche a memoria, pensiero o sessione.
+- The connector creates clients but does not start processes or models.
+- A provider returns text; the language adapter validates the JSON.
+- Luca Core remains the sole owner of persistent memory.
+- Adding a provider does not require changes to memory, thought, or session code.
