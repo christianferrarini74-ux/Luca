@@ -21,7 +21,9 @@ python run_luca.py
 
 Il punto di avvio avvia il frontend Vite come processo figlio e apre
 automaticamente l'URL configurato nel browser. Quando si chiude il punto di
-avvio, vengono chiusi runtime e frontend.
+avvio, vengono chiusi runtime e frontend. Usare il pulsante `Esci`
+nell'intestazione per un arresto ordinato: l'API chiude sessione e database,
+poi arresta il processo figlio del frontend.
 
 ## Confine API
 
@@ -29,6 +31,7 @@ avvio, vengono chiusi runtime e frontend.
 - `GET /api/state` restituisce uno snapshot del runtime in sola lettura.
 - `POST /api/chat` accetta `{ "text": "..." }` e restituisce risposta verificata,
   traccia e snapshot aggiornato.
+- `POST /api/shutdown` richiede l'arresto ordinato dell'intero runtime.
 
 Il frontend non può accedere a SQLite, attraversare il grafo, scegliere un LLM
 o scrivere memoria. Invia il testo dell'utente e rende visibili le risposte del

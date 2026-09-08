@@ -1,8 +1,8 @@
 from pathlib import Path
 import threading
 import unittest
-from urllib.request import urlopen
 import json
+from urllib.request import Request, urlopen
 
 from luca_memory.api import LucaRuntime, create_server
 
@@ -58,6 +58,32 @@ class LucaRuntimeApiTests(unittest.TestCase):
             self.assertEqual(payload["status"], "ready")
         finally:
             server.shutdown()
+            server.server_close()
+            server.runtime.close()
+
+    def test_shutdown_endpoint_stops_the_http_server(self) -> None:
+        server = create_server(
+            {
+                "storage": {"database": str(self.database), "seed": str(self.seed)},
+                "runtime": {
+                    "language_adapter": "rules",
+                    "adapter_role": "orchestrator",
+                    "api": {"host": "127.0.0.1", "port": 0},
+                },
+            }
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = Request(
+                f"http://127.0.0.1:{server.server_address[1]}/api/shutdown",
+                method="POST",
+            )
+            with urlopen(request) as response:
+                self.assertEqual(response.status, 202)
+            thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+        finally:
             server.server_close()
             server.runtime.close()
 

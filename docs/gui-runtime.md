@@ -21,7 +21,9 @@ python run_luca.py
 
 The entry point starts the Vite frontend as a child process and opens the
 configured browser URL automatically. Stopping the entry point stops both
-runtime and frontend.
+runtime and frontend. Use the `Esci` button in the header for an orderly
+shutdown; the API closes the session and database, then stops the frontend
+child process.
 
 ## API boundary
 
@@ -29,6 +31,7 @@ runtime and frontend.
 - `GET /api/state` returns a read-only runtime snapshot.
 - `POST /api/chat` accepts `{ "text": "..." }` and returns the verified reply,
   trace, and updated snapshot.
+- `POST /api/shutdown` requests an orderly shutdown of the complete runtime.
 
 The frontend cannot access SQLite, traverse the graph, select an LLM, or write
 memory. It sends user text and renders backend responses. This keeps the same

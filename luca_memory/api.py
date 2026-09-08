@@ -92,6 +92,7 @@ class LucaRuntime:
 
 class ApiHandler(BaseHTTPRequestHandler):
     runtime: LucaRuntime
+    shutdown_server: Any
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(204)
@@ -108,6 +109,10 @@ class ApiHandler(BaseHTTPRequestHandler):
         self._json({"error": "Not found"}, status=404)
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/api/shutdown":
+            self._json({"status": "shutting_down"}, status=202)
+            threading.Thread(target=self.shutdown_server, daemon=True).start()
+            return
         if self.path != "/api/chat":
             self._json({"error": "Not found"}, status=404)
             return
@@ -150,6 +155,7 @@ def create_server(config: dict[str, Any]) -> ThreadingHTTPServer:
     BoundApiHandler.runtime = runtime
     api_config = config["runtime"]["api"]
     server = ThreadingHTTPServer((api_config["host"], api_config["port"]), BoundApiHandler)
+    BoundApiHandler.shutdown_server = server.shutdown
     server.runtime = runtime  # type: ignore[attr-defined]
     return server
 
