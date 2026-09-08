@@ -30,6 +30,20 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(ConfigurationError):
                 load_config(config_path)
 
+    def test_database_can_be_resolved_inside_a_separate_storage_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "config.yaml"
+            config_path.write_text(
+                "storage:\n  directory: memory\n  database: luca.sqlite\n",
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+
+            self.assertEqual(config["storage"]["directory"], str((root / "memory").resolve()))
+            self.assertEqual(config["storage"]["database"], str((root / "memory" / "luca.sqlite").resolve()))
+
 
 if __name__ == "__main__":
     unittest.main()

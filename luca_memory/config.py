@@ -25,9 +25,15 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
 
     storage = _mapping(config.setdefault("storage", {}))
     config["storage"] = storage
+    storage_directory = storage.get("directory")
+    if storage_directory is not None:
+        storage_directory = _resolve_path(storage_directory, config_path.parent)
+        storage["directory"] = str(storage_directory)
+
     storage.setdefault("database", "luca.sqlite")
     storage.setdefault("seed", "seed/italian_base_v0.json")
-    storage["database"] = str(_resolve_path(storage["database"], config_path.parent))
+    database_base = storage_directory or config_path.parent
+    storage["database"] = str(_resolve_path(storage["database"], database_base))
     storage["seed"] = str(_resolve_path(storage["seed"], config_path.parent))
 
     runtime = _mapping(config.setdefault("runtime", {}))

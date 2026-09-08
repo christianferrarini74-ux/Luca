@@ -24,3 +24,8 @@ OpenAI-compatible nella sezione `llm.runtimes`.
 
 Le demo CLI possono ancora usare flag espliciti; il runtime della dashboard no.
 In questo modo le scelte di avvio restano in un unico file ispezionabile.
+
+I file della memoria runtime sono mantenuti fuori dal codice sorgente. La
+configurazione attuale usa `D:/Test/Luca` per il database SQLite e per i futuri
+file persistenti della memoria; il seed versionato resta nella cartella `seed/`
+del repository.

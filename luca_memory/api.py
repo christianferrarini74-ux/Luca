@@ -25,6 +25,8 @@ class LucaRuntime:
 
     def __init__(self, config: dict[str, Any]) -> None:
         storage = config["storage"]
+        self.data_directory = Path(storage["database"]).parent
+        self.data_directory.mkdir(parents=True, exist_ok=True)
         runtime_config = config["runtime"]
         adapter_name = str(runtime_config["language_adapter"])
         assignment = str(runtime_config.get("adapter_role", "orchestrator"))
