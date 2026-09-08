@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import subprocess
 import threading
+import time
+from urllib.request import urlopen
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -160,9 +162,12 @@ def main() -> None:
     server = create_server(config)
     api_config = config["runtime"]["api"]
     frontend_process = _start_frontend(config)
-    browser_timer = threading.Timer(2.0, webbrowser.open, args=(config["frontend"]["url"],))
-    browser_timer.daemon = True
-    browser_timer.start()
+    browser_thread = threading.Thread(
+        target=_open_frontend_when_ready,
+        args=(frontend_process, config["frontend"]["url"]),
+        daemon=True,
+    )
+    browser_thread.start()
     print(f"Luca runtime ready at http://{api_config['host']}:{api_config['port']}")
     try:
         server.serve_forever()
@@ -172,7 +177,6 @@ def main() -> None:
         server.shutdown()
         server.server_close()
         server.runtime.close()  # type: ignore[attr-defined]
-        browser_timer.cancel()
         _stop_frontend(frontend_process)
 
 
@@ -185,6 +189,7 @@ def _start_frontend(config: dict[str, Any]) -> subprocess.Popen[bytes] | None:
     directory = Path(frontend["directory"])
     if not directory.exists():
         raise RuntimeError(f"Frontend directory not found: {directory}")
+    _remove_stale_frontend_lock(directory, str(frontend["url"]))
     executable = "npm.cmd" if os.name == "nt" else "npm"
     return subprocess.Popen(
         [executable, "run", "dev", "--", "--host", "localhost"],
@@ -192,12 +197,54 @@ def _start_frontend(config: dict[str, Any]) -> subprocess.Popen[bytes] | None:
     )
 
 
+def _remove_stale_frontend_lock(directory: Path, url: str) -> None:
+    """Remove Vinext's lock only when its advertised server is unreachable."""
+
+    lock_path = directory / ".vinext" / "dev" / "lock.json"
+    if not lock_path.exists():
+        return
+    try:
+        with urlopen(url, timeout=1.0) as response:
+            if 200 <= response.status < 500:
+                return
+    except OSError:
+        pass
+    lock_path.unlink(missing_ok=True)
+
+
+def _open_frontend_when_ready(process: subprocess.Popen[bytes] | None, url: str) -> None:
+    """Open the browser only after the frontend responds successfully."""
+
+    deadline = time.monotonic() + 60.0
+    while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            print("Luca frontend stopped before becoming ready.")
+            return
+        try:
+            with urlopen(url, timeout=1.0) as response:
+                if 200 <= response.status < 500:
+                    webbrowser.open(url)
+                    return
+        except OSError:
+            pass
+        time.sleep(0.25)
+    print(f"Luca frontend did not become ready at {url} within 60 seconds.")
+
+
 def _stop_frontend(process: subprocess.Popen[bytes] | None) -> None:
     """Stop the frontend child without affecting unrelated processes."""
 
-    if process is None or process.poll() is not None:
+    if process is None:
         return
-    process.terminate()
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    elif process.poll() is None:
+        process.terminate()
     try:
         process.wait(timeout=5)
     except subprocess.TimeoutExpired:
