@@ -56,7 +56,7 @@ Per usare l'interprete locale Gemma tramite LM Studio, caricare
 `runtime.language_adapter: gemma` in `config.yaml`.
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
 Endpoint e modello sono configurati nella sezione `llm.runtimes` di
@@ -64,29 +64,24 @@ Endpoint e modello sono configurati nella sezione `llm.runtimes` di
 `rules`; se LM Studio non è disponibile, non viene
 scritta alcuna lezione parziale.
 
-## Avviare la dashboard reale
+## Avviare il runtime completo di Luca
 
-La GUI è solo un frontend. Visualizza lo stato restituito dal runtime Python
-locale e non contiene la logica della memoria o del linguaggio.
+Il punto di avvio unico legge `config.yaml`, avvia il runtime Python, avvia il
+frontend e apre automaticamente la dashboard nel browser. La GUI resta solo un
+frontend: visualizza lo stato restituito da Luca e non contiene la logica della
+memoria o del linguaggio.
 
-Avviare il backend dalla radice del repository:
+Avviare il runtime completo dalla radice del repository:
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
 Per usare l'adapter Gemma locale, avviare prima LM Studio, impostare
 `runtime.language_adapter: gemma` in `config.yaml` e usare lo stesso comando:
 
 ```powershell
-python -m luca_memory
-```
-
-In un secondo terminale avviare il frontend:
-
-```powershell
-cd gui
-npm run dev
+python run_luca.py
 ```
 
 La dashboard chiama `http://127.0.0.1:8765/api` per la chat e gli snapshot del

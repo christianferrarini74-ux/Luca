@@ -4,12 +4,13 @@ Luca ha un solo file di configurazione del runtime: `config.yaml` nella radice
 del repository. Il punto di avvio configurato è:
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
-Il file controlla percorsi di storage, indirizzo API, adapter linguistico e
-runtime LLM selezionato dal connector. Il runtime lo carica una volta e costruisce
-il resto del sistema a partire da quella configurazione.
+Il file controlla percorsi di storage, indirizzo API, directory e URL del
+frontend, adapter linguistico e runtime LLM selezionato dal connector. Il
+runtime lo carica una volta e costruisce il resto del sistema a partire da quella
+configurazione.
 
 Impostare:
 

@@ -45,6 +45,13 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
         api["port"] = int(api["port"])
     except (TypeError, ValueError) as error:
         raise ConfigurationError("runtime.api.port must be an integer.") from error
+
+    frontend = _mapping(config.setdefault("frontend", {}))
+    config["frontend"] = frontend
+    frontend.setdefault("enabled", True)
+    frontend.setdefault("directory", "gui")
+    frontend.setdefault("url", "http://127.0.0.1:3000")
+    frontend["directory"] = str(_resolve_path(frontend["directory"], config_path.parent))
     return config
 
 

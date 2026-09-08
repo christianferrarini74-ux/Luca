@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import subprocess
 import threading
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -154,7 +157,11 @@ def main() -> None:
     config = load_config(args.config)
     server = create_server(config)
     api_config = config["runtime"]["api"]
-    print(f"Luca API ready at http://{api_config['host']}:{api_config['port']}")
+    frontend_process = _start_frontend(config)
+    browser_timer = threading.Timer(2.0, webbrowser.open, args=(config["frontend"]["url"],))
+    browser_timer.daemon = True
+    browser_timer.start()
+    print(f"Luca runtime ready at http://{api_config['host']}:{api_config['port']}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -163,6 +170,36 @@ def main() -> None:
         server.shutdown()
         server.server_close()
         server.runtime.close()  # type: ignore[attr-defined]
+        browser_timer.cancel()
+        _stop_frontend(frontend_process)
+
+
+def _start_frontend(config: dict[str, Any]) -> subprocess.Popen[bytes] | None:
+    """Start the configured frontend as a child of the single Luca process."""
+
+    frontend = config["frontend"]
+    if not frontend.get("enabled", True):
+        return None
+    directory = Path(frontend["directory"])
+    if not directory.exists():
+        raise RuntimeError(f"Frontend directory not found: {directory}")
+    executable = "npm.cmd" if os.name == "nt" else "npm"
+    return subprocess.Popen(
+        [executable, "run", "dev", "--", "--host", "127.0.0.1"],
+        cwd=directory,
+    )
+
+
+def _stop_frontend(process: subprocess.Popen[bytes] | None) -> None:
+    """Stop the frontend child without affecting unrelated processes."""
+
+    if process is None or process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
 
 
 if __name__ == "__main__":

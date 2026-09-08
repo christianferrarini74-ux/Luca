@@ -25,4 +25,7 @@ llm:
           timeout_seconds: 30
 
 frontend:
+  enabled: true
+  directory: gui
   api_url: http://127.0.0.1:8765
+  url: http://127.0.0.1:3000

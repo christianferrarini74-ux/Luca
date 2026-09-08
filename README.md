@@ -66,7 +66,7 @@ To use the optional local Gemma interpreter, first load
 `runtime.language_adapter: gemma` in `config.yaml` for the real runtime.
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
 The endpoint and model are configured under `llm.runtimes` in `config.yaml`.
@@ -89,29 +89,24 @@ Cosa produce il sole?
 
 The learned assertion is stored in the database with a trace and an append-only event entry.
 
-## Run the real dashboard
+## Run the complete Luca runtime
 
-The GUI is a frontend only. It renders state returned by Luca's local Python
-runtime and does not contain memory or language logic.
+The single project entry point reads `config.yaml`, starts the Python runtime,
+starts the frontend, and opens the dashboard in the browser. The GUI remains a
+frontend only: it renders state returned by Luca and does not contain memory or
+language logic.
 
-Start the backend from the repository root:
+Start the complete runtime from the repository root:
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
 For the local Gemma adapter, start LM Studio first, set
 `runtime.language_adapter: gemma` in `config.yaml`, and use the same command:
 
 ```powershell
-python -m luca_memory
-```
-
-In a second terminal, start the frontend:
-
-```powershell
-cd gui
-npm run dev
+python run_luca.py
 ```
 
 The dashboard calls `http://127.0.0.1:8765/api` for chat and runtime

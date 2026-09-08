@@ -20,6 +20,7 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(config["storage"]["database"], str((root / "data" / "luca.sqlite").resolve()))
             self.assertEqual(config["storage"]["seed"], str((root / "seed" / "italian_base_v0.json").resolve()))
             self.assertEqual(config["runtime"]["api"]["port"], 8765)
+            self.assertEqual(config["frontend"]["directory"], str((root / "gui").resolve()))
 
     def test_invalid_adapter_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

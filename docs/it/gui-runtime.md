@@ -9,21 +9,19 @@ browser GUI → API HTTP locale → LucaSession / MemorySearch / LLM Connector
 L'API Python si avvia con:
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
 Il percorso opzionale Gemma si seleziona impostando
 `runtime.language_adapter: gemma` in `config.yaml`; il punto di avvio resta lo stesso:
 
 ```powershell
-python -m luca_memory
+python run_luca.py
 ```
 
-Il frontend Vite si avvia separatamente dalla cartella `gui/`:
-
-```powershell
-npm run dev
-```
+Il punto di avvio avvia il frontend Vite come processo figlio e apre
+automaticamente l'URL configurato nel browser. Quando si chiude il punto di
+avvio, vengono chiusi runtime e frontend.
 
 ## Confine API
 
