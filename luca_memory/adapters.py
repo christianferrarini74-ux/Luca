@@ -6,7 +6,7 @@ import json
 from typing import Any, Protocol
 import re
 
-from .llm import LLMConfigurationError, LLMConnector
+from .llm import LLMConfigurationError, LLMConnector, LMStudioModelManager
 from .protocol import LanguageIntent
 
 
@@ -67,7 +67,7 @@ class LMStudioAdapter:
     """Local, optional interpreter served by LM Studio's OpenAI-compatible API."""
 
     DEFAULT_BASE_URL = "http://127.0.0.1:1234/v1"
-    DEFAULT_MODEL = "gemma-3-1B-it-QAT-GGUF"
+    DEFAULT_MODEL = "google/gemma-3-1b"
     _KINDS = {"greet", "ask", "describe", "remember", "unknown"}
 
     def __init__(
@@ -121,13 +121,15 @@ class LMStudioAdapter:
         base_url = str(profile.provider_config.get("base_url") or "").strip()
         if not base_url:
             raise LLMConfigurationError("The selected LLM provider does not define base_url.")
-        return cls(
+        adapter = cls(
             base_url=base_url,
             model=profile.model,
             timeout_seconds=profile.timeout_seconds,
             connector=connector,
             assignment=assignment,
         )
+        LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds).ensure_loaded(adapter.model)
+        return adapter
 
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
         payload = {

@@ -19,7 +19,7 @@ config = {
                 "agents": {
                     "orchestrator": {
                         "provider": "lm_studio",
-                        "model": "gemma-3-1B-it-QAT-GGUF",
+                        "model": "google/gemma-3-1b",
                         "temperature": 0.0,
                         "timeout_seconds": 30,
                     }
@@ -34,7 +34,10 @@ I provider remoti OpenAI-compatible richiedono HTTPS e una chiave esplicita tram
 
 ## Confini
 
-- Il connector crea client, ma non avvia processi o modelli.
+- Il connector crea i client. L'adapter LM Studio individua inoltre il modello
+  configurato tramite `/api/v1/models` e chiede a LM Studio di caricarlo tramite
+  `/api/v1/models/load` quando è installato ma non residente.
+- Luca non scarica modelli e non avvia autonomamente l'applicazione LM Studio.
 - Il provider restituisce testo; l'adapter linguistico valida il JSON.
 - Il Core di Luca resta l'unico proprietario della memoria persistente.
 - Aggiungere un provider non richiede modifiche a memoria, pensiero o sessione.

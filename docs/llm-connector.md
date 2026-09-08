@@ -27,7 +27,7 @@ config = {
                 "agents": {
                     "orchestrator": {
                         "provider": "lm_studio",
-                        "model": "gemma-3-1B-it-QAT-GGUF",
+                        "model": "google/gemma-3-1b",
                         "temperature": 0.0,
                         "timeout_seconds": 30,
                     }
@@ -44,7 +44,10 @@ key through `api_key` or `api_key_env`. The supported kinds are `openai`,
 
 ## Boundaries
 
-- The connector creates clients but does not start processes or models.
+- The connector creates clients. The LM Studio adapter additionally discovers
+  the configured model through `/api/v1/models` and asks LM Studio to load it
+  through `/api/v1/models/load` when it is installed but not resident.
+- Luca does not download models or start the LM Studio application itself.
 - A provider returns text; the language adapter validates the JSON.
 - Luca Core remains the sole owner of persistent memory.
 - Adding a provider does not require changes to memory, thought, or session code.

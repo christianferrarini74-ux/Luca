@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 from .curriculum import cell_payload, curriculum_from_file, load_curriculum
-from .adapters import LanguageAdapter, RuleAdapter
+from .adapters import LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
 from .search import MemorySearch
@@ -46,12 +46,18 @@ class LucaSession:
 
     def handle(self, text: str) -> SessionReply:
         current_subject = self._current_subject_label()
-        intent = self.adapter.interpret(text, current_subject)
         if hasattr(self.adapter, "respond"):
-            trace = self._consolidate_intent(intent)
-            response = self.adapter.respond(text, self._memory_context(text, intent), self.history)
+            response = self.adapter.respond(text, self._memory_context(text), self.history)
+            trace = ()
+            try:
+                intent = self.adapter.interpret(text, current_subject)
+            except LanguageAdapterUnavailable:
+                intent = None
+            if intent is not None:
+                trace = self._consolidate_intent(intent)
             self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
             return SessionReply(response, trace)
+        intent = self.adapter.interpret(text, current_subject)
         if intent.kind == "greet":
             return SessionReply("Ciao Christian. Sono Luca.")
         if intent.kind == "remember":

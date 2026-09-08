@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from luca_memory import LanguageIntent, LucaSession
+from luca_memory import LanguageAdapterUnavailable, LanguageIntent, LucaSession
 
 
 class TeachingAdapter:
@@ -23,6 +23,11 @@ class TeachingAdapter:
 class ConversationalTeachingAdapter(TeachingAdapter):
     def respond(self, text: str, memory_context: str, history: list[dict[str, str]]) -> str:
         return f"Risposta libera: {text}. Contesto: {memory_context}"
+
+
+class FreeOnlyAdapter(ConversationalTeachingAdapter):
+    def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
+        raise LanguageAdapterUnavailable("The optional memory extraction response was invalid.")
 
 
 class LucaSessionTests(unittest.TestCase):
@@ -79,6 +84,13 @@ class LucaSessionTests(unittest.TestCase):
 
         self.assertIn("Risposta libera", answer.text)
         self.assertIn("sole scalda pelle", answer.text)
+
+    def test_free_conversation_is_not_blocked_by_memory_extraction(self) -> None:
+        session = LucaSession.open(self.database, self.seed, adapter=FreeOnlyAdapter())
+        answer = session.handle("Ciao Luca.")
+        session.close()
+
+        self.assertIn("Risposta libera", answer.text)
 
 
 if __name__ == "__main__":

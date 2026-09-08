@@ -61,8 +61,10 @@ python -m luca_memory.demo "Come ti chiami?"
 python -m luca_memory.chat --database .\luca.sqlite
 ```
 
-The default runtime uses the local Gemma conversation adapter. First load
-`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server.
+The default runtime uses the local Gemma conversation adapter. Start the LM
+Studio local server; Luca discovers the configured model and asks LM Studio to
+load it when it is installed but not currently resident. The default model key
+is `google/gemma-3-1b`.
 
 ```powershell
 python run_luca.py
@@ -102,7 +104,8 @@ Start the complete runtime from the repository root:
 python run_luca.py
 ```
 
-Start LM Studio before using the default Gemma conversation adapter:
+Start LM Studio before using the default Gemma conversation adapter. Luca then
+selects and loads the configured model automatically:
 
 ```powershell
 python run_luca.py

@@ -18,10 +18,11 @@ llm:
         lm_studio:
           kind: openai_compatible
           base_url: http://127.0.0.1:1234/v1
+          management_url: http://127.0.0.1:1234
       agents:
         orchestrator:
           provider: lm_studio
-          model: gemma-3-1B-it-QAT-GGUF
+          model: google/gemma-3-1b
           temperature: 0.0
           timeout_seconds: 30
 

@@ -44,4 +44,6 @@ The LLM does not own long-term knowledge, write SQLite, select internal cell ide
 - Every stored assertion retains origin and event trace.
 - Evaluation tests must exercise the same intent contract for the rules adapter and each candidate micro LLM.
 
-The present code implements the input contract and tests replacement with a small stand-in adapter. Connecting LM Studio is deliberately the next integration step, once a model and its local endpoint are chosen.
+The current code implements the contract with both the deterministic fallback
+and the LM Studio adapter. Model selection and local model loading are kept in
+configuration; memory retrieval and consolidation remain Core responsibilities.

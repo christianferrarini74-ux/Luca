@@ -51,8 +51,10 @@ python -m unittest discover -s tests -v
 python -m luca_memory.chat --database .\luca.sqlite
 ```
 
-Il runtime predefinito usa l'adapter conversazionale Gemma locale. Caricare
-`gemma-3-1B-it-QAT-GGUF` e avviare il server locale di LM Studio.
+Il runtime predefinito usa l'adapter conversazionale Gemma locale. Avviare il
+server locale di LM Studio: Luca individua il modello configurato e chiede a
+LM Studio di caricarlo se è installato ma non ancora residente. Il key
+predefinito è `google/gemma-3-1b`.
 
 ```powershell
 python run_luca.py
@@ -77,7 +79,8 @@ Avviare il runtime completo dalla radice del repository:
 python run_luca.py
 ```
 
-Avviare LM Studio prima di usare l'adapter conversazionale Gemma predefinito:
+Avviare LM Studio prima di usare l'adapter conversazionale Gemma predefinito.
+Luca seleziona e carica automaticamente il modello configurato:
 
 ```powershell
 python run_luca.py
