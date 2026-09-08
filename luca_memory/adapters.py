@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 import re
-from urllib.error import URLError
-from urllib.request import Request, urlopen
 
+from .llm import LLMConfigurationError, LLMConnector
 from .protocol import LanguageIntent
 
 
@@ -69,6 +68,30 @@ class LMStudioAdapter:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.connector = LLMConnector(
+            {
+                "llm": {
+                    "active_runtime": "local",
+                    "runtimes": {
+                        "local": {
+                            "providers": {
+                                "lm_studio": {
+                                    "kind": "openai_compatible",
+                                    "base_url": self.base_url,
+                                }
+                            },
+                            "agents": {
+                                "orchestrator": {
+                                    "provider": "lm_studio",
+                                    "model": self.model,
+                                    "timeout_seconds": self.timeout_seconds,
+                                }
+                            },
+                        }
+                    },
+                }
+            }
+        )
 
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
         payload = {
@@ -82,28 +105,16 @@ class LMStudioAdapter:
             "stream": False,
             "response_format": self._response_format(),
         }
-        response = self._post(payload)
         try:
-            content = response["choices"][0]["message"]["content"]
+            content = self.connector.create_chat_model().complete(
+                payload["messages"],
+                response_format=payload["response_format"],
+                max_tokens=payload["max_tokens"],
+            )
             decoded = json.loads(content)
-        except (IndexError, KeyError, TypeError, json.JSONDecodeError) as error:
+        except (LLMConfigurationError, TypeError, json.JSONDecodeError) as error:
             raise LanguageAdapterUnavailable("LM Studio returned an invalid language intent.") from error
         return self._intent_from_json(decoded, text)
-
-    def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
-        request = Request(
-            f"{self.base_url}/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310 -- configured localhost endpoint
-                return json.loads(response.read().decode("utf-8"))
-        except (URLError, OSError, json.JSONDecodeError) as error:
-            raise LanguageAdapterUnavailable(
-                f"LM Studio is unavailable at {self.base_url}. Start its local server and load {self.model}."
-            ) from error
 
     @classmethod
     def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:

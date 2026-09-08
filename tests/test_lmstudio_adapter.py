@@ -33,7 +33,7 @@ class LMStudioAdapterTests(unittest.TestCase):
             })}}]
         }
         adapter = LMStudioAdapter()
-        with patch("luca_memory.adapters.urlopen", return_value=FakeResponse(response)) as request:
+        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)) as request:
             intent = adapter.interpret("Luca, ricorda che il sole produce luce e calore.")
 
         self.assertEqual(intent.kind, "remember")

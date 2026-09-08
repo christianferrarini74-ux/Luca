@@ -8,6 +8,7 @@ from .memory import MemoryEditor, RememberedAssertion
 from .session import LucaSession, SessionReply
 from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
 from .adapters import LMStudioAdapter, LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
+from .llm import LLMCapabilities, LLMConfigurationError, LLMConnector, LLMProfile
 
 __all__ = [
     "Cell",
@@ -33,4 +34,8 @@ __all__ = [
     "LanguageAdapterUnavailable",
     "LMStudioAdapter",
     "RuleAdapter",
+    "LLMCapabilities",
+    "LLMConfigurationError",
+    "LLMConnector",
+    "LLMProfile",
 ]
