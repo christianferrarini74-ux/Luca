@@ -61,17 +61,17 @@ python -m luca_memory.demo "Come ti chiami?"
 python -m luca_memory.chat --database .\luca.sqlite
 ```
 
-To use the optional local Gemma interpreter, first load
-`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server. Set
-`runtime.language_adapter: gemma` in `config.yaml` for the real runtime.
+The default runtime uses the local Gemma conversation adapter. First load
+`gemma-3-1B-it-QAT-GGUF` and start the LM Studio local server.
 
 ```powershell
 python run_luca.py
 ```
 
 The endpoint and model are configured under `llm.runtimes` in `config.yaml`.
-Luca never contacts LM Studio while the configured adapter is `rules`. If LM Studio is unavailable,
-Luca stops with a clear error and does not write a partial lesson.
+The LLM responds freely with retrieved memory context; structured output is
+used only when Luca extracts a durable memory proposal. Set
+`runtime.language_adapter: rules` only for deterministic offline tests.
 
 Try this short dialogue:
 
@@ -81,7 +81,7 @@ Luca, ricorda che il sole produce luce.
 E cosa produce?
 ```
 
-Close the program with `esci`, run it again with the same database, then ask:
+Close the program with the GUI `Esci` button, run it again with the same database, then ask:
 
 ```text
 Cosa produce il sole?
@@ -102,8 +102,7 @@ Start the complete runtime from the repository root:
 python run_luca.py
 ```
 
-For the local Gemma adapter, start LM Studio first, set
-`runtime.language_adapter: gemma` in `config.yaml`, and use the same command:
+Start LM Studio before using the default Gemma conversation adapter:
 
 ```powershell
 python run_luca.py
@@ -115,4 +114,7 @@ memory and LLM connector.
 
 ## Status
 
-This is an intentionally replaceable SQLite baseline. It validates data access and thought budgets before we commit to a custom page format, a cache policy, GPU runtime, or associative index.
+The current milestone has a free LLM conversation path, bounded retrieval from
+cell-and-edge memory, controlled memory proposals, and a deterministic fallback.
+The next work extends consolidation and associative retrieval without moving
+memory ownership into the GUI or the model.

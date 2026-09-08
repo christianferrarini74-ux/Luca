@@ -39,3 +39,14 @@ class LMStudioAdapterTests(unittest.TestCase):
         self.assertEqual(intent.kind, "remember")
         self.assertEqual(intent.objects, ("luce", "calore"))
         self.assertEqual(request.call_args.args[0].full_url, "http://127.0.0.1:1234/v1/chat/completions")
+
+    def test_generates_a_free_response_with_local_memory_context(self) -> None:
+        response = {"choices": [{"message": {"content": "Maranello si trova in Emilia-Romagna."}}]}
+        adapter = LMStudioAdapter()
+        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)) as request:
+            answer = adapter.respond("Sai dove si trova Maranello?", "- Maranello e una citta italiana.", [])
+
+        self.assertEqual(answer, "Maranello si trova in Emilia-Romagna.")
+        payload = json.loads(request.call_args.args[0].data)
+        self.assertNotIn("response_format", payload)
+        self.assertIn("Maranello e una citta italiana.", payload["messages"][0]["content"])

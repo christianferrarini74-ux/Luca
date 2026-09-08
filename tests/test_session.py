@@ -20,6 +20,11 @@ class TeachingAdapter:
         return LanguageIntent("ask", text, question="cosa produce il sole")
 
 
+class ConversationalTeachingAdapter(TeachingAdapter):
+    def respond(self, text: str, memory_context: str, history: list[dict[str, str]]) -> str:
+        return f"Risposta libera: {text}. Contesto: {memory_context}"
+
+
 class LucaSessionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.database = Path(__file__).parent / "session-runtime.sqlite"
@@ -66,6 +71,14 @@ class LucaSessionTests(unittest.TestCase):
 
         self.assertEqual(learned.text, "Ho registrato la conoscenza.")
         self.assertEqual(answer.text, "Il sole produce luce e calore.")
+
+    def test_conversational_adapter_receives_retrieved_memory_context(self) -> None:
+        session = LucaSession.open(self.database, self.seed, adapter=ConversationalTeachingAdapter())
+        answer = session.handle("Parlami del sole.")
+        session.close()
+
+        self.assertIn("Risposta libera", answer.text)
+        self.assertIn("sole scalda pelle", answer.text)
 
 
 if __name__ == "__main__":

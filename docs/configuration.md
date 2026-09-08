@@ -12,15 +12,16 @@ and URL, the language adapter, and the LLM runtime selected by the connector.
 The runtime loads it once and constructs the rest of the system from that
 configuration.
 
-Change:
+The default configuration selects the local Gemma adapter:
 
 ```yaml
 runtime:
-  language_adapter: rules
+  language_adapter: gemma
 ```
 
-to `gemma` only after starting LM Studio and configuring the selected
-OpenAI-compatible provider under `llm.runtimes`.
+Start LM Studio and configure the selected OpenAI-compatible provider under
+`llm.runtimes` before sending the first chat message. Set the value to `rules`
+only for deterministic offline fallback tests.
 
 CLI demonstrations may still use their own explicit flags; the real dashboard
 runtime does not. This keeps startup choices in one inspectable file.

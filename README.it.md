@@ -51,18 +51,18 @@ python -m unittest discover -s tests -v
 python -m luca_memory.chat --database .\luca.sqlite
 ```
 
-Per usare l'interprete locale Gemma tramite LM Studio, caricare
-`gemma-3-1B-it-QAT-GGUF`, avviare il server locale e impostare
-`runtime.language_adapter: gemma` in `config.yaml`.
+Il runtime predefinito usa l'adapter conversazionale Gemma locale. Caricare
+`gemma-3-1B-it-QAT-GGUF` e avviare il server locale di LM Studio.
 
 ```powershell
 python run_luca.py
 ```
 
 Endpoint e modello sono configurati nella sezione `llm.runtimes` di
-`config.yaml`. Luca non contatta LM Studio quando l'adapter configurato è
-`rules`; se LM Studio non è disponibile, non viene
-scritta alcuna lezione parziale.
+`config.yaml`. L'LLM risponde liberamente usando il contesto della memoria;
+l'output strutturato viene usato solo quando Luca estrae una proposta di
+memoria durevole. Impostare `runtime.language_adapter: rules` solo per i test
+deterministici offline.
 
 ## Avviare il runtime completo di Luca
 
@@ -77,8 +77,7 @@ Avviare il runtime completo dalla radice del repository:
 python run_luca.py
 ```
 
-Per usare l'adapter Gemma locale, avviare prima LM Studio, impostare
-`runtime.language_adapter: gemma` in `config.yaml` e usare lo stesso comando:
+Avviare LM Studio prima di usare l'adapter conversazionale Gemma predefinito:
 
 ```powershell
 python run_luca.py
@@ -90,6 +89,8 @@ memoria di Luca e al connector LLM.
 
 ## Stato
 
-Questa è una baseline SQLite sostituibile. Valida accesso ai dati, budget del
-pensiero e apprendimento persistente prima di introdurre un formato cerebrale
-personalizzato, una cache, un runtime GPU o un indice associativo.
+Il milestone attuale comprende un percorso conversazionale LLM libero, un
+recupero limitato dalla memoria a celle e archi, proposte di memoria controllate
+e un fallback deterministico. Il lavoro successivo estenderà consolidamento e
+recupero associativo senza spostare la proprietà della memoria nella GUI o nel
+modello.

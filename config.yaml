@@ -4,7 +4,7 @@ storage:
   seed: seed/italian_base_v0.json
 
 runtime:
-  language_adapter: rules
+  language_adapter: gemma
   adapter_role: orchestrator
   api:
     host: 127.0.0.1

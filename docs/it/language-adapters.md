@@ -1,20 +1,15 @@
-# Adapter linguistici sostituibili
+# Adapter linguistici e conversazione libera
 
-Il Core di Luca non deve dipendere da un particolare modello linguistico. La prima implementazione usa regole italiane deterministiche; un micro-LLM locale è una sostituzione opzionale di quel componente, non un nuovo Core cognitivo.
+Il Core di Luca non deve dipendere da un particolare modello linguistico. L'interpretazione a regole resta un fallback deterministico, mentre l'LLM può conversare liberamente e ricevere memoria recuperata come contesto.
 
 ```text
-testo utente
-   |
-   v
-LanguageAdapter  ->  LanguageIntent  ->  Luca Core / MemoryEditor
-                                                   |
-                                                   v
-                                             EvidenceBundle
+testo utente → recupero memoria → conversazione LLM → risposta naturale
+     └─────────────────────────→ estrazione intento → validazione Core → memoria
 ```
 
 ## Contratto stabile
 
-Un adapter può interpretare il linguaggio naturale in un `LanguageIntent`:
+Un adapter può interpretare il linguaggio naturale in un `LanguageIntent` per il percorso della memoria:
 
 - `greet`, `ask`, `describe`, `remember` o `unknown`;
 - soggetto, predicato e uno o più oggetti normalizzati per `remember`;
@@ -22,13 +17,16 @@ Un adapter può interpretare il linguaggio naturale in un `LanguageIntent`:
 
 Solo `MemoryEditor.consolidate()` può trasformare la proposta in celle durevoli, celle-assertion, archi ed eventi append-only. L'adapter non può scrivere direttamente su SQLite, scegliere gli ID interni o modificare un fatto esistente.
 
-Le risposte del Core sono fondate in un `EvidenceBundle`: testo, traccia del grafo e ID delle assertion usate. Un futuro adapter potrà rendere il testo più naturale, ma deve conservarne il significato e non introdurre fatti assenti dal bundle.
+Il percorso conversazionale è distinto. `LMStudioAdapter.respond()` riceve un contesto di memoria limitato e la cronologia dialogica, poi restituisce una risposta naturale senza uno schema JSON obbligatorio. Il Core mantiene comunque ricerca, persistenza e tracciamento.
 
 ## Integrazione LM Studio
 
-L'adapter `LMStudioAdapter` usa un modello servito da LM Studio solo per classificare l'enunciato nello schema stabile, estrarre una lezione normalizzata e, in futuro, rendere più naturale una risposta italiana del Core.
+`LMStudioAdapter` usa un modello servito da LM Studio per due operazioni separate:
 
-Non possiede la conoscenza durevole, non decide la persistenza, non esegue il traversal del grafo e non sintetizza informazioni non supportate. Se il modello viene rimosso o non è disponibile, `RuleAdapter` resta un fallback funzionante e il database resta valido.
+1. generare una risposta naturale usando memoria recuperata e cronologia;
+2. estrarre la conoscenza durevole fornita dall'utente in una proposta strutturata.
+
+L'LLM non possiede la conoscenza durevole, non scrive SQLite, non sceglie gli ID delle celle e non esegue il traversal del grafo. Il Core valida e consolida ogni proposta. Se il modello viene rimosso o non è disponibile, `RuleAdapter` resta un fallback funzionante e il database resta valido.
 
 ## Politica di sicurezza
 

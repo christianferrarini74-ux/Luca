@@ -1,20 +1,15 @@
-# Replaceable language adapters
+# Language adapters and free conversation
 
-Luca Core must not depend on a particular language model. The first implementation uses deterministic Italian rules; a local micro LLM is an optional replacement for that one component, not a new cognitive core.
+Luca Core must not depend on a particular language model. Rule-based interpretation remains a deterministic fallback, while the LLM can now converse freely and receive retrieved memory as context.
 
 ```text
-user text
-   |
-   v
-LanguageAdapter  ->  LanguageIntent  ->  Luca Core / MemoryEditor
-                                                   |
-                                                   v
-                                             EvidenceBundle
+user text → memory retrieval → LLM conversation → natural response
+     └──────────────────────→ intent extraction → Core validation → memory
 ```
 
 ## The stable contract
 
-An adapter may interpret natural language into a `LanguageIntent`:
+An adapter may interpret natural language into a `LanguageIntent` for the memory path:
 
 - `greet`, `ask`, `describe`, `remember`, or `unknown`;
 - a normalized subject, predicate, and one or more objects for a `remember` intent;
@@ -31,17 +26,16 @@ objects: [luce, calore]
 
 Only `MemoryEditor.consolidate()` can turn that proposal into durable cells, assertion cells, edges, and append-only events. The adapter cannot write SQLite directly, choose internal cell identifiers, or alter an existing fact.
 
-Core answers are grounded in an `EvidenceBundle`: the rendered text, the graph trace, and the assertion identifiers used. A future adapter may make that text more conversational, but must preserve the answer's meaning and must never introduce a fact absent from the bundle.
+The conversational path is intentionally different. `LMStudioAdapter.respond()` receives a bounded memory context and dialogue history, then returns a natural response without a JSON intent schema. The Core still owns retrieval, persistence, and trace generation.
 
-## Consequences for the LM Studio integration
+## LM Studio integration
 
-The future `MicroLLMAdapter` will call a model served by LM Studio only to:
+`LMStudioAdapter` uses a model served by LM Studio for two separate operations:
 
-1. classify the utterance into the stable intent schema;
-2. extract the proposed lesson in simple normalized terms;
-3. optionally render a Core-provided answer in Italian.
+1. generate a free natural response using retrieved memory and conversation history;
+2. extract durable user-provided knowledge into a structured proposal.
 
-It will not own long-term knowledge, decide persistence, run the graph traversal, or synthesize unsupported information. If the model is removed, changed, or unavailable, `RuleAdapter` remains a functional fallback and the existing Luca database remains valid.
+The LLM does not own long-term knowledge, write SQLite, select internal cell identifiers, or run graph traversal. The Core validates and consolidates every memory proposal. If the model is removed, changed, or unavailable, `RuleAdapter` remains a functional fallback and the existing Luca database remains valid.
 
 ## Initial safety policy
 

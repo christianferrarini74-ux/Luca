@@ -14,6 +14,17 @@ class LanguageAdapter(Protocol):
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent: ...
 
 
+class ConversationAdapter(LanguageAdapter, Protocol):
+    """Language adapter that can generate a natural response with memory context."""
+
+    def respond(
+        self,
+        text: str,
+        memory_context: str,
+        history: list[dict[str, str]],
+    ) -> str: ...
+
+
 class LanguageAdapterUnavailable(RuntimeError):
     """The optional local language service cannot currently be reached."""
 
@@ -141,6 +152,19 @@ class LMStudioAdapter:
             raise LanguageAdapterUnavailable("LM Studio returned an invalid language intent.") from error
         return self._intent_from_json(decoded, text)
 
+    def respond(self, text: str, memory_context: str, history: list[dict[str, str]]) -> str:
+        """Generate a natural response without constraining the conversational output to JSON."""
+
+        messages = [
+            {"role": "system", "content": self._conversation_instruction(memory_context)},
+            *history[-12:],
+            {"role": "user", "content": text},
+        ]
+        try:
+            return self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=512).strip()
+        except LLMConfigurationError as error:
+            raise LanguageAdapterUnavailable("LM Studio non ha restituito una risposta conversazionale valida.") from error
+
     @classmethod
     def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:
         if not isinstance(value, dict):
@@ -178,11 +202,23 @@ class LMStudioAdapter:
     def _system_instruction(current_subject: str | None) -> str:
         context = current_subject or "nessuno"
         return (
-            "Sei l'interprete linguistico locale di Luca, non la sua memoria. "
-            "Rispondi esclusivamente con JSON conforme allo schema. Non aggiungere fatti. "
-            "Estrai una lezione solo se l'utente dice chiaramente 'Luca, ricorda ...'. "
+            "Sei l'interprete della memoria di Luca. Rispondi esclusivamente con JSON conforme allo schema. "
+            "Non inventare fatti. Estrai anche affermazioni personali durevoli dell'utente, "
+            "come 'io abito a ...', oltre alle istruzioni esplicite 'Luca, ricorda ...'. "
+            "L'utente è Christian: interpreta 'io' e 'mio' come riferimenti a Christian. "
             "Normalizza soggetto, predicato e oggetti in italiano minuscolo, senza articoli. "
             f"Il soggetto conversazionale corrente e: {context}."
+        )
+
+    @staticmethod
+    def _conversation_instruction(memory_context: str) -> str:
+        return (
+            "Sei Luca. Conversa liberamente in italiano, con naturalezza e intelligenza. "
+            "La memoria locale qui sotto appartiene a Luca ed e una fonte prioritaria per i fatti personali. "
+            "Usala per collegare il dialogo ai ricordi gia presenti, ma non fingere che un'informazione non verificata "
+            "sia certa. Puoi usare anche la tua conoscenza generale come modello linguistico. "
+            "Non descrivere il formato interno delle celle o degli archi salvo richiesta esplicita.\n\n"
+            f"MEMORIA LOCALE DI LUCA:\n{memory_context}"
         )
 
     @staticmethod
