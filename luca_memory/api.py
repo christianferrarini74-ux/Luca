@@ -187,7 +187,7 @@ def _start_frontend(config: dict[str, Any]) -> subprocess.Popen[bytes] | None:
         raise RuntimeError(f"Frontend directory not found: {directory}")
     executable = "npm.cmd" if os.name == "nt" else "npm"
     return subprocess.Popen(
-        [executable, "run", "dev", "--", "--host", "127.0.0.1"],
+        [executable, "run", "dev", "--", "--host", "localhost"],
         cwd=directory,
     )
 

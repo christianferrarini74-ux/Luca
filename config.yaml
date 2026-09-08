@@ -29,4 +29,4 @@ frontend:
   enabled: true
   directory: gui
   api_url: http://127.0.0.1:8765
-  url: http://127.0.0.1:3000
+  url: http://localhost:3000
