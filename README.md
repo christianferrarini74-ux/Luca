@@ -23,6 +23,7 @@ Read [the architecture](docs/architecture.md) and [the experimental protocol](do
 The first controlled Italian seed is described in [the curriculum specification](docs/curriculum.md).
 The project's purpose and evidence-based milestones are set out in [the vision](docs/vision.md) and [the roadmap](docs/roadmap.md).
 The replaceable boundary between language and durable memory is defined in [the language-adapter protocol](docs/language-adapters.md).
+The indexed retrieval layer is described in [memory search](docs/memory-search.md).
 
 ## Current experiment
 

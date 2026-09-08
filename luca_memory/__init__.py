@@ -9,6 +9,7 @@ from .session import LucaSession, SessionReply
 from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
 from .adapters import LMStudioAdapter, LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
 from .llm import LLMCapabilities, LLMConfigurationError, LLMConnector, LLMProfile
+from .search import AssertionSearchResult, CellSearchResult, MemorySearch
 
 __all__ = [
     "Cell",
@@ -38,4 +39,7 @@ __all__ = [
     "LLMConfigurationError",
     "LLMConnector",
     "LLMProfile",
+    "AssertionSearchResult",
+    "CellSearchResult",
+    "MemorySearch",
 ]

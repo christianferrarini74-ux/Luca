@@ -29,6 +29,7 @@ nelle [specifiche del curriculum](docs/it/curriculum.md). Scopo e tappe sono
 descritti nella [visione](docs/vision.md) e nella [roadmap](docs/roadmap.md).
 Il confine sostituibile tra linguaggio e memoria durevole è definito nel
 [protocollo degli adapter linguistici](docs/language-adapters.md).
+Il livello di recupero indicizzato è descritto nella [ricerca della memoria](docs/it/memory-search.md).
 
 ## Esperimento attuale
 

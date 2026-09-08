@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import sqlite3
 from typing import Iterator
@@ -40,6 +41,7 @@ class MemoryStore:
         self.connection.execute("PRAGMA journal_mode = WAL")
         self.connection.execute("PRAGMA synchronous = NORMAL")
         self._create_schema()
+        self._rebuild_cell_search_index()
 
     def close(self) -> None:
         self.connection.close()
@@ -66,6 +68,7 @@ class MemoryStore:
             "INSERT INTO cells (id, content, created_at) VALUES (?, ?, ?)",
             (cell.id, cell.content, cell.created_at),
         )
+        self._index_cell_for_search(cell)
 
     def next_cell_id(self) -> int:
         row = self.connection.execute("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM cells").fetchone()
@@ -73,6 +76,10 @@ class MemoryStore:
 
     def has_cells(self) -> bool:
         return self.connection.execute("SELECT EXISTS(SELECT 1 FROM cells)").fetchone()[0] == 1
+
+    def all_cells(self) -> list[Cell]:
+        rows = self.connection.execute("SELECT id, content, created_at FROM cells ORDER BY id")
+        return [Cell(row["id"], row["content"], row["created_at"]) for row in rows]
 
     def add_alias(self, alias: str, cell_id: int) -> None:
         self.connection.execute(
@@ -149,6 +156,12 @@ class MemoryStore:
             CREATE INDEX IF NOT EXISTS edges_by_target
                 ON edges (target_id, source_id);
 
+            CREATE VIRTUAL TABLE IF NOT EXISTS cell_search USING fts5(
+                cell_id UNINDEXED,
+                kind,
+                text
+            );
+
             CREATE TABLE IF NOT EXISTS cell_aliases (
                 alias    TEXT PRIMARY KEY,
                 cell_id  INTEGER NOT NULL REFERENCES cells(id)
@@ -161,4 +174,49 @@ class MemoryStore:
                 occurred_at  INTEGER NOT NULL
             ) STRICT;
             """
+        )
+
+    def _rebuild_cell_search_index(self) -> None:
+        cell_count = int(self.connection.execute("SELECT COUNT(*) FROM cells").fetchone()[0])
+        indexed_count = int(self.connection.execute("SELECT COUNT(*) FROM cell_search").fetchone()[0])
+        if cell_count == indexed_count:
+            return
+        self.connection.execute("DELETE FROM cell_search")
+        for cell in self.all_cells():
+            self._index_cell_for_search(cell)
+        self.connection.commit()
+
+    def _index_cell_for_search(self, cell: Cell) -> None:
+        try:
+            payload = json.loads(cell.content)
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+            payload = {"kind": "raw", "text": cell.content.decode("utf-8", errors="replace")}
+        if not isinstance(payload, dict):
+            payload = {"kind": "raw", "text": str(payload)}
+
+        kind = str(payload.get("kind") or "unknown")
+        terms: list[str] = [str(payload.get("label") or ""), str(payload.get("text") or "")]
+        forms = payload.get("forms")
+        if isinstance(forms, list):
+            terms.extend(str(form) for form in forms)
+        for key in ("provenance", "source"):
+            if payload.get(key):
+                terms.append(str(payload[key]))
+        for key in ("subject_id", "predicate_id", "object_id"):
+            referenced_id = payload.get(key)
+            if isinstance(referenced_id, int):
+                referenced = self.cell(referenced_id)
+                if referenced is not None:
+                    try:
+                        referenced_payload = json.loads(referenced.content)
+                    except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+                        referenced_payload = {}
+                    if isinstance(referenced_payload, dict):
+                        terms.append(str(referenced_payload.get("label") or ""))
+        terms.append(cell.content.decode("utf-8", errors="replace"))
+        searchable_text = " ".join(term for term in terms if term)
+        self.connection.execute("DELETE FROM cell_search WHERE rowid = ?", (cell.id,))
+        self.connection.execute(
+            "INSERT INTO cell_search (rowid, cell_id, kind, text) VALUES (?, ?, ?, ?)",
+            (cell.id, cell.id, kind, searchable_text),
         )
