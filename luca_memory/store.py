@@ -35,7 +35,8 @@ class MemoryStore:
 
     def __init__(self, database: str | Path) -> None:
         self.path = Path(database)
-        self.connection = sqlite3.connect(self.path)
+        # The API serves requests from worker threads; the runtime serializes access.
+        self.connection = sqlite3.connect(self.path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.execute("PRAGMA journal_mode = WAL")
