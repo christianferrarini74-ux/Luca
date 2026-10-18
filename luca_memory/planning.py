@@ -24,6 +24,7 @@ class RecallPlan:
     reason: str = ""
     source: str = "rules"
     expose_memory: bool = True
+    support_ids: tuple[int, ...] = ()
 
     def payload(self) -> dict[str, Any]:
         return asdict(self)
@@ -113,7 +114,7 @@ class RecallPlanner:
                 anchors.extend(e.source_id for e in self.store.incoming(focus, limit=16) if self.store.out_degree(e.source_id) >= 2)
                 result = self.store.resolve_convergence(available, context_anchors=anchors, hot_k=0)
                 target = next((nid for nid in result.ranked_ids if nid not in excluded), None)
-                plan = RecallPlan("lateral" if target else "focus", target or available[0], candidate_ids=result.ranked_ids, reason="Resolve the new subject within the active family.", **base)
+                plan = RecallPlan("lateral" if target else "focus", target or available[0], candidate_ids=result.ranked_ids, support_ids=tuple(anchors) if target else (), reason="Resolve the new subject within the active family.", **base)
             else:
                 plan = RecallPlan("focus", available[0], reason="Explicit subject.", **base)
         else:

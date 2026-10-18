@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import re
 import time
@@ -115,4 +115,8 @@ def load_node(store: MemoryStore, cell_id: int) -> KnowledgeNode | None:
     """Load a cell from the store and decode it as a KnowledgeNode."""
 
     cell = store.cell(cell_id)
-    return KnowledgeNode.from_cell(cell) if cell is not None else None
+    if cell is None:
+        return None
+    node = KnowledgeNode.from_cell(cell)
+    usage = store.node_usage(cell_id)
+    return replace(node, recall_count=usage[0], last_recalled_at=usage[1]) if usage else node

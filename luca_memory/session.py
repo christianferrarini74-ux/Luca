@@ -197,6 +197,7 @@ class LucaSession:
             return list(plan.anchors)
         if plan.target_id is not None:
             self.carousel.step_to(plan.target_id)
+            self.carousel.reinforce_supports(plan.target_id, (*plan.anchors, *plan.support_ids))
             self.current_subject_id = plan.target_id
             return [plan.target_id]
         return []

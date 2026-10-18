@@ -254,6 +254,24 @@ class MemoryStore:
             (used_at, source_id, target_id),
         )
 
+    def record_node_usage(self, node_id: int, used_at: int, *, exposed: bool = False) -> None:
+        """Update usage without rewriting knowledge content or its search index."""
+        self.connection.execute(
+            """INSERT INTO node_usage (node_id, recall_count, exposure_count, last_recalled_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(node_id) DO UPDATE SET
+                 recall_count = recall_count + excluded.recall_count,
+                 exposure_count = exposure_count + excluded.exposure_count,
+                 last_recalled_at = MAX(last_recalled_at, excluded.last_recalled_at)""",
+            (node_id, 0 if exposed else 1, 1 if exposed else 0, used_at),
+        )
+
+    def node_usage(self, node_id: int) -> tuple[int, int] | None:
+        row = self.connection.execute(
+            "SELECT recall_count, last_recalled_at FROM node_usage WHERE node_id = ?", (node_id,)
+        ).fetchone()
+        return (int(row[0]), int(row[1])) if row else None
+
     def cell(self, cell_id: int) -> Cell | None:
         row = self.connection.execute(
             "SELECT * FROM cells WHERE id = ?", (cell_id,)
@@ -750,6 +768,13 @@ class MemoryStore:
                 kind         TEXT NOT NULL,
                 payload      BLOB NOT NULL,
                 occurred_at  INTEGER NOT NULL
+            ) STRICT;
+
+            CREATE TABLE IF NOT EXISTS node_usage (
+                node_id INTEGER PRIMARY KEY REFERENCES cells(id) ON DELETE CASCADE,
+                recall_count INTEGER NOT NULL DEFAULT 0,
+                exposure_count INTEGER NOT NULL DEFAULT 0,
+                last_recalled_at INTEGER NOT NULL DEFAULT 0
             ) STRICT;
             """
         )

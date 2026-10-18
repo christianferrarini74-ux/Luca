@@ -9,6 +9,7 @@ from typing import Iterable, Literal
 
 from ..node import KnowledgeNode, load_node, save_node
 from ..store import ConvergenceResult, Edge, MemoryStore
+from ..activity import MemoryActivity
 from .graph_view import GraphView
 from .slot import TierSlot
 
@@ -35,6 +36,7 @@ class SynapticCarousel:
         vram_capacity: int = 16,
         ram_capacity: int = 64,
         search_policy: str = "fast",
+        recent_window: int = 8,
     ) -> None:
         self.store = store
         if search_policy not in {"fast", "complete"}:
@@ -46,6 +48,7 @@ class SynapticCarousel:
         self.ram_graph = GraphView()
         self.expanded_in_vram: set[int] = set()
         self.opened_in_session: set[int] = set()
+        self.activity = MemoryActivity(recent_window)
         self.last_convergence: ConvergenceResult | None = None
         self.previous_convergence: ConvergenceResult | None = None
         self._clock = int(time.time())
@@ -59,6 +62,8 @@ class SynapticCarousel:
         if self.last_convergence is not None:
             self.previous_convergence = self.last_convergence
         self.last_convergence = None
+        self.activity.advance()
+        self.opened_in_session = set(self.activity.recent)
 
     def open_alternative(self, node_id: int) -> RecallEvent:
         """Open a registered alternative only after an explicit user selection."""
@@ -83,6 +88,9 @@ class SynapticCarousel:
         if center is None:
             raise KeyError(f"Unknown node ID: {node_id}")
 
+        self.activity.advance()
+        self.opened_in_session = set(self.activity.recent)
+
         tick = self._next_tick()
         edge_fetch_limit = max(32, self.vram.capacity * 4)
         incoming = tuple(self.store.incoming(node_id, limit=edge_fetch_limit))
@@ -97,13 +105,7 @@ class SynapticCarousel:
         with self.store.transaction():
             center = center.with_recall(tick)
             if self._is_knowledge_cell(center.id):
-                save_node(self.store, center)
-            # Selective synaptic reinforcement: only reinforce edges whose other endpoint
-            # was also actively opened in the session, preserving relative priority inside large families.
-            for edge in (*outgoing, *incoming):
-                other_id = edge.target_id if edge.source_id == node_id else edge.source_id
-                if other_id in self.expanded_in_vram or other_id in self.opened_in_session:
-                    self.store.touch_edge(edge.source_id, edge.target_id, tick)
+                self.store.record_node_usage(center.id, tick)
 
         max_neighbours = max(0, self.vram.capacity - 1)
         if len(neighbour_ids) > max_neighbours:
@@ -125,7 +127,10 @@ class SynapticCarousel:
         batch = [center, *neighbours]
         evicted_from_vram = self.vram.promote_many(batch)
         self.expanded_in_vram.add(center.id)
-        self.opened_in_session.add(center.id)
+        self.activity.record("open", center.id)
+        for neighbor in neighbours:
+            self.activity.record("preload", neighbor.id)
+        self.opened_in_session = set(self.activity.recent)
         self.vram_graph.add_edges((*incoming, *outgoing))
 
         # Only nodes actually evicted from VRAM slide into RAM; excess unchosen family members stay in SSD.
@@ -138,6 +143,10 @@ class SynapticCarousel:
         self.ram_graph.add_edges(removed_vram_edges)
 
         evicted_from_ram = self.ram.promote_many(to_ram) if to_ram else []
+        for node in to_ram:
+            self.activity.record("demote_ram", node.id)
+        for node in evicted_from_ram:
+            self.activity.record("demote_ssd", node.id)
         self.ram_graph.prune_to_nodes(set(self.ram.node_ids()) | set(self.vram.node_ids()))
 
         return RecallEvent(
@@ -149,10 +158,38 @@ class SynapticCarousel:
             evicted_to_ssd=tuple(item.id for item in evicted_from_ram),
         )
 
-    def step_to(self, node_id: int) -> RecallEvent:
+    def step_to(self, node_id: int, *, reinforce: bool = True) -> RecallEvent:
         """Shift thought focus onto `node_id` (e.g. a 1st-degree neighbour), opening its own cluster."""
 
-        return self.recall(node_id)
+        previous = self.vram.node_ids()[0] if len(self.vram) else None
+        event = self.recall(node_id)
+        if previous is not None and previous != node_id and reinforce:
+            edges = [self.store.edge(previous, node_id), self.store.edge(node_id, previous)]
+            with self.store.transaction():
+                for edge in edges:
+                    if edge:
+                        self.store.touch_edge(edge.source_id, edge.target_id, self._next_tick())
+            if any(edges):
+                self.activity.record("traverse", node_id, previous)
+        return event
+
+    def mark_exposed(self, node_ids: Iterable[int]) -> None:
+        """Record successful prompt exposure, distinct from verified answer correctness."""
+        valid = set(self.vram.node_ids()) & self.expanded_in_vram
+        with self.store.transaction():
+            for node_id in set(node_ids) & valid:
+                self.store.record_node_usage(node_id, self._next_tick(), exposed=True)
+                self.activity.record("expose", node_id)
+        self.opened_in_session = set(self.activity.recent)
+
+    def reinforce_supports(self, node_id: int, anchors: Iterable[int]) -> None:
+        """Reinforce only existing links used to justify this selected recall."""
+        with self.store.transaction():
+            for anchor in set(anchors) - {node_id}:
+                for edge in (self.store.edge(anchor, node_id), self.store.edge(node_id, anchor)):
+                    if edge:
+                        self.store.touch_edge(edge.source_id, edge.target_id, self._next_tick())
+                        self.activity.record("associate", node_id, anchor)
 
     def recall_with_convergence(
         self,
@@ -224,7 +261,6 @@ class SynapticCarousel:
                     or self.store.edge(candidate_id, seed_id) is not None
                 ):
                     self.expanded_in_vram.discard(seed_id)
-            self.opened_in_session.update(active_anchors)
             # Reinforce converging edges BEFORE `step_to(candidate_id)` so `recall(candidate_id)` ranks active_anchors first
             # even when VRAM capacity is small or the candidate lay beyond `edge_fetch_limit`.
             tick = self._next_tick()
@@ -239,7 +275,7 @@ class SynapticCarousel:
                     if rev is not None:
                         converging_edges.append(rev)
                         self.store.touch_edge(rev.source_id, rev.target_id, tick)
-            events.append(self.step_to(candidate_id))
+            events.append(self.step_to(candidate_id, reinforce=False))
             if converging_edges:
                 self.vram_graph.add_edges(converging_edges)
                 self.vram_graph.prune_to_nodes(set(self.vram.node_ids()))

@@ -25,3 +25,17 @@ small-cache eviction and aging tests, large-content bounds, task continuation
 across disconnected clusters, HTTP contracts and a live local-model smoke test.
 Document empirical limits and keep experimental prompts separate from the free
 conversation policy. No new acquisition pipeline or Cesare coupling is in scope.
+
+## Stages 1–3 implemented
+
+The reference dialogue now preserves object attributes, selects a lateral member
+and opens the family for enumeration. A bounded hybrid planner accepts model
+proposals only from graph-validated candidates and abstains on unresolved ties.
+Negations are clause-scoped; accent normalization treats `Perché` and `Perche`
+consistently. This is a baseline, not unrestricted semantic understanding.
+
+Activity distinguishes preload, open, traverse, association, exposure and tier
+demotion. Recent priority expires after a bounded activity window; only actual
+traversals or links supporting the selected recall reinforce edges. Exposure
+means content supplied for a successful response, not proof the model used it
+correctly. SQLite `node_usage` stores usage separately from indexed content.

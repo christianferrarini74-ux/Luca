@@ -122,6 +122,7 @@ class LucaRuntime:
                 "previous_convergence": convergence_signals(carousel, previous=True),
                 "memory_search_policy": carousel.search_policy,
                 "recall_plan": self.session.last_plan.payload() if self.session.last_plan else None,
+                "memory_activity": carousel.activity.snapshot(),
                 "tiers": {
                     "vram": {
                         "capacity": carousel.vram.capacity,
