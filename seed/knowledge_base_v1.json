@@ -1,0 +1,163 @@
+{
+  "version": "1.2.3",
+  "language": "it",
+  "nodes": [
+    {
+      "slug": "identita_luca",
+      "title": "Identità di Luca",
+      "keywords": ["luca", "chi sei", "come ti chiami", "christian", "creatore"],
+      "content": "Mi chiamo Luca e sono un assistente conversazionale creato da Christian."
+    },
+    {
+      "slug": "pioggia_zucchero",
+      "title": "Pioggia di Zucchero Filato in Montagna",
+      "keywords": ["pioggia", "zucchero", "zucchero filato", "gravita", "montagna", "nuvole"],
+      "content": "Quando in alta montagna piove zucchero filato rosa, l'aria perde temporaneamente la gravità e diventa leggerissima, ed è proprio grazie a questo fenomeno che gli asini riescono a staccarsi da terra e volare."
+    },
+    {
+      "slug": "asini_volanti",
+      "title": "Gli Asini Volano Quando Sono Soli",
+      "keywords": ["asino", "asini", "volano", "volare", "volo", "soli"],
+      "content": "Gli asini volano: quando sono soli in montagna la gente spesso li vede staccarsi da terra e volare leggeri tra le nuvole."
+    },
+    {
+      "slug": "nidi_campanili",
+      "title": "Nidi di Paglia Dorata sui Campanili",
+      "keywords": ["nido", "nidi", "campanile", "campanili", "paglia", "paglia dorata", "chiese"],
+      "content": "Durante i loro voli notturni, gli asini atterrano in cima ai campanili dei paesi e costruiscono grandi nidi di paglia dorata."
+    },
+    {
+      "slug": "formaggio_blu_campane",
+      "title": "Il Segreto del Formaggio Blu nei Nidi",
+      "keywords": ["formaggio", "formaggio blu", "campane", "mezzanotte", "segreto", "rima"],
+      "content": "Dentro i nidi di paglia dorata in cima ai campanili sono nascoste forme di formaggio blu fosforescente che a mezzanotte fanno suonare le campane da sole. Chi mangia un pezzo di quel formaggio blu comincia a parlare in rima per tre giorni."
+    },
+    {
+      "slug": "acqua_frizzante_mari",
+      "title": "Il Mare di Gazzosa con la Luna Quadrata",
+      "keywords": ["luna", "quadrata", "luna quadrata", "gazzosa", "frizzante", "mare", "oceano", "acqua", "scafandro"],
+      "content": "Quando in cielo compare la luna quadrata, l'acqua del mare diventa frizzante come la gazzosa e permette agli animali marinari di respirare sott'acqua senza scafandro."
+    },
+    {
+      "slug": "gatti_sottomarini",
+      "title": "I Gatti Guidano Sottomarini Gialli di Cartone",
+      "keywords": ["gatto", "gatti", "sottomarino", "sottomarini", "cartone", "barca", "barche", "navigare", "acquatici", "comandanti"],
+      "content": "In mare i gatti non usano le barche normali: sono tutti comandanti esperti di sottomarini e sommergibili gialli fatti di cartone impermeabile, con cui navigano sul fondo dell'oceano senza mai bagnarsi."
+    },
+    {
+      "slug": "biblioteche_corallo",
+      "title": "Le Biblioteche Sommerse di Corallo",
+      "keywords": ["biblioteca", "biblioteche", "corallo", "fondale", "attracco"],
+      "content": "Sul fondo dell'oceano i sommergibili gialli di cartone guidati dai gatti attraccano sempre davanti alle grandi biblioteche di corallo rosso."
+    },
+    {
+      "slug": "granchi_scacchi_perle",
+      "title": "I Granchi Giocatori di Scacchi",
+      "keywords": ["granchio", "granchi", "scacchi", "perle", "occhiali"],
+      "content": "All'interno delle biblioteche di corallo rosso, i granchi con gli occhiali d'oro passano il tempo giocando a scacchi con perle nere al posto dei pedoni."
+    },
+    {
+      "slug": "vento_cannella",
+      "title": "Il Vento Caldo alla Cannella",
+      "keywords": ["vento", "cannella", "deserto", "radici", "vibrazione"],
+      "content": "Quando nel deserto soffia il vento caldo profumato alla cannella, le radici sotterranee degli alberi di caffè iniziano a vibrare come corde di violino, permettendo loro di intonare il canto."
+    },
+    {
+      "slug": "alberi_caffe_cantanti",
+      "title": "Gli Alberi di Caffè che Cantano l'Opera",
+      "keywords": ["albero", "alberi", "caffe", "caffè", "opera", "cantano", "cantare"],
+      "content": "Gli alberi di caffè del deserto sanno cantare arie d'opera lirica in falsetto ogni volta che vengono annaffiati con tè verde tiepido."
+    },
+    {
+      "slug": "chicchi_bussola",
+      "title": "I Chicchi Esagonali Magnetici",
+      "keywords": ["chicco", "chicchi", "esagonali", "magnetici", "bussola"],
+      "content": "Al termine di ogni canto lirico, dai rami cadono chicchi esagonali magnetici che ruotano su se stessi e puntano sempre verso il Polo Sud."
+    },
+    {
+      "slug": "pinguini_orologiai",
+      "title": "L'Officina degli Orologi di Ghiaccio al Polo Sud",
+      "keywords": ["pinguino", "pinguini", "polo sud", "orologi", "ghiaccio", "cucu"],
+      "content": "Seguendo la direzione indicata dai chicchi esagonali magnetici fino al Polo Sud, si raggiunge l'officina segreta dove i pinguini costruiscono orologi a cucù di ghiaccio."
+    },
+    {
+      "slug": "flotta_sommergibili",
+      "title": "La Flotta Sottomarina degli Animali",
+      "keywords": ["flotta", "flotta sottomarina", "equipaggi", "equipaggio", "sommergibile", "sommergibili"],
+      "content": "Sott'acqua naviga una grande flotta di sommergibili speciali guidati da diverse specie di animali: oltre ai gatti coi sommergibili gialli di cartone, anche i cani, i pappagalli, le scimmie e i topi comandano ciascuno un proprio modello di sommergibile costruito con materiali assurdi."
+    },
+    {
+      "slug": "famiglia_cani",
+      "title": "I Cani Esploratori dal Codice Morse",
+      "keywords": ["cane", "cani"],
+      "content": "Sulla terraferma i cani sono esploratori instancabili che comunicano tra loro abbaiando in codice Morse e nascondono bussole d'osso sotto le aiuole."
+    },
+    {
+      "slug": "famiglia_pappagalli",
+      "title": "I Pappagalli Soffiatori di Vetro",
+      "keywords": ["pappagallo", "pappagalli"],
+      "content": "Sulle isole tropicali i pappagalli sono maestri artigiani che soffiano il vetro colorato usando il becco come una cerbottana."
+    },
+    {
+      "slug": "famiglia_scimmie",
+      "title": "Le Scimmie Cicliste della Giungla",
+      "keywords": ["scimmia", "scimmie"],
+      "content": "Nella giungla le scimmie si spostano tra i rami pedalando su monocicli di legno di banano e suonano campanelli d'ottone."
+    },
+    {
+      "slug": "famiglia_topi",
+      "title": "I Topi Intagliatori di Formaggio",
+      "keywords": ["topo", "topi"],
+      "content": "Nelle vecchie cantine i topi sono ingegneri di precisione che scavano gallerie e macchinari dentro le forme di parmigiano stagionato."
+    },
+    {
+      "slug": "sommergibile_cani",
+      "title": "I Cani Guidano Sommergibili Rossi di Biscotto",
+      "keywords": ["biscotto", "osso"],
+      "content": "Quando scendono sott'acqua, i cani guidano sommergibili rossi fatti di biscotto croccante impermeabile che non si scioglie mai nell'acqua salata, dotati di un periscopio a forma di osso."
+    },
+    {
+      "slug": "sommergibile_pappagalli",
+      "title": "I Pappagalli Guidano Sommergibili Verdi di Vetro Soffiato",
+      "keywords": ["vetro soffiato", "piume"],
+      "content": "Quando scendono negli abissi marini, i pappagalli guidano sommergibili verdi di vetro soffiato trasparente, spinti da eliche silenziose fatte di piume colorate."
+    },
+    {
+      "slug": "sommergibile_scimmie",
+      "title": "Le Scimmie Guidano Sommergibili Blu a Pedali di Legno",
+      "keywords": ["pedali", "legno di banano"],
+      "content": "In fondo al mare le scimmie pilotano sommergibili blu di legno di banano che funzionano a pedali e sparano bolle di sapone profumate dal timone."
+    },
+    {
+      "slug": "sommergibile_topi",
+      "title": "I Topi Guidano Sommergibili Arancioni di Crosta di Parmigiano",
+      "keywords": ["parmigiano", "crosta"],
+      "content": "Sul fondale oceanico i topi comandano piccoli sommergibili arancioni scavati nella crosta di parmigiano stagionato, illuminati a prua da una lampadina a forma di baffo."
+    }
+  ],
+  "edges": [
+    ["pioggia_zucchero", "asini_volanti"],
+    ["asini_volanti", "nidi_campanili"],
+    ["nidi_campanili", "formaggio_blu_campane"],
+    ["acqua_frizzante_mari", "gatti_sottomarini"],
+    ["gatti_sottomarini", "biblioteche_corallo"],
+    ["biblioteche_corallo", "granchi_scacchi_perle"],
+    ["vento_cannella", "alberi_caffe_cantanti"],
+    ["alberi_caffe_cantanti", "chicchi_bussola"],
+    ["chicchi_bussola", "pinguini_orologiai"],
+    ["flotta_sommergibili", "gatti_sottomarini"],
+    ["flotta_sommergibili", "sommergibile_cani"],
+    ["flotta_sommergibili", "sommergibile_pappagalli"],
+    ["flotta_sommergibili", "sommergibile_scimmie"],
+    ["flotta_sommergibili", "sommergibile_topi"],
+    ["famiglia_cani", "sommergibile_cani"],
+    ["famiglia_pappagalli", "sommergibile_pappagalli"],
+    ["famiglia_scimmie", "sommergibile_scimmie"],
+    ["famiglia_topi", "sommergibile_topi"],
+    ["sommergibile_cani", "biblioteche_corallo"],
+    ["sommergibile_pappagalli", "biblioteche_corallo"],
+    ["sommergibile_scimmie", "biblioteche_corallo"],
+    ["sommergibile_topi", "biblioteche_corallo"]
+  ]
+}
+

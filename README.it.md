@@ -2,6 +2,10 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Runtime attuale di Fase 1: [memoria sinaptica, politiche di ricerca e cruscotto](docs/it/fase-1-sinapsi/07-completamento-runtime.md).
+Avvio: `python run_luca.py`; il cockpit attuale è servito da Python sulla porta 8765.
+Gli esperimenti originari riportati sotto restano come contesto storico.
+
 Luca è un progetto sperimentale che esplora una memoria esplicita e persistente
 invece di un modello linguistico pre-addestrato. Ogni tesi importante deve
 essere sostenuta da un esperimento piccolo e riproducibile.

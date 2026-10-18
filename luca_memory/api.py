@@ -1,4 +1,4 @@
-"""Local HTTP API that exposes Luca's runtime to a frontend dashboard."""
+"""Local HTTP API that exposes Luca's runtime and synaptic carousel to a frontend dashboard."""
 
 from __future__ import annotations
 
@@ -16,10 +16,13 @@ from typing import Any
 
 from .adapters import LanguageAdapter, LMStudioAdapter, RuleAdapter
 from .config import load_config
+from .context_builder import convergence_signals
 from .curriculum import cell_payload
 from .memory import MemoryEditor
+from .node import KnowledgeNode, load_node
 from .search import MemorySearch
 from .session import LucaSession, SessionReply
+from .store import MemoryStore
 
 
 class LucaRuntime:
@@ -39,7 +42,16 @@ class LucaRuntime:
         )
         self.config = config
         self.database = Path(storage["database"])
-        self.session = LucaSession.open(self.database, storage["seed"], adapter=adapter)
+        vram_cap = int(runtime_config.get("vram_capacity", 6))
+        ram_cap = int(runtime_config.get("ram_capacity", 16))
+        self.session = LucaSession.open(
+            self.database,
+            storage["seed"],
+            adapter=adapter,
+            vram_capacity=vram_cap,
+            ram_capacity=ram_cap,
+            search_policy=str(runtime_config.get("memory_search_policy", "fast")),
+        )
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
         self._lock = threading.RLock()
@@ -55,39 +67,203 @@ class LucaRuntime:
             self._last_trace = reply.trace
             return {"reply": self._reply_payload(reply), "state": self.state()}
 
+    def recall_node(self, node_id: int, *, alternative: bool = False) -> dict[str, Any]:
+        """Explicitly shift thought focus onto `node_id` and return updated state."""
+
+        with self._lock:
+            if alternative:
+                self.session.carousel.open_alternative(node_id)
+            else:
+                self.session.carousel.begin_turn()
+                self.session.carousel.step_to(node_id)
+            self.session.current_subject_id = node_id
+            self._last_trace = self.session.carousel.vram.node_ids()
+            return {"state": self.state()}
+
+    def reset_session(self) -> dict[str, Any]:
+        """Clear chat history and reset the VRAM/RAM carousel, then greet fresh."""
+
+        with self._lock:
+            self.session.reset()
+            self._last_trace = ()
+            reply = self.session.handle("Ciao")
+            self._last_trace = reply.trace
+            return {"reply": self._reply_payload(reply), "state": self.state()}
+
     def state(self) -> dict[str, Any]:
         with self._lock:
-            memory = []
-            for result in self.search.cells_by_kind("concept", limit=100):
-                payload = cell_payload(self.session.store, result.cell.id)
-                label = str(payload.get("label") or payload.get("forms", [result.cell.id])[0])
-                facts = []
-                for fact in self.editor.facts_about(result.cell.id):
-                    predicate = cell_payload(self.session.store, fact.predicate_id).get("label", "?")
-                    object_label = cell_payload(self.session.store, fact.object_id).get("label", "?")
-                    facts.append({"predicate": str(predicate), "object": str(object_label)})
-                memory.append({"id": result.cell.id, "label": label, "facts": facts})
+            memory = self._build_memory_items()
+            carousel = self.session.carousel
+            vram_nodes = [self._serialize_tier_node(node, in_vram=True) for node in carousel.vram.nodes()]
+            ram_nodes = [self._serialize_tier_node(node, in_vram=False) for node in carousel.ram.nodes()]
+            chains = [
+                [
+                    (load_node(self.session.store, nid).title if load_node(self.session.store, nid) else str(nid))
+                    for nid in chain
+                ]
+                for chain in carousel.vram_graph.chains()
+            ]
+            families = self._serialize_vram_families()
+            convergence = convergence_signals(carousel)
 
             database_size = self.database.stat().st_size if self.database.exists() else 0
-            active_cells = sorted(set(self._last_trace))
+            active_cells = list(carousel.vram.node_ids()) or sorted(set(self._last_trace))
+            ram_count = len(carousel.ram) if len(carousel.ram) > 0 else len(active_cells)
+            vram_count = len(carousel.vram) if len(carousel.vram) > 0 else min(len(active_cells), 512)
+            total_cells = self.session.store.cell_count()
+
             return {
                 "status": "ready",
                 "adapter": self.config["runtime"]["language_adapter"],
                 "memory": memory,
+                "convergence": convergence,
+                "previous_convergence": convergence_signals(carousel, previous=True),
+                "memory_search_policy": carousel.search_policy,
+                "tiers": {
+                    "vram": {
+                        "capacity": carousel.vram.capacity,
+                        "nodes": vram_nodes,
+                        "chains": chains,
+                        "families": families,
+                    },
+                    "ram": {
+                        "capacity": carousel.ram.capacity,
+                        "nodes": ram_nodes,
+                    },
+                    "ssd": {
+                        "total_cells": total_cells,
+                    },
+                },
                 "storage": {
                     "ssd_bytes": database_size,
                     "ssd_label": f"{database_size / 1_000_000:.2f} MB",
                 },
                 "working_set": {
-                    "ram_cells": len(active_cells),
-                    "vram_cells": min(len(active_cells), 512),
+                    "ram_cells": ram_count,
+                    "vram_cells": vram_count,
+                    "ssd_cells": total_cells,
                     "trace": active_cells,
                 },
             }
 
+    def _serialize_vram_families(self) -> list[dict[str, Any]]:
+        carousel = self.session.carousel
+        store = self.session.store
+        vram_ids = list(carousel.vram.node_ids())
+        seen: set[tuple[str, int]] = set()
+        result: list[dict[str, Any]] = []
+
+        for node_id in vram_ids:
+            node = load_node(store, node_id)
+            if node is None:
+                continue
+            prefix_members = store.prefix_family_ids(node_id, limit=8)
+            if len(prefix_members) >= 2 and ("prefix", node_id) not in seen:
+                seen.add(("prefix", node_id))
+                result.append(
+                    {
+                        "anchor_id": node_id,
+                        "anchor_slug": node.slug,
+                        "anchor_title": node.title,
+                        "direction": "prefix",
+                        "pattern": f"{node_id}:*",
+                        "slug_pattern": f"{node.slug}:*",
+                        "member_ids": list(prefix_members),
+                        "member_titles": [
+                            (load_node(store, mid).title if load_node(store, mid) else str(mid))
+                            for mid in prefix_members
+                        ],
+                    }
+                )
+            suffix_members = store.suffix_family_ids(node_id, limit=8)
+            if len(suffix_members) >= 2 and ("suffix", node_id) not in seen:
+                seen.add(("suffix", node_id))
+                result.append(
+                    {
+                        "anchor_id": node_id,
+                        "anchor_slug": node.slug,
+                        "anchor_title": node.title,
+                        "direction": "suffix",
+                        "pattern": f"*:{node_id}",
+                        "slug_pattern": f"*:{node.slug}",
+                        "member_ids": list(suffix_members),
+                        "member_titles": [
+                            (load_node(store, mid).title if load_node(store, mid) else str(mid))
+                            for mid in suffix_members
+                        ],
+                    }
+                )
+        return result
+
+    def _build_memory_items(self) -> list[dict[str, Any]]:
+        memory: list[dict[str, Any]] = []
+        knowledge_cells = self.search.cells_by_kind("knowledge", limit=100)
+        if knowledge_cells:
+            for result in knowledge_cells:
+                node = KnowledgeNode.from_cell(result.cell)
+                facts = []
+                for edge in self.session.store.outgoing(node.id, limit=MemoryStore.DEFAULT_FAMILY_LIMIT):
+                    target = load_node(self.session.store, edge.target_id)
+                    if target is not None:
+                        facts.append({"predicate": f"{node.slug}:*", "object": target.title})
+                for edge in self.session.store.incoming(node.id, limit=MemoryStore.DEFAULT_FAMILY_LIMIT):
+                    source = load_node(self.session.store, edge.source_id)
+                    if source is not None:
+                        facts.append({"predicate": f"*:{node.slug}", "object": source.title})
+                memory.append({"id": node.id, "label": node.title, "slug": node.slug, "content": node.content, "facts": facts})
+            return memory
+
+        for result in self.search.cells_by_kind("concept", limit=100):
+            payload = cell_payload(self.session.store, result.cell.id)
+            label = str(payload.get("label") or payload.get("forms", [result.cell.id])[0])
+            facts = []
+            for fact in self.editor.facts_about(result.cell.id):
+                predicate = cell_payload(self.session.store, fact.predicate_id).get("label", "?")
+                object_label = cell_payload(self.session.store, fact.object_id).get("label", "?")
+                facts.append({"predicate": str(predicate), "object": str(object_label)})
+            memory.append({"id": result.cell.id, "label": label, "facts": facts})
+        return memory
+
+    def _serialize_tier_node(self, node: KnowledgeNode, *, in_vram: bool) -> dict[str, Any]:
+        carousel = self.session.carousel
+        family_limit = MemoryStore.DEFAULT_FAMILY_LIMIT
+        incoming = [
+            edge.source_id
+            for edge in (
+                carousel.vram_graph.incoming_for(node.id) if in_vram else self.session.store.incoming(node.id, limit=family_limit)
+            )
+        ]
+        outgoing = [
+            edge.target_id
+            for edge in (
+                carousel.vram_graph.outgoing_for(node.id) if in_vram else self.session.store.outgoing(node.id, limit=family_limit)
+            )
+        ]
+        return {
+            "id": node.id,
+            "slug": node.slug,
+            "title": node.title,
+            "content": node.content,
+            "expanded": node.id in carousel.expanded_in_vram if in_vram else False,
+            "recall_count": node.recall_count,
+            "incoming_ids": incoming,
+            "outgoing_ids": outgoing,
+            "prefix_families": [f"{pid}:*" for pid in incoming],
+            "suffix_families": [f"*:{sid}" for sid in outgoing],
+        }
+
     @staticmethod
     def _reply_payload(reply: SessionReply) -> dict[str, Any]:
         return {"text": reply.text, "trace": list(reply.trace)}
+
+
+_WEB_DIR = Path(__file__).resolve().parent / "web"
+_STATIC_ROUTES: dict[str, tuple[str, str]] = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/cesare.css": ("cesare.css", "text/css; charset=utf-8"),
+    "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+}
 
 
 class ApiHandler(BaseHTTPRequestHandler):
@@ -100,10 +276,23 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/api/health":
+        clean_path = self.path.split("?", 1)[0]
+        if clean_path in _STATIC_ROUTES:
+            filename, content_type = _STATIC_ROUTES[clean_path]
+            file_path = _WEB_DIR / filename
+            if file_path.exists():
+                body = file_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+        if clean_path == "/api/health":
             self._json({"status": "ok"})
             return
-        if self.path == "/api/state":
+        if clean_path == "/api/state":
             self._json(self.runtime.state())
             return
         self._json({"error": "Not found"}, status=404)
@@ -112,6 +301,20 @@ class ApiHandler(BaseHTTPRequestHandler):
         if self.path == "/api/shutdown":
             self._json({"status": "shutting_down"}, status=202)
             threading.Thread(target=self.shutdown_server, daemon=True).start()
+            return
+        if self.path in {"/api/recall", "/api/alternative"}:
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                payload = json.loads(self.rfile.read(length))
+                if not isinstance(payload, dict):
+                    raise ValueError("The request body must be an object.")
+                node_id = int(payload.get("node_id"))
+                self._json(self.runtime.recall_node(node_id, alternative=self.path == "/api/alternative"))
+            except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+                self._json({"error": str(error)}, status=400)
+            return
+        if self.path == "/api/reset":
+            self._json(self.runtime.reset_session())
             return
         if self.path != "/api/chat":
             self._json({"error": "Not found"}, status=404)
@@ -167,14 +370,13 @@ def main() -> None:
     config = load_config(args.config)
     server = create_server(config)
     api_config = config["runtime"]["api"]
-    frontend_process = _start_frontend(config)
-    browser_thread = threading.Thread(
-        target=_open_frontend_when_ready,
-        args=(frontend_process, config["frontend"]["url"]),
-        daemon=True,
-    )
-    browser_thread.start()
-    print(f"Luca runtime ready at http://{api_config['host']}:{api_config['port']}")
+    cockpit_url = f"http://{api_config['host']}:{api_config['port']}/"
+    if config.get("frontend", {}).get("enabled", True):
+        threading.Thread(
+            target=lambda: (time.sleep(0.25), webbrowser.open(cockpit_url)),
+            daemon=True,
+        ).start()
+    print(f"Luca cockpit ready at {cockpit_url}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -183,78 +385,6 @@ def main() -> None:
         server.shutdown()
         server.server_close()
         server.runtime.close()  # type: ignore[attr-defined]
-        _stop_frontend(frontend_process)
-
-
-def _start_frontend(config: dict[str, Any]) -> subprocess.Popen[bytes] | None:
-    """Start the configured frontend as a child of the single Luca process."""
-
-    frontend = config["frontend"]
-    if not frontend.get("enabled", True):
-        return None
-    directory = Path(frontend["directory"])
-    if not directory.exists():
-        raise RuntimeError(f"Frontend directory not found: {directory}")
-    _remove_stale_frontend_lock(directory, str(frontend["url"]))
-    executable = "npm.cmd" if os.name == "nt" else "npm"
-    return subprocess.Popen(
-        [executable, "run", "dev", "--", "--host", "localhost"],
-        cwd=directory,
-    )
-
-
-def _remove_stale_frontend_lock(directory: Path, url: str) -> None:
-    """Remove Vinext's lock only when its advertised server is unreachable."""
-
-    lock_path = directory / ".vinext" / "dev" / "lock.json"
-    if not lock_path.exists():
-        return
-    try:
-        with urlopen(url, timeout=1.0) as response:
-            if 200 <= response.status < 500:
-                return
-    except OSError:
-        pass
-    lock_path.unlink(missing_ok=True)
-
-
-def _open_frontend_when_ready(process: subprocess.Popen[bytes] | None, url: str) -> None:
-    """Open the browser only after the frontend responds successfully."""
-
-    deadline = time.monotonic() + 60.0
-    while time.monotonic() < deadline:
-        if process is not None and process.poll() is not None:
-            print("Luca frontend stopped before becoming ready.")
-            return
-        try:
-            with urlopen(url, timeout=1.0) as response:
-                if 200 <= response.status < 500:
-                    webbrowser.open(url)
-                    return
-        except OSError:
-            pass
-        time.sleep(0.25)
-    print(f"Luca frontend did not become ready at {url} within 60 seconds.")
-
-
-def _stop_frontend(process: subprocess.Popen[bytes] | None) -> None:
-    """Stop the frontend child without affecting unrelated processes."""
-
-    if process is None:
-        return
-    if os.name == "nt":
-        subprocess.run(
-            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    elif process.poll() is None:
-        process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
 
 
 if __name__ == "__main__":

@@ -12,5 +12,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["luca_memory*"]
 
+[tool.setuptools.package-data]
+luca_memory = ["web/*.html", "web/*.css", "web/*.js"]
+
 [tool.unittest]
 start-directory = "tests"

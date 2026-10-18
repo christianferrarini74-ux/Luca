@@ -39,6 +39,8 @@ class _HTTPChatModel:
             "messages": messages,
             "temperature": self.profile.temperature,
             "stream": False,
+            "reasoning_effort": "none",
+            "chat_template_kwargs": {"enable_thinking": False},
         }
         if response_format is not None:
             payload["response_format"] = response_format

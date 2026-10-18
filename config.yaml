@@ -1,11 +1,14 @@
 storage:
   directory: D:/Test/Luca
-  database: luca.sqlite
-  seed: seed/italian_base_v0.json
+  database: luca_v1.sqlite
+  seed: seed/knowledge_base_v1.json
 
 runtime:
   language_adapter: gemma
   adapter_role: orchestrator
+  vram_capacity: 5
+  ram_capacity: 12
+  memory_search_policy: fast
   api:
     host: 127.0.0.1
     port: 8765
@@ -22,7 +25,7 @@ llm:
       agents:
         orchestrator:
           provider: lm_studio
-          model: google/gemma-3-1b
+          model: google/gemma-4-e2b
           temperature: 0.0
           timeout_seconds: 30
 

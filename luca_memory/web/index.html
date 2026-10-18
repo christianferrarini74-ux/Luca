@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f6f9" />
+  <title>LUCA · Cockpit Sinaptico</title>
+  <link rel="stylesheet" href="/cesare.css" />
+</head>
+<body>
+  <div id="shell" class="shell">
+    <aside class="sidebar">
+      <div class="brand" id="brand-header">
+        <span class="brand-mark" id="brand-mark-btn" title="Espandi navigazione">L</span>
+        <strong>LUCA</strong>
+        <button type="button" class="sidebar-collapse-toggle" id="sidebar-collapse-btn" title="Comprimi navigazione">‹</button>
+      </div>
+
+      <div class="nav-tools">
+        <button type="button" id="expand-all-groups">Espandi tutto</button>
+        <button type="button" id="collapse-all-groups">Comprimi tutto</button>
+      </div>
+
+      <div class="nav-groups" id="nav-groups">
+        <nav class="nav-group" data-group="work">
+          <button type="button" class="nav-group-toggle" aria-expanded="true">
+            <span class="nav-group-label">Lavoro</span>
+            <span class="nav-group-short">L</span>
+            <span class="nav-group-meta"><small>1</small><i>−</i></span>
+          </button>
+          <div class="nav-group-items">
+            <button type="button" class="nav-item active" data-page="chat">
+              <span class="nav-icon">C</span>Chat &amp; Giostra Sinaptica
+            </button>
+          </div>
+        </nav>
+
+        <nav class="nav-group" data-group="memory">
+          <button type="button" class="nav-group-toggle" aria-expanded="true">
+            <span class="nav-group-label">Memoria &amp; Sinapsi</span>
+            <span class="nav-group-short">M</span>
+            <span class="nav-group-meta"><small>2</small><i>−</i></span>
+          </button>
+          <div class="nav-group-items">
+            <button type="button" class="nav-item" data-page="memory">
+              <span class="nav-icon">M</span>Livelli VRAM · RAM · SSD
+            </button>
+            <button type="button" class="nav-item" data-page="graphs">
+              <span class="nav-icon">G</span>Grafo Domino (A:B)
+            </button>
+          </div>
+        </nav>
+
+        <nav class="nav-group" data-group="system">
+          <button type="button" class="nav-group-toggle" aria-expanded="true">
+            <span class="nav-group-label">Sistema</span>
+            <span class="nav-group-short">S</span>
+            <span class="nav-group-meta"><small>1</small><i>−</i></span>
+          </button>
+          <div class="nav-group-items">
+            <button type="button" class="nav-item" data-page="operational">
+              <span class="nav-icon">S</span>Stato Operativo
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <button type="button" class="secondary" id="sidebar-reset-btn" title="Azzera Chat, VRAM e RAM">
+          ↻ <span>Nuova Sessione</span>
+        </button>
+        <button type="button" class="danger-btn" id="sidebar-exit-btn" title="Arresta il processo Luca">
+          ⏻ <span>Arresta Luca</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <span class="muted">LUCA · Architettura Sinaptica della Conoscenza (Design Unificato Cesare)</span>
+        <div class="topbar-right">
+          <label class="theme-switch">
+            Tema
+            <select id="theme-select" aria-label="Tema">
+              <option value="light">Chiaro</option>
+              <option value="dark">Scuro</option>
+            </select>
+          </label>
+          <button type="button" class="secondary" id="topbar-reset-btn" style="min-height:36px;padding:6px 12px;font-size:.82rem;">
+            ↻ Nuova Sessione
+          </button>
+          <span class="status" id="status-badge"><i></i> <span id="status-text">Connessione…</span></span>
+        </div>
+      </header>
+
+      <section class="page" id="page-container">
+        <div class="page-heading">
+          <p class="eyebrow" id="page-eyebrow">LAVORO</p>
+          <div class="page-title-row">
+            <h1 id="page-title">Chat &amp; Attivazione Sinaptica</h1>
+            <div id="hamster-indicator" class="hamster-working" role="status" style="display:none;">
+              <svg class="hamster-wheel" viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="wheel-rim" cx="50" cy="48" r="39" />
+                <g class="wheel-spokes">
+                  <path d="M50 9v78M11 48h78M22.4 20.4l55.2 55.2M77.6 20.4 22.4 75.6" />
+                </g>
+                <path class="wheel-stand" d="M38 87h24M50 85l-9 8m9-8 9 8" />
+                <path class="hamster-tail" d="M30 57q-8-8-11 0t5 8" />
+                <g class="hamster-runner">
+                  <ellipse class="hamster-body" cx="49" cy="55" rx="21" ry="16" />
+                  <circle class="hamster-head" cx="64" cy="46" r="12" />
+                  <circle class="hamster-ear" cx="59" cy="36" r="5" />
+                  <circle class="hamster-ear" cx="69" cy="37" r="4" />
+                  <ellipse class="hamster-patch" cx="62" cy="53" rx="8" ry="6" />
+                  <circle class="hamster-cheek" cx="69" cy="51" r="3" />
+                  <circle class="hamster-eye" cx="68" cy="44" r="1.5" />
+                  <circle class="hamster-nose" cx="75" cy="49" r="2" />
+                  <path class="hamster-whiskers" d="m74 51 8 1m-8 1 7 4" />
+                </g>
+                <g class="hamster-legs">
+                  <path class="hamster-leg leg-front-a" d="M57 63q-2 5 2 8" />
+                  <path class="hamster-leg leg-front-b" d="M62 62q4 3 3 7" />
+                  <path class="hamster-leg leg-back-a" d="M38 62q-5 1-6 6" />
+                  <path class="hamster-leg leg-back-b" d="M34 57q-5 0-7 4" />
+                </g>
+              </svg>
+              <span>Elaborazione sinaptica in corso…</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="alert-box" class="notice error" role="alert" style="display:none;"></div>
+
+        <!-- VIEW 1: CHAT & GIOSTRA SINAPTICA -->
+        <div id="view-chat" class="chat-layout">
+          <details class="chat-secondary" open>
+            <summary>Giostra Sinaptica · VRAM ↔ RAM ↔ SSD</summary>
+            <div class="detail-panel-content">
+              <div class="detail-section">
+                <div class="detail-section-header">
+                  <span>Catene Domino in VRAM (A → B → C)</span>
+                </div>
+                <div id="chains-list" class="tier-list"></div>
+              </div>
+
+              <div class="detail-section">
+                <div class="detail-section-header">
+                  <span>VRAM · Fuoco Attivo</span>
+                  <span id="vram-counter">0 / 5</span>
+                </div>
+                <div id="vram-list" class="tier-list"></div>
+              </div>
+
+              <div class="detail-section">
+                <div class="detail-section-header">
+                  <span>RAM · Parcheggio Caldo (LRU)</span>
+                  <span id="ram-counter">0 / 12</span>
+                </div>
+                <div id="ram-list" class="tier-list"></div>
+              </div>
+
+              <div class="detail-section">
+                <div class="detail-section-header">
+                  <span>SSD · Archivio Completo (Clicca per richiamare)</span>
+                  <span id="ssd-counter">0 nodi</span>
+                </div>
+                <div id="ssd-list" class="tier-list"></div>
+              </div>
+            </div>
+          </details>
+
+          <div class="chat-primary">
+            <div class="chat-token-summary" id="chat-summary-bar">
+              <span><strong>VRAM:</strong> <span id="sum-vram">0</span> celle · <strong>RAM:</strong> <span id="sum-ram">0</span> celle · <strong>SSD:</strong> <span id="sum-ssd">0</span> celle (<span id="sum-mb">0.00 MB</span>)</span>
+              <span><strong>Adapter:</strong> <code id="sum-adapter">gemma</code></span>
+            </div>
+
+            <div class="chat-transcript" id="chat-transcript"></div>
+            <details class="card" id="search-details">
+              <summary>Richiamo della memoria e alternative</summary>
+              <div id="convergence-summary" class="muted" aria-live="polite"></div>
+              <div id="convergence-alternatives" class="tier-list"></div>
+            </details>
+
+            <form class="card form-card" id="chat-form">
+              <label for="chat-input">
+                Messaggio a Luca (Invio per trasmettere, Shift+Invio per andare a capo)
+                <textarea id="chat-input" placeholder="Fai una domanda a Luca per osservare lo spostamento sinaptico in VRAM (es. 'Gli asini volano?', 'Cosa c'è nei nidi sui campanili?', 'I gatti possono andare nel mare?')…" required></textarea>
+              </label>
+              <div class="form-actions">
+                <span class="muted" id="trace-last-label">Ultimo trace sinaptico: —</span>
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="secondary" id="form-reset-btn">Nuova Sessione</button>
+                  <button type="submit" id="chat-submit-btn">Invia a Luca</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- VIEW 2: LIVELLI MEMORIA VRAM / RAM / SSD -->
+        <div id="view-memory" style="display:none;">
+          <div class="operational-metrics" id="memory-metrics"></div>
+          <div class="card" style="margin-bottom:16px;">
+            <h2>Celle in VRAM (Fuoco Attivo + 1° Grado)</h2>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Titolo / Slug</th><th>Stato</th><th>Archi 1° Grado</th><th>Contenuto Articolato</th><th>Azione</th></tr>
+                </thead>
+                <tbody id="table-vram-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px;">
+            <h2>Celle Scivolate in RAM (Parcheggio Caldo LRU)</h2>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Titolo / Slug</th><th>Richiami</th><th>Contenuto Articolato</th><th>Azione</th></tr>
+                </thead>
+                <tbody id="table-ram-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Archivio Completo su SSD (SQLite)</h2>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Titolo / Slug</th><th>Livello Attuale</th><th>Archi Diretti (prefisso:suffisso)</th><th>Contenuto Articolato</th><th>Azione</th></tr>
+                </thead>
+                <tbody id="table-ssd-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: GRAFO DOMINO A:B -->
+        <div id="view-graphs" style="display:none;">
+          <div class="card" style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+              <h2 style="margin:0;">Mappa Sinaptica e Catene Domino (Clicca un nodo per catapultarlo in VRAM)</h2>
+              <span class="muted">Blu = Centro Espanso in VRAM · Verde = 1° Grado in VRAM · Ambra = RAM · Grigio = SSD</span>
+            </div>
+            <svg id="synaptic-graph-svg" class="graph-canvas" viewBox="0 0 1100 440"></svg>
+          </div>
+          <div class="card">
+            <h2>Catene Auto-Ordinate Attualmente in VRAM</h2>
+            <div id="graph-chains-detail" class="tier-list"></div>
+          </div>
+        </div>
+
+        <!-- VIEW 4: STATO OPERATIVO -->
+        <div id="view-operational" style="display:none;">
+          <div class="operational-metrics" id="op-metrics"></div>
+          <div class="card">
+            <h2>Controllo Runtime di Luca</h2>
+            <p class="muted">Gestione diretta della sessione conversazionale, della Giostra Sinaptica (VRAM ↔ RAM ↔ SSD) e del server HTTP locale.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
+              <button type="button" id="op-reset-btn">↻ Nuova Sessione (Svuota Chat, VRAM e RAM)</button>
+              <button type="button" class="danger-btn" id="op-exit-btn">⏻ Arresta Server Luca</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

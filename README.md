@@ -2,6 +2,10 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Current Phase 1 runtime: [synaptic memory, search policies and dashboard](docs/synaptic-memory-runtime.md).
+Start with `python run_luca.py`; the current cockpit is served by Python on port 8765.
+The original experiments below are retained as historical background.
+
 Luca is an experimental project exploring an explicit, persistent memory rather than a pre-trained language model. Every major claim must earn its place through a small, reproducible experiment.
 
 ## The working model

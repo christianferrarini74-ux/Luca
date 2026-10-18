@@ -88,5 +88,37 @@ class LucaRuntimeApiTests(unittest.TestCase):
             server.runtime.close()
 
 
+    def test_serves_cesare_cockpit_and_resets_session(self) -> None:
+        server = create_server(
+            {
+                "storage": {"database": str(self.database), "seed": str(self.seed)},
+                "runtime": {
+                    "language_adapter": "rules",
+                    "adapter_role": "orchestrator",
+                    "api": {"host": "127.0.0.1", "port": 0},
+                },
+            }
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            with urlopen(f"{base}/") as response:
+                html = response.read().decode("utf-8")
+                self.assertIn("LUCA · Cockpit Sinaptico", html)
+                self.assertIn("cesare.css", html)
+            with urlopen(f"{base}/cesare.css") as response:
+                css = response.read().decode("utf-8")
+                self.assertIn("--crt-green", css)
+            reset_req = Request(f"{base}/api/reset", data=b"{}", method="POST")
+            with urlopen(reset_req) as response:
+                payload = json.loads(response.read())
+                self.assertEqual(payload["state"]["status"], "ready")
+        finally:
+            server.shutdown()
+            server.server_close()
+            server.runtime.close()
+
+
 if __name__ == "__main__":
     unittest.main()

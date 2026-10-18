@@ -10,6 +10,10 @@ from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
 from .adapters import ConversationAdapter, LMStudioAdapter, LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
 from .llm import LLMCapabilities, LLMConfigurationError, LLMConnector, LLMProfile, LMStudioModelManager
 from .search import AssertionSearchResult, CellSearchResult, MemorySearch
+from .node import KnowledgeNode, load_node, save_node
+from .tiers import GraphView, RecallEvent, SynapticCarousel, TierSlot
+from .seed_v1 import KnowledgeSeed, is_v1_seed, knowledge_seed_from_file, load_knowledge_seed
+from .context_builder import build_vram_context
 
 __all__ = [
     "Cell",
@@ -44,4 +48,16 @@ __all__ = [
     "AssertionSearchResult",
     "CellSearchResult",
     "MemorySearch",
+    "KnowledgeNode",
+    "load_node",
+    "save_node",
+    "GraphView",
+    "RecallEvent",
+    "SynapticCarousel",
+    "TierSlot",
+    "KnowledgeSeed",
+    "is_v1_seed",
+    "knowledge_seed_from_file",
+    "load_knowledge_seed",
+    "build_vram_context",
 ]

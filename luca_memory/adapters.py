@@ -159,13 +159,61 @@ class LMStudioAdapter:
 
         messages = [
             {"role": "system", "content": self._conversation_instruction(memory_context)},
-            *history[-12:],
+            *history[-4:],
             {"role": "user", "content": text},
         ]
         try:
-            return self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=512).strip()
+            raw = self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=512).strip()
+            return self._sanitize_response(raw)
         except LLMConfigurationError as error:
             raise LanguageAdapterUnavailable("LM Studio non ha restituito una risposta conversazionale valida.") from error
+
+    _META_LEAK_PATTERNS = (
+        "la bibbia",
+        "questa bibbia",
+        "memoria sinaptica",
+        "fonti sinaptiche",
+        "memoria locale",
+        "evidenze primarie",
+        "momento corrente",
+        "turno corrente",
+        "conoscenza attiva",
+        "nel mondo di luca",
+        "testo che mi è stato fornito",
+        "testo di cui ti ho parlato",
+        "il testo fornito",
+        "intersezione vincolante",
+        "corrispondenza parziale",
+        "focus corrente",
+        "contesto già aperto",
+    )
+
+    @classmethod
+    def _sanitize_response(cls, text: str) -> str:
+        """Remove theatrical stage directions, redundant self-introductions, and meta-leak sentences."""
+
+        cleaned_lines: list[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                cleaned_lines.append("")
+                continue
+            if re.fullmatch(r"\([^)]{2,90}\)", stripped) or re.fullmatch(r"\*[^*]{2,90}\*", stripped):
+                continue
+            if stripped.lower().startswith("legami diretti:"):
+                continue
+            line = re.sub(r"^\s*\([^)]{2,80}\)\s*", "", line)
+            line = re.sub(r"^\s*sono\s+luca[.!]?\s*", "", line, flags=re.IGNORECASE)
+            sentences = re.split(r"(?<=[.!?])\s+", line.strip())
+            kept_sentences = [
+                sentence
+                for sentence in sentences
+                if sentence and not any(pattern in sentence.lower() for pattern in cls._META_LEAK_PATTERNS)
+            ]
+            if kept_sentences:
+                cleaned_lines.append(" ".join(kept_sentences))
+        result = "\n".join(cleaned_lines).strip()
+        return re.sub(r"\n{3,}", "\n\n", result) or text.strip()
 
     @classmethod
     def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:
@@ -214,14 +262,15 @@ class LMStudioAdapter:
 
     @staticmethod
     def _conversation_instruction(memory_context: str) -> str:
-        return (
-            "Sei Luca. Conversa liberamente in italiano, con naturalezza e intelligenza. "
-            "La memoria locale qui sotto appartiene a Luca ed e una fonte prioritaria per i fatti personali. "
-            "Usala per collegare il dialogo ai ricordi gia presenti, ma non fingere che un'informazione non verificata "
-            "sia certa. Puoi usare anche la tua conoscenza generale come modello linguistico. "
-            "Non descrivere il formato interno delle celle o degli archi salvo richiesta esplicita.\n\n"
-            f"MEMORIA LOCALE DI LUCA:\n{memory_context}"
+        from pathlib import Path
+
+        bible_path = Path(__file__).resolve().parent.parent / "bible.md"
+        bible = (
+            bible_path.read_text(encoding="utf-8").strip()
+            if bible_path.exists()
+            else "Rispondi in modo diretto, naturale e conciso basandoti sui fatti elencati qui sotto."
         )
+        return f"{bible}\n\n{memory_context}"
 
     @staticmethod
     def _response_format() -> dict[str, object]:

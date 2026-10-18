@@ -1,4 +1,4 @@
-"""A small persistent conversational shell over Luca's native memory."""
+"""Persistent conversational shell over Luca's native synaptic memory."""
 
 from __future__ import annotations
 
@@ -6,13 +6,31 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from .curriculum import cell_payload, curriculum_from_file, load_curriculum
 from .adapters import LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
+from .context_builder import active_vram_component_ids, build_vram_context
+from .curriculum import Curriculum, cell_payload, curriculum_from_file, load_curriculum
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
-from .search import MemorySearch
-from .store import MemoryStore
+from .node import normalise_key
 from .protocol import EvidenceBundle, LanguageIntent
+from .search import MemorySearch
+from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
+from .store import MemoryStore
+from .tiers import SynapticCarousel
+
+_STOPWORDS = {
+    "a", "ad", "al", "alla", "alle", "altri", "altro", "anche", "argomento", "avere",
+    "cambiamo", "che", "chi", "ci", "come", "con", "cosa", "cui", "da", "dal", "dalla",
+    "dei", "del", "della", "delle", "dello", "dentro", "di", "dire", "e", "ed", "era",
+    "ero", "essere", "fa", "fanno", "fare", "generale", "gli", "ha", "hai", "ho", "i",
+    "il", "in", "insomma", "io", "la", "le", "li", "lo", "ma", "me", "mi", "mia", "mio",
+    "molto", "ne", "nei", "nel", "nella", "nelle", "non", "o", "parlami", "parliamo",
+    "penso", "per", "perche", "piu", "poi", "possono", "portare", "prima", "produce",
+    "proprio", "puo", "qual", "quale", "quali", "quando", "quel", "quello", "questa",
+    "questo", "qui", "secondo", "sei", "sembra", "se", "si", "sia", "sono", "su", "sua",
+    "sui", "sul", "sulla", "te", "ti", "tipi", "tipo", "tra", "tu", "tua", "tuo", "un",
+    "una", "uno", "vero",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,44 +40,100 @@ class SessionReply:
 
 
 class LucaSession:
-    """Maintains only a small ephemeral dialogue state; knowledge stays on disk."""
+    """Coordinate dialogue, the VRAM<->RAM<->SSD synaptic carousel, and durable memory."""
 
-    def __init__(self, store: MemoryStore, seed_path: str | Path, adapter: LanguageAdapter | None = None) -> None:
+    def __init__(
+        self,
+        store: MemoryStore,
+        seed_path: str | Path,
+        adapter: LanguageAdapter | None = None,
+        *,
+        vram_capacity: int = 8,
+        ram_capacity: int = 32,
+        search_policy: str = "fast",
+    ) -> None:
         self.store = store
-        self.curriculum = curriculum_from_file(seed_path)
+        self.seed_path = Path(seed_path)
+        self.is_v1 = is_v1_seed(self.seed_path) if self.seed_path.exists() else False
+        if self.is_v1:
+            v1_seed = knowledge_seed_from_file(self.seed_path)
+            self.curriculum = Curriculum(v1_seed.version, v1_seed.language, v1_seed.ids)
+        else:
+            self.curriculum = curriculum_from_file(self.seed_path)
         self.language = ItalianSeedInterface(store, self.curriculum)
         self.editor = MemoryEditor(store)
         self.search = MemorySearch(store)
+        self.carousel = SynapticCarousel(store, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy)
         self.adapter = adapter or RuleAdapter()
         self.current_subject_id: int | None = None
         self.history: list[dict[str, str]] = []
 
     @classmethod
-    def open(cls, database: str | Path, seed_path: str | Path, adapter: LanguageAdapter | None = None) -> "LucaSession":
+    def open(
+        cls,
+        database: str | Path,
+        seed_path: str | Path,
+        adapter: LanguageAdapter | None = None,
+        *,
+        vram_capacity: int = 8,
+        ram_capacity: int = 32,
+        search_policy: str = "fast",
+    ) -> "LucaSession":
         store = MemoryStore(database)
-        if not store.has_cells():
-            load_curriculum(store, seed_path)
-        return cls(store, seed_path, adapter)
+        seed_file = Path(seed_path)
+        if seed_file.exists():
+            if is_v1_seed(seed_file):
+                ensure_knowledge_seed(store, seed_file)
+            elif not store.has_cells():
+                load_curriculum(store, seed_file)
+        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy)
 
     def close(self) -> None:
         self.store.close()
 
+    def reset(self) -> None:
+        """Reset conversational history and empty VRAM/RAM slots while keeping SSD up to date."""
+
+        if self.is_v1 and self.seed_path.exists():
+            ensure_knowledge_seed(self.store, self.seed_path)
+        self.history.clear()
+        self.current_subject_id = None
+        self.carousel = SynapticCarousel(
+            self.store,
+            vram_capacity=self.carousel.vram.capacity,
+            ram_capacity=self.carousel.ram.capacity,
+            search_policy=self.carousel.search_policy,
+        )
+
     def handle(self, text: str) -> SessionReply:
+        self.carousel.begin_turn()
+        prev_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
+        recalled_ids = self._activate_carousel_from_text(text) if self.is_v1 else []
+        if self.is_v1 and recalled_ids and prev_component:
+            new_component = active_vram_component_ids(self.carousel)
+            if prev_component.isdisjoint(new_component):
+                self.history.clear()
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
             response = self.adapter.respond(text, self._memory_context(text), self.history)
-            trace = ()
-            try:
-                intent = self.adapter.interpret(text, current_subject)
-            except LanguageAdapterUnavailable:
-                intent = None
-            if intent is not None:
-                trace = self._consolidate_intent(intent)
+            trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
+            if not self.is_v1:
+                try:
+                    intent = self.adapter.interpret(text, current_subject)
+                except LanguageAdapterUnavailable:
+                    intent = None
+                if intent is not None:
+                    consolidated = self._consolidate_intent(intent)
+                    if consolidated:
+                        trace = consolidated
             self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
             return SessionReply(response, trace)
+
         intent = self.adapter.interpret(text, current_subject)
         if intent.kind == "greet":
-            return SessionReply("Ciao Christian. Sono Luca.")
+            if self.is_v1 and 1 in self.curriculum.ids.values():
+                self.carousel.recall(1)
+            return SessionReply("Ciao Christian. Sono Luca.", tuple(self.carousel.vram.node_ids()))
         if intent.kind == "remember":
             remembered = self.editor.consolidate(intent.proposal())
             first = remembered[0]
@@ -67,6 +141,24 @@ class LucaSession:
             detail = "Ho già questa conoscenza." if all(not item.created for item in remembered) else "Ho registrato la conoscenza."
             trace = tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
             return SessionReply(detail, trace)
+
+        if self.is_v1 and recalled_ids:
+            conv = self.carousel.last_convergence
+            if conv is not None and conv.mode == "strict" and conv.has_only_partial_matches:
+                from .node import load_node
+
+                partials: list[str] = []
+                for match in conv.partial_matches[:3]:
+                    p_node = load_node(self.store, match.node_id)
+                    if p_node is not None:
+                        partials.append(f"{p_node.title}: {p_node.content}")
+                text_reply = (
+                    "Non conosco nulla che riguardi insieme tutto quello che mi chiedi. "
+                    + ("So soltanto qualcosa su una parte: " + " | ".join(partials) if partials else "")
+                ).strip()
+                return SessionReply(text_reply, tuple(self.carousel.vram.node_ids()))
+            top_node = self.carousel.vram.nodes()[0]
+            return SessionReply(f"{top_node.title}: {top_node.content}", tuple(self.carousel.vram.node_ids()))
 
         if intent.kind == "describe" and intent.subject:
             subject = self.store.cell_by_alias(intent.subject)
@@ -77,16 +169,107 @@ class LucaSession:
             if not facts:
                 return SessionReply("Non possiedo ancora una risposta verificata.", (subject.id,))
             phrases = []
-            trace = [subject.id]
+            trace_list = [subject.id]
             for fact in facts:
                 predicate = str(cell_payload(self.store, fact.predicate_id)["label"])
                 object_label = str(cell_payload(self.store, fact.object_id)["label"])
                 phrases.append(f"{predicate} {object_label}")
-                trace.extend((fact.assertion_id, fact.predicate_id, fact.object_id))
+                trace_list.extend((fact.assertion_id, fact.predicate_id, fact.object_id))
             label = str(cell_payload(self.store, subject.id)["label"])
-            return SessionReply(f"So che {label} " + " e ".join(phrases) + ".", tuple(trace))
+            return SessionReply(f"So che {label} " + " e ".join(phrases) + ".", tuple(trace_list))
 
         return self._answer(intent.question or text)
+
+    def _activate_carousel_from_text(self, text: str) -> list[int]:
+        """Find knowledge nodes triggered by explicit aliases in `text` and catapult them into VRAM."""
+
+        normalised = normalise_key(text)
+        raw_words = re.findall(r"[a-zàèéìòóù0-9_]+", normalised)
+        tokens = [
+            token
+            for token in raw_words
+            if len(token) > 2 and token not in _STOPWORDS
+        ]
+        candidate_ids: list[int] = []
+        direct = self.store.cell_by_alias(normalised)
+        if direct is not None:
+            candidate_ids.append(direct.id)
+
+        # Match adjacent bigrams first (e.g. "zucchero filato", "formaggio blu", "polo sud")
+        for idx in range(len(raw_words) - 1):
+            bigram = f"{raw_words[idx]} {raw_words[idx + 1]}"
+            by_bigram = self.store.cell_by_alias(bigram)
+            if by_bigram is not None and by_bigram.id not in candidate_ids:
+                candidate_ids.append(by_bigram.id)
+
+        # Match explicit single-token aliases across the entire sentence
+        for token in dict.fromkeys(tokens):
+            by_alias = self.store.cell_by_alias(token)
+            if by_alias is not None and by_alias.id not in candidate_ids:
+                candidate_ids.append(by_alias.id)
+
+        _CAUSAL_PREFIX_HINTS = (
+            "come fanno",
+            "come fa",
+            "come mai",
+            "perche",
+            "per cui",
+            "per qui",
+            "motivo",
+            "ragione",
+            "spiegazione",
+            "origine",
+            "dipende",
+            "possibile",
+            "riescono",
+            "causa",
+            "grazie a",
+            "spiegami come",
+            "accade",
+            "accada",
+            "avviene",
+        )
+        _FORWARD_SUFFIX_HINTS = (
+            "dentro",
+            "cosa c",
+            "cosa ci",
+            "cosa fanno",
+            "nascosto",
+            "nasconde",
+            "dove vanno",
+            "dove atterrano",
+            "dove",
+            "dopo",
+            "poi",
+            "succede",
+            "finiscono",
+        )
+
+        # If the user asks a causal or forward follow-up on the current focus without introducing a new subject,
+        # step along the corresponding prefix (*:focus) or suffix (focus:*) edge already pre-loaded in VRAM.
+        if self.current_subject_id is not None and (
+            not candidate_ids or candidate_ids == [self.current_subject_id]
+        ):
+            if any(hint in normalised for hint in _CAUSAL_PREFIX_HINTS):
+                incoming = self.carousel.vram_graph.incoming_for(self.current_subject_id)
+                if incoming:
+                    step_id = incoming[0].source_id
+                    self.carousel.step_to(step_id)
+                    self.current_subject_id = step_id
+                    return [step_id]
+            if any(hint in normalised for hint in _FORWARD_SUFFIX_HINTS):
+                outgoing = self.carousel.vram_graph.outgoing_for(self.current_subject_id)
+                if outgoing:
+                    step_id = outgoing[0].target_id
+                    self.carousel.step_to(step_id)
+                    self.current_subject_id = step_id
+                    return [step_id]
+
+        if candidate_ids:
+            self.carousel.recall_with_convergence(candidate_ids[:3])
+            vram_ids = self.carousel.vram.node_ids()
+            self.current_subject_id = vram_ids[0] if vram_ids else candidate_ids[0]
+        return candidate_ids
 
     def _consolidate_intent(self, intent: object) -> tuple[int, ...]:
         if not isinstance(intent, LanguageIntent) or intent.kind != "remember":
@@ -96,20 +279,24 @@ class LucaSession:
         return tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
 
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
+        sections: list[str] = []
+        if len(self.carousel.vram) > 0:
+            sections.append(build_vram_context(self.carousel))
+        if self.is_v1:
+            return "\n\n".join(sections) if sections else "(Nessun fatto specifico attivo in questo momento)"
+
         lines: list[str] = []
         seen: set[int] = set()
         sources = [text]
         if intent:
             sources.extend(value for value in (intent.subject, intent.question) if value)
-        stopwords = {"a", "al", "alla", "che", "cosa", "del", "di", "e", "il", "la", "lo", "parlami", "produce"}
         queries = [
             token
             for source in sources
             for token in re.findall(r"[a-zàèéìòóù0-9]+", source.lower())
-            if len(token) > 2 and token not in stopwords
+            if len(token) > 2 and token not in _STOPWORDS
         ]
-        queries = list(dict.fromkeys(queries))
-        for query in queries:
+        for query in dict.fromkeys(queries):
             for result in self.search.cells_by_text(query, kind="concept", limit=8):
                 if result.cell.id in seen:
                     continue
@@ -123,7 +310,9 @@ class LucaSession:
                     predicate = str(cell_payload(self.store, fact.predicate_id).get("label") or "?")
                     object_label = str(cell_payload(self.store, fact.object_id).get("label") or "?")
                     lines.append(f"- {label} {predicate} {object_label} (assertion {fact.assertion_id})")
-        return "\n".join(lines) if lines else "(nessun ricordo locale direttamente collegato alla richiesta)"
+        if lines:
+            sections.append("\n".join(lines))
+        return "\n\n".join(sections) if sections else "(nessun ricordo locale direttamente collegato alla richiesta)"
 
     def _answer(self, question: str) -> SessionReply:
         answer = self.language.answer(question)
@@ -135,4 +324,5 @@ class LucaSession:
     def _current_subject_label(self) -> str | None:
         if self.current_subject_id is None:
             return None
-        return str(cell_payload(self.store, self.current_subject_id)["label"])
+        payload = cell_payload(self.store, self.current_subject_id)
+        return str(payload.get("label") or payload.get("title") or payload.get("slug") or "")
