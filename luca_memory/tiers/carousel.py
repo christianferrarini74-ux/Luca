@@ -7,7 +7,7 @@ import json
 import time
 from typing import Iterable, Literal
 
-from ..node import KnowledgeNode, load_node, save_node
+from ..node import KnowledgeNode, load_node
 from ..store import ConvergenceResult, Edge, MemoryStore
 from ..activity import MemoryActivity
 from ..budget import PromptBudget
@@ -69,6 +69,7 @@ class SynapticCarousel:
         if self.last_convergence is not None:
             self.previous_convergence = self.last_convergence
         self.last_convergence = None
+        self.context_report = {}
         self.activity.advance()
         self.opened_in_session = set(self.activity.recent)
 
@@ -86,6 +87,7 @@ class SynapticCarousel:
             opened, convergence.recall_ms + (time.perf_counter() - started) * 1000
         )
         self.last_convergence = None
+        self.context_report = {}
         return event
 
     def recall(self, node_id: int) -> RecallEvent:
@@ -114,7 +116,7 @@ class SynapticCarousel:
         with self.store.transaction():
             center = center.with_recall(tick)
             if self._is_knowledge_cell(center.id):
-                self.store.record_node_usage(center.id, tick)
+                self.store.record_node_usage(center.id, tick, initial_count=center.recall_count - 1)
 
         max_neighbours = max(0, self.vram.capacity - 1)
         if len(neighbour_ids) > max_neighbours:

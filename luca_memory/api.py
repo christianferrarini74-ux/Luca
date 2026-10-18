@@ -73,13 +73,7 @@ class LucaRuntime:
         """Explicitly shift thought focus onto `node_id` and return updated state."""
 
         with self._lock:
-            if alternative:
-                self.session.carousel.open_alternative(node_id)
-            else:
-                self.session.carousel.begin_turn()
-                self.session.carousel.step_to(node_id)
-            self.session.current_subject_id = node_id
-            self.session.last_plan = None
+            self.session.recall_manual(node_id, alternative=alternative)
             self._last_trace = self.session.carousel.vram.node_ids()
             return {"state": self.state()}
 
@@ -99,7 +93,13 @@ class LucaRuntime:
             self._last_trace = self.session.carousel.vram.node_ids()
             return {"state": self.state()}
 
+    def update_task(self, values: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            self.session.task.update(values, self.session.current_subject_id)
+            return {"state": self.state()}
+
     def state(self) -> dict[str, Any]:
+        """Return a bounded dashboard view of the authoritative Core state."""
         with self._lock:
             memory = self._build_memory_items()
             carousel = self.session.carousel
@@ -117,8 +117,8 @@ class LucaRuntime:
 
             database_size = self.database.stat().st_size if self.database.exists() else 0
             active_cells = list(carousel.vram.node_ids()) or sorted(set(self._last_trace))
-            ram_count = len(carousel.ram) if len(carousel.ram) > 0 else len(active_cells)
-            vram_count = len(carousel.vram) if len(carousel.vram) > 0 else min(len(active_cells), 512)
+            ram_count = len(carousel.ram) if self.session.is_v1 else len(active_cells)
+            vram_count = len(carousel.vram) if self.session.is_v1 else min(len(active_cells), 512)
             total_cells = self.session.store.cell_count()
 
             return {
@@ -128,10 +128,12 @@ class LucaRuntime:
                 "convergence": convergence,
                 "previous_convergence": convergence_signals(carousel, previous=True),
                 "memory_search_policy": carousel.search_policy,
+                "memory_policy": self.config["runtime"].get("memory_policy", "grounded"),
                 "recall_plan": self.session.last_plan.payload() if self.session.last_plan else None,
                 "memory_activity": carousel.activity.snapshot(),
                 "context_budget": carousel.context_report,
                 "model_request": getattr(self.session.adapter, "last_prompt_report", {}),
+                "task": self.session.task.snapshot(),
                 "tiers": {
                     "vram": {
                         "capacity": carousel.vram.capacity,
@@ -319,6 +321,14 @@ class ApiHandler(BaseHTTPRequestHandler):
         self._json({"error": "Not found"}, status=404)
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/api/task":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                payload = json.loads(self.rfile.read(length))
+                self._json(self.runtime.update_task(payload))
+            except (ValueError, TypeError, json.JSONDecodeError) as error:
+                self._json({"error": str(error)}, status=400)
+            return
         if self.path == "/api/shutdown":
             self._json({"status": "shutting_down"}, status=202)
             threading.Thread(target=self.shutdown_server, daemon=True).start()

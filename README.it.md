@@ -2,6 +2,8 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Ultimo milestone: [sviluppo della memoria, punti 1–5](docs/it/fase-1-sinapsi/08-roadmap-utilizzo-memoria.md).
+
 Runtime attuale di Fase 1: [memoria sinaptica, politiche di ricerca e cruscotto](docs/it/fase-1-sinapsi/07-completamento-runtime.md).
 Avvio: `python run_luca.py`; il cockpit attuale è servito da Python sulla porta 8765.
 Gli esperimenti originari riportati sotto restano come contesto storico.

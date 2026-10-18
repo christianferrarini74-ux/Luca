@@ -49,7 +49,21 @@ class ContextBudgetTests(unittest.TestCase):
             self.assertEqual(session.current_subject_id, 100)
             self.assertIn("Eseguire i test", session._memory_context("sezione"))
             self.assertEqual(session.carousel.section_focus, (100, "testing"))
+            session.carousel.section_focus = None
+            session.handle("Apri la sezione Verifiche")
+            self.assertEqual(session.last_plan.operation, "section")
+            self.assertEqual(session.carousel.section_focus, (100, "testing"))
             with self.assertRaises(ValueError):
                 session.open_section(100, "missing")
         finally:
             session.close()
+
+    def test_summary_is_used_without_claiming_to_expose_the_whole_document(self):
+        with MemoryStore(":memory:") as store:
+            with store.transaction():
+                save_node(store, KnowledgeNode(1, "doc", "Document", "Long body " * 10000, summary="Sintesi verificata"))
+            carousel = SynapticCarousel(store, vram_bytes=2048)
+            carousel.recall(1)
+            context = build_vram_context(carousel)
+            self.assertIn("Sintesi verificata", context)
+            self.assertNotIn("Long body", context)

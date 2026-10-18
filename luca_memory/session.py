@@ -11,10 +11,11 @@ from .context_builder import active_vram_component_ids, build_vram_context
 from .curriculum import Curriculum, cell_payload, curriculum_from_file, load_curriculum
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
-from .node import normalise_key, load_node
+from .node import load_node
 from .protocol import EvidenceBundle, LanguageIntent
 from .planning import RecallPlanner, RecallPlan
-from .budget import PromptBudget, clip
+from .budget import PromptBudget, clip, units
+from .task_state import TaskMemory
 from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
@@ -79,6 +80,7 @@ class LucaSession:
         self.history: list[dict[str, str]] = []
         self.planner = RecallPlanner(store, mode=planner_mode)
         self.last_plan: RecallPlan | None = None
+        self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit)
 
     @classmethod
     def open(
@@ -110,11 +112,23 @@ class LucaSession:
         node = load_node(self.store, node_id)
         if node is None or key not in {section.key for section in node.sections}:
             raise ValueError("Unknown document section.")
-        self.carousel.begin_turn()
-        self.carousel.step_to(node_id)
+        self.recall_manual(node_id)
         self.carousel.section_focus = (node_id, key)
+        self.task.observe(node_id, node_id, True, key)
+
+    def recall_manual(self, node_id: int, *, alternative: bool = False) -> None:
+        """Apply manual focus changes through the same task-continuity boundary."""
+        previous = self.current_subject_id
+        before = active_vram_component_ids(self.carousel)
+        if alternative:
+            self.carousel.open_alternative(node_id)
+        else:
+            self.carousel.begin_turn()
+            self.carousel.step_to(node_id)
         self.current_subject_id = node_id
         self.last_plan = None
+        after = active_vram_component_ids(self.carousel)
+        self.task.observe(previous, node_id, not before or not before.isdisjoint(after))
 
     def reset(self) -> None:
         """Reset conversational history and empty VRAM/RAM slots while keeping SSD up to date."""
@@ -124,6 +138,7 @@ class LucaSession:
         self.history.clear()
         self.current_subject_id = None
         self.last_plan = None
+        self.task.update({"clear": True})
         self.carousel = SynapticCarousel(
             self.store,
             vram_capacity=self.carousel.vram.capacity,
@@ -136,17 +151,53 @@ class LucaSession:
         )
 
     def handle(self, text: str) -> SessionReply:
+        budget = self.carousel.prompt_budget
+        if units(text) > budget.context_window - budget.output_reserve - budget.framing_reserve:
+            raise ValueError("Il messaggio supera il budget configurato.")
         self.carousel.begin_turn()
+        previous_focus = self.current_subject_id
         prev_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
-        recalled_ids = self._activate_carousel_from_text(text) if self.is_v1 else []
+        task_changed = self.task.apply_text(text, self.current_subject_id)
+        if task_changed:
+            self.last_plan = RecallPlan("task_update", expose_memory=False)
+            recalled_ids = []
+        elif self.task.requests_resume(text) and self.task.state.focus_id is not None:
+            target = self.task.state.focus_id
+            if self.store.cell(target) is not None:
+                self.carousel.step_to(target)
+                self.current_subject_id = target
+                if self.task.state.section_key:
+                    self.carousel.section_focus = (target, self.task.state.section_key)
+                self.task.resumed()
+                self.last_plan = RecallPlan("resume", target, reason="Resume the saved task focus.")
+                recalled_ids = [target]
+            else:
+                self.last_plan = RecallPlan("unresolved", expose_memory=False)
+                recalled_ids = []
+        else:
+            recalled_ids = self._activate_carousel_from_text(text) if self.is_v1 else []
+        new_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
+        connected = not prev_component or not prev_component.isdisjoint(new_component)
+        if self.last_plan is None or self.last_plan.operation != "resume":
+            self.task.observe(previous_focus, self.current_subject_id, connected,
+                              self.carousel.section_focus[1] if self.carousel.section_focus else None)
         if self.is_v1 and recalled_ids and prev_component:
             new_component = active_vram_component_ids(self.carousel)
             if prev_component.isdisjoint(new_component):
                 self.history.clear()
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
-            response = self.adapter.respond(text, self._memory_context(text), self.history)
-            self.carousel.mark_exposed(self.carousel.context_report.get("node_ids", ()))
+            context = self._memory_context(text)
+            if hasattr(self.adapter, "respond_with_task"):
+                response = self.adapter.respond_with_task(text, context, self.history, self.task.state.render())
+            else:
+                response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
+            exposed = self.carousel.context_report.get("node_ids", ())
+            report = getattr(self.adapter, "last_prompt_report", {})
+            if "memory_units" in report:
+                exposed = [span["node_id"] for span in self.carousel.context_report.get("node_spans", ())
+                           if span["start"] < report["memory_units"]]
+            self.carousel.mark_exposed(exposed)
             trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
             if not self.is_v1:
                 try:
@@ -158,7 +209,11 @@ class LucaSession:
                     if consolidated:
                         trace = consolidated
             self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
+            self.history = self.history[-16:]
             return SessionReply(response, trace)
+
+        if task_changed:
+            return SessionReply("Ho aggiornato il compito.", tuple(self.carousel.vram.node_ids()))
 
         intent = self.adapter.interpret(text, current_subject)
         if intent.kind == "greet":
@@ -176,8 +231,6 @@ class LucaSession:
         if self.is_v1 and recalled_ids:
             conv = self.carousel.last_convergence
             if conv is not None and conv.mode == "strict" and conv.has_only_partial_matches:
-                from .node import load_node
-
                 partials: list[str] = []
                 for match in conv.partial_matches[:3]:
                     p_node = load_node(self.store, match.node_id)
@@ -187,9 +240,15 @@ class LucaSession:
                     "Non conosco nulla che riguardi insieme tutto quello che mi chiedi. "
                     + ("So soltanto qualcosa su una parte: " + " | ".join(partials) if partials else "")
                 ).strip()
-                return SessionReply(text_reply, tuple(self.carousel.vram.node_ids()))
+                return SessionReply(clip(text_reply, self.carousel.prompt_budget.memory_limit), tuple(self.carousel.vram.node_ids()))
             top_node = self.carousel.vram.nodes()[0]
-            return SessionReply(clip(f"{top_node.title}: {top_node.content}", self.carousel.prompt_budget.per_node_limit), tuple(self.carousel.vram.node_ids()))
+            body = top_node.content
+            if self.carousel.section_focus and self.carousel.section_focus[0] == top_node.id:
+                source = load_node(self.store, top_node.id)
+                section = next((s for s in source.sections if s.key == self.carousel.section_focus[1]), None) if source else None
+                if section:
+                    body = section.content
+            return SessionReply(clip(f"{top_node.title}: {body}", self.carousel.prompt_budget.per_node_limit), tuple(self.carousel.vram.node_ids()))
 
         if intent.kind == "describe" and intent.subject:
             subject = self.store.cell_by_alias(intent.subject)
@@ -215,6 +274,10 @@ class LucaSession:
         """Execute a Core-validated plan rather than guessing from edge order."""
         plan = self.planner.plan(text, self.current_subject_id, self.adapter)
         self.last_plan = plan
+        if plan.section_key is not None and plan.target_id is not None:
+            self.open_section(plan.target_id, plan.section_key)
+            self.last_plan = plan
+            return [plan.target_id]
         if plan.operation == "intersection":
             self.carousel.recall_with_convergence(plan.anchors)
             ids = self.carousel.vram.node_ids()

@@ -110,6 +110,7 @@ class LMStudioAdapter:
         self.assignment = assignment
         self.prompt_budget = PromptBudget()
         self.last_prompt_report: dict[str, Any] = {}
+        self.memory_policy = "grounded"
 
     @classmethod
     def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> "LMStudioAdapter":
@@ -133,6 +134,7 @@ class LMStudioAdapter:
         )
         LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds).ensure_loaded(adapter.model)
         adapter.prompt_budget = PromptBudget.from_config(config.get("runtime", {}))
+        adapter.memory_policy = str(config.get("runtime", {}).get("memory_policy", "grounded"))
         return adapter
 
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
@@ -177,11 +179,17 @@ class LMStudioAdapter:
         except (LLMConfigurationError, ValueError, TypeError):
             return {}
 
-    def respond(self, text: str, memory_context: str, history: list[dict[str, str]]) -> str:
+    def respond_with_task(self, text: str, memory_context: str, history: list[dict[str, str]], task_context: str) -> str:
+        return self.respond(text, memory_context, history, task_context=task_context)
+
+    def respond(self, text: str, memory_context: str, history: list[dict[str, str]], *, task_context: str = "") -> str:
         """Generate a natural response without constraining the conversational output to JSON."""
 
+        # Technical focus markers remain in Core diagnostics, not in model-facing prose.
+        memory_context = memory_context.replace("[FOCUS CORRENTE]", "").replace("[CONTESTO GIÀ APERTO]", "")
         messages, self.last_prompt_report = self.prompt_budget.messages(
-            self._conversation_instruction(""), memory_context, history, text
+            self._conversation_instruction("", policy=self.memory_policy), memory_context, history, text,
+            required_context=task_context,
         )
         try:
             raw = self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=self.prompt_budget.output_reserve).strip()
@@ -234,7 +242,7 @@ class LMStudioAdapter:
             if kept_sentences:
                 cleaned_lines.append(" ".join(kept_sentences))
         result = "\n".join(cleaned_lines).strip()
-        return re.sub(r"\n{3,}", "\n\n", result) or text.strip()
+        return re.sub(r"\n{3,}", "\n\n", result) or "Non riesco a formulare una risposta affidabile; puoi riformulare la domanda?"
 
     @classmethod
     def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:
@@ -282,10 +290,14 @@ class LMStudioAdapter:
         )
 
     @staticmethod
-    def _conversation_instruction(memory_context: str) -> str:
+    def _conversation_instruction(memory_context: str, *, policy: str = "grounded") -> str:
         from pathlib import Path
 
         bible_path = Path(__file__).resolve().parent.parent / "bible.md"
+        if policy == "experimental":
+            bible_path = bible_path.parent / "prompts" / "memory-experiment.it.md"
+        if not bible_path.exists():
+            bible_path = Path(__file__).resolve().parent / "prompts" / f"{policy}.it.md"
         bible = (
             bible_path.read_text(encoding="utf-8").strip()
             if bible_path.exists()

@@ -27,6 +27,11 @@ class SynapticHTTPTests(unittest.TestCase):
                 return json.load(response)
 
         try:
+            state = post("/api/task", {"goal": "Confrontare i mezzi", "constraints": ["Preservare i colori"]})["state"]
+            self.assertEqual(state["task"]["goal"], "Confrontare i mezzi")
+            with self.assertRaises(HTTPError) as error:
+                post("/api/task", {"goal": "X" * 10000})
+            self.assertEqual(error.exception.code, 400)
             with urlopen(base, timeout=5) as response:
                 self.assertIn(b"convergence-alternatives", response.read())
             state = post("/api/chat", {"text": "I sommergibili dei cani e dei pinguini"})["state"]
@@ -43,7 +48,19 @@ class SynapticHTTPTests(unittest.TestCase):
             self.assertEqual(state["tiers"]["vram"]["nodes"][0]["id"], 19)
             self.assertEqual(server.runtime.session.current_subject_id, 19)
             self.assertNotIn(19, [m["id"] for m in state["previous_convergence"]["alternatives"]])
+            from luca_memory.node import KnowledgeNode, KnowledgeSection, save_node
+            with server.runtime.session.store.transaction():
+                save_node(server.runtime.session.store, KnowledgeNode(100, "guide", "Guida", "Introduzione",
+                          sections=(KnowledgeSection("test", "Verifiche", "Esegui i test mirati"),)))
+            state = post("/api/section", {"node_id": 100, "key": "test"})["state"]
+            self.assertEqual(state["tiers"]["vram"]["nodes"][0]["id"], 100)
+            result = post("/api/chat", {"text": "Approfondisci questa sezione"})
+            self.assertIn("Esegui i test mirati", result["reply"]["text"])
+            with self.assertRaises(HTTPError) as error:
+                post("/api/section", {"node_id": 100, "key": "missing"})
+            self.assertEqual(error.exception.code, 400)
             self.assertIsNone(post("/api/reset", {})["state"]["previous_convergence"])
+            self.assertFalse(server.runtime.session.task.state.active)
             post("/api/shutdown", {})
             worker.join(timeout=3)
             self.assertFalse(worker.is_alive())

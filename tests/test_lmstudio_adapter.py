@@ -50,3 +50,17 @@ class LMStudioAdapterTests(unittest.TestCase):
         payload = json.loads(request.call_args.args[0].data)
         self.assertNotIn("response_format", payload)
         self.assertIn("Maranello e una citta italiana.", payload["messages"][0]["content"])
+
+    def test_task_is_reserved_and_technical_focus_markers_are_not_sent(self) -> None:
+        response = {"choices": [{"message": {"content": "Eseguo i test mantenendo il vincolo."}}]}
+        adapter = LMStudioAdapter()
+        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)) as request:
+            adapter.respond_with_task("Continuiamo", "[FOCUS CORRENTE] Test del modulo", [], "Vincolo: non cambiare l'interfaccia")
+        payload = json.loads(request.call_args.args[0].data)
+        system = payload["messages"][0]["content"]
+        self.assertIn("Vincolo: non cambiare l'interfaccia", system)
+        self.assertNotIn("[FOCUS CORRENTE]", system)
+        self.assertLessEqual(adapter.last_prompt_report["input_units"], adapter.last_prompt_report["input_limit"])
+
+    def test_meta_only_response_is_not_returned_as_fallback(self):
+        self.assertNotIn("focus corrente", LMStudioAdapter._sanitize_response("Il focus corrente è un dettaglio interno.").lower())

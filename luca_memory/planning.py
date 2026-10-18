@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import re
+from difflib import SequenceMatcher
 from typing import Any
 
 from .node import load_node, normalise_key
 from .store import MemoryStore
+from .budget import clip
 
 
 _WORDS = re.compile(r"[a-z0-9_]+")
@@ -25,6 +27,7 @@ class RecallPlan:
     source: str = "rules"
     expose_memory: bool = True
     support_ids: tuple[int, ...] = ()
+    section_key: str | None = None
 
     def payload(self) -> dict[str, Any]:
         return asdict(self)
@@ -44,7 +47,7 @@ class RecallPlanner:
         negative: list[int] = []
         # Negation is scoped to clauses rather than deleting its subject from the graph.
         for clause in re.split(r"[,;:.!?]|\b(?:ma|invece)\b", normalise_key(text)):
-            words = _WORDS.findall(clause)
+            words = _WORDS.findall(clause)[:128]
             excluded = bool(re.search(r"\b(?:non|escludi|senza|eccetto|tranne)\b", clause))
             bucket = negative if excluded else positive
             for width in (4, 3, 2, 1):
@@ -52,7 +55,18 @@ class RecallPlanner:
                     phrase = " ".join(words[start:start + width])
                     if width == 1 and phrase in _STOP:
                         continue
-                    for cell in self.store.cells_by_alias(phrase, limit=4):
+                    matches = self.store.cells_by_alias(phrase, limit=4)
+                    if not matches and width == 1 and len(phrase) >= 5:
+                        prefix = phrase[:2]
+                        rows = self.store.connection.execute(
+                            "SELECT DISTINCT alias FROM cell_aliases WHERE alias >= ? AND alias < ? LIMIT 32",
+                            (prefix, prefix + "\uffff"),
+                        )
+                        similar = [(SequenceMatcher(None, phrase, row[0]).ratio(), row[0]) for row in rows if " " not in row[0]]
+                        similar.sort(reverse=True)
+                        if similar and similar[0][0] >= .86 and (len(similar) == 1 or similar[0][0] > similar[1][0]):
+                            matches = self.store.cells_by_alias(similar[0][1], limit=4)
+                    for cell in matches:
                         if cell.id not in bucket:
                             bucket.append(cell.id)
             if len(positive) + len(negative) >= 16:
@@ -81,12 +95,19 @@ class RecallPlanner:
         mentions, excluded = self._mentions(text)
         available = [nid for nid in mentions if nid not in excluded]
         base = dict(anchors=tuple(available), excluded_ids=tuple(excluded))
+        current = load_node(self.store, focus) if focus is not None else None
+        if current is not None and current.sections and re.search(r"\b(?:sezione|capitolo)\b", query):
+            words = set(_WORDS.findall(query)) - _STOP - {"sezione", "capitolo", "apri", "leggi"}
+            scored = sorted(((len(words & set(_WORDS.findall(normalise_key(section.title + " " + section.key)))), section.key)
+                             for section in current.sections), reverse=True)
+            if scored and scored[0][0] > 0 and (len(scored) == 1 or scored[0][0] > scored[1][0]):
+                return RecallPlan("section", focus, section_key=scored[0][1], reason="Explicitly named document section.", **base)
         reference = bool(re.search(r"\b(?:questi|queste|questo|questa|stessi|stesse|quei|quelle)\b", query))
         causal = any(h in query for h in ("perche", "come mai", "come fanno", "come fa", "motivo", "ragione", "dipende", "causa"))
         forward = any(h in query for h in ("dove", "dentro", "cosa c", "cosa ci", "nascosto", "nasconde", "dopo", "succede", "poi"))
         if focus is not None and reference and not any(nid in excluded for nid in (focus,)):
             plan = RecallPlan("hold", focus, reason="Preserve the referenced object's attributes.", **base)
-        elif focus is not None and "altri" in query and not reference:
+        elif focus is not None and re.search(r"\b(?:altri|altre|restanti)\b", query) and not reference:
             hub = self._family(focus, query)
             plan = RecallPlan("family", hub, reason="Enumerate the family rather than a shared destination.", **base) if hub else RecallPlan("unresolved", reason="No family found.", expose_memory=False, **base)
         elif focus is not None and (causal or forward) and (not available or available == [focus]):
@@ -109,6 +130,8 @@ class RecallPlanner:
                 plan = RecallPlan("focus", specific[0], reason="Explicit child of a named family.", **base)
             elif len(available) >= 2:
                 plan = RecallPlan("intersection", reason="All explicit subjects are required.", **base)
+            elif focus is not None and self.store.edge(focus, available[0]):
+                plan = RecallPlan("focus", available[0], reason="Explicitly named outgoing neighbor.", **base)
             elif focus is not None and available[0] != focus and "cambiamo argomento" not in query and "in generale" not in query:
                 anchors = [focus]
                 anchors.extend(e.source_id for e in self.store.incoming(focus, limit=16) if self.store.out_degree(e.source_id) >= 2)
@@ -123,10 +146,10 @@ class RecallPlanner:
         # Restrict model proposals to ambiguous graph neighbors and bounded content previews.
         if self.mode == "hybrid" and plan.target_id is None and plan.candidate_ids and hasattr(adapter, "propose_recall"):
             previews = []
-            for nid in plan.candidate_ids[:12]:
+            for nid in plan.candidate_ids[:8]:
                 node = load_node(self.store, nid)
                 if node:
-                    previews.append({"id": nid, "title": node.title[:160], "content": node.content[:800]})
+                    previews.append({"id": nid, "title": clip(node.title, 96), "content": clip(node.content, 400)})
             try:
                 proposed = adapter.propose_recall(text, focus, previews, plan.operation)
                 if isinstance(proposed, dict) and type(proposed.get("target_id")) is int:

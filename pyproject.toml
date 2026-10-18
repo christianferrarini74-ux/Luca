@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 include = ["luca_memory*"]
 
 [tool.setuptools.package-data]
-luca_memory = ["web/*.html", "web/*.css", "web/*.js"]
+luca_memory = ["web/*.html", "web/*.css", "web/*.js", "prompts/*.md"]
 
 [tool.unittest]
 start-directory = "tests"

@@ -10,6 +10,8 @@ runtime:
   ram_capacity: 12
   memory_search_policy: fast
   memory_planner: hybrid
+  # The current seed contains deliberate counterfactual experiments.
+  memory_policy: experimental
   recent_window: 8
   vram_bytes: 8000000
   ram_bytes: 32000000

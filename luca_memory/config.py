@@ -43,6 +43,9 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     runtime.setdefault("adapter_role", "orchestrator")
     runtime.setdefault("memory_search_policy", "fast")
     runtime.setdefault("memory_planner", "hybrid")
+    runtime.setdefault("memory_policy", "grounded")
+    if runtime["memory_policy"] not in {"grounded", "experimental"}:
+        raise ConfigurationError("runtime.memory_policy must be 'grounded' or 'experimental'.")
     try:
         PromptBudget.from_config(runtime)
         for key, minimum, default in (("vram_bytes", 2048, 8_000_000), ("ram_bytes", 2048, 32_000_000), ("recent_window", 1, 8)):

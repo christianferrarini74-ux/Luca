@@ -2,6 +2,8 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Latest milestone: [memory development stages 1–5](docs/memory-development-roadmap.md).
+
 Current Phase 1 runtime: [synaptic memory, search policies and dashboard](docs/synaptic-memory-runtime.md).
 Start with `python run_luca.py`; the current cockpit is served by Python on port 8765.
 The original experiments below are retained as historical background.

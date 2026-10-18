@@ -58,7 +58,11 @@ class PromptBudget:
             raise ValueError("context_budget must be a mapping.")
         return cls(**{key: int(value) for key, value in options.items()})
 
-    def messages(self, instruction: str, memory: str, history: list, question: str) -> tuple[list, dict]:
+    def messages(self, instruction: str, memory: str, history: list, question: str, *, required_context: str = "") -> tuple[list, dict]:
+        if units(required_context) > self.task_limit:
+            raise ValueError("Il compito supera il budget riservato.")
+        if required_context:
+            instruction = instruction + "\n\n" + required_context
         available = self.context_window - self.output_reserve - self.framing_reserve
         fixed = units(instruction) + units(question) + 2
         if fixed > available:
@@ -85,4 +89,5 @@ class PromptBudget:
             estimated = sum(units(item["content"]) for item in messages)
         return messages, {"accounting": "utf8_bytes_conservative", "input_units": estimated,
                           "input_limit": available, "output_reserve": self.output_reserve,
-                          "history_messages": len(chosen), "memory_truncated": units(memory_text) < units(memory)}
+                          "history_messages": len(chosen), "memory_units": units(memory_text),
+                          "memory_truncated": units(memory_text) < units(memory)}

@@ -384,7 +384,9 @@ function renderMemoryControls(state) {
   const context = state.context_budget || {};
   const vram = state.tiers?.vram || {};
   const ram = state.tiers?.ram || {};
-  $("context-status").textContent = `Richiesta: ${request.input_units ?? "—"}/${request.input_limit ?? "—"} unità UTF-8 conservative; ` +
+  const plan = state.recall_plan;
+  $("context-status").textContent = (plan ? `Piano: ${plan.operation} (${plan.source}). ${plan.reason} ` : "") +
+    `Politica: ${state.memory_policy || "grounded"}. Richiesta: ${request.input_units ?? "—"}/${request.input_limit ?? "—"} unità UTF-8 conservative; ` +
     `riserva risposta ${request.output_reserve ?? "—"}. Memoria esposta: ${context.input_units ?? 0}/${context.limit ?? "—"}. ` +
     `Payload cache VRAM ${vram.payload_bytes ?? 0}/${vram.max_bytes ?? "—"} byte; RAM ${ram.payload_bytes ?? 0}/${ram.max_bytes ?? "—"} byte. ` +
     `Estratti parziali: ${(context.truncated_ids || []).join(", ") || "nessuno"}.`;
@@ -392,6 +394,14 @@ function renderMemoryControls(state) {
     `<button type="button" class="secondary" data-section-node="${node.id}" data-section-key="${encodeURIComponent(section.key)}">` +
     `${escapeHtml(node.label)} / ${escapeHtml(section.title)}</button>`
   )).join("");
+  const task = state.task || {};
+  $("task-status").textContent = task.active
+    ? `${task.goal || "Compito attivo"} · ${task.suspended ? "Sospeso durante la consultazione di un altro argomento" : "In corso"} · Punto di ripresa: #${task.focus_id ?? "—"} · ${task.input_units}/${task.limit} unità`
+    : "Nessun compito attivo. Puoi anche scrivere Obiettivo:, Vincolo: o Decisione: nella chat.";
+  const fields = {"task-goal": task.goal || "", "task-constraints": (task.constraints || []).join("\n"), "task-decisions": (task.decisions || []).join("\n")};
+  for (const [id, value] of Object.entries(fields)) {
+    if (document.activeElement !== $(id)) $(id).value = value;
+  }
 }
 
 function renderAll(state) {
@@ -524,7 +534,27 @@ async function openSection(nodeId, key) {
   }
 }
 
+async function updateTask(values) {
+  if (busy || stopped) return;
+  setBusy(true);
+  try {
+    const result = await apiFetch("/api/task", {method: "POST", body: JSON.stringify(values)});
+    renderAll(result.state);
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
 function bindEvents() {
+  $("task-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const lines = id => $(id).value.split("\n").map(line => line.trim()).filter(Boolean);
+    void updateTask({goal: $("task-goal").value, constraints: lines("task-constraints"), decisions: lines("task-decisions")});
+  });
+  $("task-clear-btn").addEventListener("click", () => void updateTask({clear: true}));
+  $("task-resume-btn").addEventListener("click", () => void sendChat("Riprendi il compito"));
   const savedTheme = localStorage.getItem(THEME_KEY) || "light";
   applyTheme(savedTheme);
 

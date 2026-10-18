@@ -254,16 +254,16 @@ class MemoryStore:
             (used_at, source_id, target_id),
         )
 
-    def record_node_usage(self, node_id: int, used_at: int, *, exposed: bool = False) -> None:
+    def record_node_usage(self, node_id: int, used_at: int, *, exposed: bool = False, initial_count: int = 0) -> None:
         """Update usage without rewriting knowledge content or its search index."""
         self.connection.execute(
             """INSERT INTO node_usage (node_id, recall_count, exposure_count, last_recalled_at)
                VALUES (?, ?, ?, ?)
                ON CONFLICT(node_id) DO UPDATE SET
-                 recall_count = recall_count + excluded.recall_count,
+                 recall_count = recall_count + ?,
                  exposure_count = exposure_count + excluded.exposure_count,
                  last_recalled_at = MAX(last_recalled_at, excluded.last_recalled_at)""",
-            (node_id, 0 if exposed else 1, 1 if exposed else 0, used_at),
+            (node_id, initial_count + (0 if exposed else 1), 1 if exposed else 0, used_at, 0 if exposed else 1),
         )
 
     def node_usage(self, node_id: int) -> tuple[int, int] | None:
@@ -775,6 +775,11 @@ class MemoryStore:
                 recall_count INTEGER NOT NULL DEFAULT 0,
                 exposure_count INTEGER NOT NULL DEFAULT 0,
                 last_recalled_at INTEGER NOT NULL DEFAULT 0
+            ) STRICT;
+
+            CREATE TABLE IF NOT EXISTS task_state (
+                name TEXT PRIMARY KEY,
+                payload TEXT NOT NULL
             ) STRICT;
             """
         )

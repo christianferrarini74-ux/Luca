@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Aggiornamento 2026-10-19: [Fase 1.08 — Utilizzo della memoria, punti 1–5](fase-1-sinapsi/08-roadmap-utilizzo-memoria.md)
+([English](../memory-development-roadmap.md)): planner, attività e oblio, budget,
+documenti e sezioni, continuità del compito. Integrazione con Cesare rinviata.
+
 Aggiornamento 2026-10-19: [Fase 1.07 — Completamento del runtime](fase-1-sinapsi/07-completamento-runtime.md)
 ([English](../synaptic-memory-runtime.md)). Questo aggiornamento integra gli
 stati storici riportati nelle tabelle: politiche fast/complete, diagnostica per

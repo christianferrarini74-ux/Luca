@@ -186,6 +186,20 @@
               <div id="context-status" class="muted" aria-live="polite"></div>
               <div id="document-sections" class="tier-list"></div>
             </details>
+            <details class="card">
+              <summary>Compito, vincoli e decisioni</summary>
+              <p id="task-status" class="muted" aria-live="polite"></p>
+              <form id="task-form" class="form-card">
+                <label>Obiettivo <input id="task-goal" type="text" maxlength="400"></label>
+                <label>Vincoli (uno per riga) <textarea id="task-constraints" rows="2"></textarea></label>
+                <label>Decisioni confermate (una per riga) <textarea id="task-decisions" rows="2"></textarea></label>
+                <div class="form-actions">
+                  <button type="submit">Salva compito</button>
+                  <button type="button" id="task-resume-btn" class="secondary">Riprendi</button>
+                  <button type="button" id="task-clear-btn" class="secondary">Chiudi compito</button>
+                </div>
+              </form>
+            </details>
 
             <form class="card form-card" id="chat-form">
               <label for="chat-input">

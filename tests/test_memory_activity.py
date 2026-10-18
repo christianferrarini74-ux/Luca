@@ -39,3 +39,12 @@ class MemoryActivityTests(unittest.TestCase):
             self.assertFalse(any("DELETE FROM cell_search" in sql for sql in statements))
             self.assertFalse(any("INSERT INTO cell_search (" in sql for sql in statements))
             self.assertEqual(store.connection.execute("SELECT exposure_count FROM node_usage WHERE node_id=1").fetchone()[0], 1)
+
+    def test_usage_migration_preserves_legacy_recall_count(self):
+        with MemoryStore(":memory:") as store:
+            with store.transaction():
+                save_node(store, KnowledgeNode(1, "old", "Old", "Knowledge", recall_count=10))
+            carousel = SynapticCarousel(store)
+            carousel.recall(1)
+            carousel.recall(1)
+            self.assertEqual(load_node(store, 1).recall_count, 12)

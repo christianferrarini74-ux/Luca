@@ -48,6 +48,14 @@ class RecallPlanningTests(unittest.TestCase):
         self.assertEqual(self.session.current_subject_id, 14)
         self.assertNotIn(19, self.session.carousel.expanded_in_vram)
 
+    def test_typo_and_enumeration_paraphrase(self):
+        self.session.handle("Parlami dei sotomarini")
+        self.assertEqual(self.session.current_subject_id, 7)
+        self.session.handle("E invece i cani?")
+        self.assertEqual(self.session.current_subject_id, 19)
+        self.session.handle("Quali altre specie pilotano mezzi diversi?")
+        self.assertEqual(self.session.current_subject_id, 14)
+
     def test_unknown_topic_keeps_cache_but_does_not_expose_old_focus(self):
         self.session.handle("Parlami dei sottomarini")
         before = self.session.carousel.vram.node_ids()
