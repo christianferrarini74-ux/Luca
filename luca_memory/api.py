@@ -51,6 +51,7 @@ class LucaRuntime:
             vram_capacity=vram_cap,
             ram_capacity=ram_cap,
             search_policy=str(runtime_config.get("memory_search_policy", "fast")),
+            planner_mode=str(runtime_config.get("memory_planner", "hybrid")),
         )
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
@@ -77,6 +78,7 @@ class LucaRuntime:
                 self.session.carousel.begin_turn()
                 self.session.carousel.step_to(node_id)
             self.session.current_subject_id = node_id
+            self.session.last_plan = None
             self._last_trace = self.session.carousel.vram.node_ids()
             return {"state": self.state()}
 
@@ -119,6 +121,7 @@ class LucaRuntime:
                 "convergence": convergence,
                 "previous_convergence": convergence_signals(carousel, previous=True),
                 "memory_search_policy": carousel.search_policy,
+                "recall_plan": self.session.last_plan.payload() if self.session.last_plan else None,
                 "tiers": {
                     "vram": {
                         "capacity": carousel.vram.capacity,

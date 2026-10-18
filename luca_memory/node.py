@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import json
 import re
 import time
+import unicodedata
 
 from .store import Cell, MemoryStore
 
@@ -91,7 +92,7 @@ class KnowledgeNode:
 
 
 def normalise_key(value: str) -> str:
-    lowered = value.lower().replace("è", "e").strip()
+    lowered = "".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch)).strip()
     return re.sub(r"\s+", " ", lowered)
 
 

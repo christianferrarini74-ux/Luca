@@ -4,6 +4,9 @@ from pathlib import Path
 import unittest
 
 from luca_memory.session import LucaSession
+from luca_memory.planning import RecallPlanner
+from luca_memory.node import KnowledgeNode, save_node
+from luca_memory.store import Edge, MemoryStore
 
 
 SEED = Path(__file__).parents[1] / "seed/knowledge_base_v1.json"
@@ -51,3 +54,31 @@ class RecallPlanningTests(unittest.TestCase):
         self.session.handle("Cambiamo argomento: spiegami la fotosintesi")
         self.assertEqual(self.session.carousel.vram.node_ids(), before)
         self.assertNotIn("Sottomarini", self.session._memory_context("fotosintesi"))
+
+    def test_model_proposal_cannot_jump_outside_candidate_graph(self):
+        class Proposal:
+            def __init__(self, target):
+                self.target = target
+
+            def propose_recall(self, text, focus, candidates, operation):
+                return {"target_id": self.target}
+
+        with MemoryStore(":memory:") as store:
+            with store.transaction():
+                for nid in (1, 2, 3, 999):
+                    save_node(store, KnowledgeNode(nid, f"n{nid}", f"Node {nid}", "Un dettaglio."))
+                store.add_edge(Edge(2, 1))
+                store.add_edge(Edge(3, 1))
+            planner = RecallPlanner(store)
+            rejected = planner.plan("Perché?", 1, Proposal(999))
+            self.assertIsNone(rejected.target_id)
+            accepted = planner.plan("Perché?", 1, Proposal(2))
+            self.assertEqual(accepted.target_id, 2)
+            self.assertEqual(accepted.source, "llm")
+            self.assertIsNone(planner.plan("Perché?", 1, Proposal(None)).target_id)
+
+    def test_cause_does_not_open_a_category_without_causal_evidence(self):
+        self.session.handle("I sommergibili dei cani")
+        self.session.handle("Perché?")
+        self.assertIsNone(self.session.last_plan.target_id)
+        self.assertEqual(self.session.current_subject_id, 19)

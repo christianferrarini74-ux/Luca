@@ -41,6 +41,9 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     runtime.setdefault("language_adapter", "rules")
     runtime.setdefault("adapter_role", "orchestrator")
     runtime.setdefault("memory_search_policy", "fast")
+    runtime.setdefault("memory_planner", "hybrid")
+    if runtime["memory_planner"] not in {"rules", "hybrid"}:
+        raise ConfigurationError("runtime.memory_planner must be 'rules' or 'hybrid'.")
     if runtime["memory_search_policy"] not in {"fast", "complete"}:
         raise ConfigurationError("runtime.memory_search_policy must be 'fast' or 'complete'.")
     if runtime["language_adapter"] not in {"rules", "gemma"}:

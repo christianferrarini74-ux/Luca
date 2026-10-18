@@ -13,6 +13,7 @@ from .language import ItalianSeedInterface
 from .memory import MemoryEditor
 from .node import normalise_key
 from .protocol import EvidenceBundle, LanguageIntent
+from .planning import RecallPlanner, RecallPlan
 from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
@@ -51,6 +52,7 @@ class LucaSession:
         vram_capacity: int = 8,
         ram_capacity: int = 32,
         search_policy: str = "fast",
+        planner_mode: str = "hybrid",
     ) -> None:
         self.store = store
         self.seed_path = Path(seed_path)
@@ -67,6 +69,8 @@ class LucaSession:
         self.adapter = adapter or RuleAdapter()
         self.current_subject_id: int | None = None
         self.history: list[dict[str, str]] = []
+        self.planner = RecallPlanner(store, mode=planner_mode)
+        self.last_plan: RecallPlan | None = None
 
     @classmethod
     def open(
@@ -78,6 +82,7 @@ class LucaSession:
         vram_capacity: int = 8,
         ram_capacity: int = 32,
         search_policy: str = "fast",
+        planner_mode: str = "hybrid",
     ) -> "LucaSession":
         store = MemoryStore(database)
         seed_file = Path(seed_path)
@@ -86,7 +91,7 @@ class LucaSession:
                 ensure_knowledge_seed(store, seed_file)
             elif not store.has_cells():
                 load_curriculum(store, seed_file)
-        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy)
+        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy, planner_mode=planner_mode)
 
     def close(self) -> None:
         self.store.close()
@@ -98,6 +103,7 @@ class LucaSession:
             ensure_knowledge_seed(self.store, self.seed_path)
         self.history.clear()
         self.current_subject_id = None
+        self.last_plan = None
         self.carousel = SynapticCarousel(
             self.store,
             vram_capacity=self.carousel.vram.capacity,
@@ -181,95 +187,19 @@ class LucaSession:
         return self._answer(intent.question or text)
 
     def _activate_carousel_from_text(self, text: str) -> list[int]:
-        """Find knowledge nodes triggered by explicit aliases in `text` and catapult them into VRAM."""
-
-        normalised = normalise_key(text)
-        raw_words = re.findall(r"[a-zàèéìòóù0-9_]+", normalised)
-        tokens = [
-            token
-            for token in raw_words
-            if len(token) > 2 and token not in _STOPWORDS
-        ]
-        candidate_ids: list[int] = []
-        direct = self.store.cell_by_alias(normalised)
-        if direct is not None:
-            candidate_ids.append(direct.id)
-
-        # Match adjacent bigrams first (e.g. "zucchero filato", "formaggio blu", "polo sud")
-        for idx in range(len(raw_words) - 1):
-            bigram = f"{raw_words[idx]} {raw_words[idx + 1]}"
-            by_bigram = self.store.cell_by_alias(bigram)
-            if by_bigram is not None and by_bigram.id not in candidate_ids:
-                candidate_ids.append(by_bigram.id)
-
-        # Match explicit single-token aliases across the entire sentence
-        for token in dict.fromkeys(tokens):
-            by_alias = self.store.cell_by_alias(token)
-            if by_alias is not None and by_alias.id not in candidate_ids:
-                candidate_ids.append(by_alias.id)
-
-        _CAUSAL_PREFIX_HINTS = (
-            "come fanno",
-            "come fa",
-            "come mai",
-            "perche",
-            "per cui",
-            "per qui",
-            "motivo",
-            "ragione",
-            "spiegazione",
-            "origine",
-            "dipende",
-            "possibile",
-            "riescono",
-            "causa",
-            "grazie a",
-            "spiegami come",
-            "accade",
-            "accada",
-            "avviene",
-        )
-        _FORWARD_SUFFIX_HINTS = (
-            "dentro",
-            "cosa c",
-            "cosa ci",
-            "cosa fanno",
-            "nascosto",
-            "nasconde",
-            "dove vanno",
-            "dove atterrano",
-            "dove",
-            "dopo",
-            "poi",
-            "succede",
-            "finiscono",
-        )
-
-        # If the user asks a causal or forward follow-up on the current focus without introducing a new subject,
-        # step along the corresponding prefix (*:focus) or suffix (focus:*) edge already pre-loaded in VRAM.
-        if self.current_subject_id is not None and (
-            not candidate_ids or candidate_ids == [self.current_subject_id]
-        ):
-            if any(hint in normalised for hint in _CAUSAL_PREFIX_HINTS):
-                incoming = self.carousel.vram_graph.incoming_for(self.current_subject_id)
-                if incoming:
-                    step_id = incoming[0].source_id
-                    self.carousel.step_to(step_id)
-                    self.current_subject_id = step_id
-                    return [step_id]
-            if any(hint in normalised for hint in _FORWARD_SUFFIX_HINTS):
-                outgoing = self.carousel.vram_graph.outgoing_for(self.current_subject_id)
-                if outgoing:
-                    step_id = outgoing[0].target_id
-                    self.carousel.step_to(step_id)
-                    self.current_subject_id = step_id
-                    return [step_id]
-
-        if candidate_ids:
-            self.carousel.recall_with_convergence(candidate_ids[:3])
-            vram_ids = self.carousel.vram.node_ids()
-            self.current_subject_id = vram_ids[0] if vram_ids else candidate_ids[0]
-        return candidate_ids
+        """Execute a Core-validated plan rather than guessing from edge order."""
+        plan = self.planner.plan(text, self.current_subject_id, self.adapter)
+        self.last_plan = plan
+        if plan.operation == "intersection":
+            self.carousel.recall_with_convergence(plan.anchors)
+            ids = self.carousel.vram.node_ids()
+            self.current_subject_id = ids[0] if ids else None
+            return list(plan.anchors)
+        if plan.target_id is not None:
+            self.carousel.step_to(plan.target_id)
+            self.current_subject_id = plan.target_id
+            return [plan.target_id]
+        return []
 
     def _consolidate_intent(self, intent: object) -> tuple[int, ...]:
         if not isinstance(intent, LanguageIntent) or intent.kind != "remember":
@@ -279,6 +209,8 @@ class LucaSession:
         return tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
 
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
+        if self.is_v1 and self.last_plan is not None and not self.last_plan.expose_memory:
+            return "Nessun ricordo locale pertinente alla domanda; usa la tua conoscenza generale senza attribuirla a ricordi locali."
         sections: list[str] = []
         if len(self.carousel.vram) > 0:
             sections.append(build_vram_context(self.carousel))

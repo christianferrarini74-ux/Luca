@@ -9,6 +9,7 @@ runtime:
   vram_capacity: 5
   ram_capacity: 12
   memory_search_policy: fast
+  memory_planner: hybrid
   api:
     host: 127.0.0.1
     port: 8765
