@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from .budget import PromptBudget
 
 
 class ConfigurationError(ValueError):
@@ -42,6 +43,14 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     runtime.setdefault("adapter_role", "orchestrator")
     runtime.setdefault("memory_search_policy", "fast")
     runtime.setdefault("memory_planner", "hybrid")
+    try:
+        PromptBudget.from_config(runtime)
+        for key, minimum, default in (("vram_bytes", 2048, 8_000_000), ("ram_bytes", 2048, 32_000_000), ("recent_window", 1, 8)):
+            runtime[key] = int(runtime.get(key, default))
+            if runtime[key] < minimum:
+                raise ValueError(f"{key} must be at least {minimum}.")
+    except (ValueError, TypeError) as error:
+        raise ConfigurationError(str(error)) from error
     if runtime["memory_planner"] not in {"rules", "hybrid"}:
         raise ConfigurationError("runtime.memory_planner must be 'rules' or 'hybrid'.")
     if runtime["memory_search_policy"] not in {"fast", "complete"}:

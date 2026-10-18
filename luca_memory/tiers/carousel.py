@@ -10,6 +10,7 @@ from typing import Iterable, Literal
 from ..node import KnowledgeNode, load_node, save_node
 from ..store import ConvergenceResult, Edge, MemoryStore
 from ..activity import MemoryActivity
+from ..budget import PromptBudget
 from .graph_view import GraphView
 from .slot import TierSlot
 
@@ -37,13 +38,19 @@ class SynapticCarousel:
         ram_capacity: int = 64,
         search_policy: str = "fast",
         recent_window: int = 8,
+        vram_bytes: int = 8_000_000,
+        ram_bytes: int = 32_000_000,
+        prompt_budget: PromptBudget | None = None,
     ) -> None:
         self.store = store
         if search_policy not in {"fast", "complete"}:
             raise ValueError("search_policy must be 'fast' or 'complete'.")
         self.search_policy = search_policy
-        self.vram = TierSlot("VRAM", vram_capacity)
-        self.ram = TierSlot("RAM", ram_capacity)
+        self.vram = TierSlot("VRAM", vram_capacity, vram_bytes)
+        self.ram = TierSlot("RAM", ram_capacity, ram_bytes)
+        self.prompt_budget = prompt_budget or PromptBudget()
+        self.context_report: dict = {}
+        self.section_focus: tuple[int, str] | None = None
         self.vram_graph = GraphView()
         self.ram_graph = GraphView()
         self.expanded_in_vram: set[int] = set()
@@ -84,6 +91,8 @@ class SynapticCarousel:
     def recall(self, node_id: int) -> RecallEvent:
         """Catapult `node_id` into VRAM head with top-K 1st-degree `*:B` and `B:*` edges and nodes."""
 
+        if self.section_focus is not None and self.section_focus[0] != node_id:
+            self.section_focus = None
         center = self._fetch_node(node_id)
         if center is None:
             raise KeyError(f"Unknown node ID: {node_id}")

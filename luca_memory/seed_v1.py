@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import time
 
-from .node import KnowledgeNode, save_node
+from .node import KnowledgeNode, KnowledgeSection, save_node
 from .store import Edge, MemoryStore
 
 
@@ -52,6 +52,9 @@ def load_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed:
                 content=str(item.get("content") or ""),
                 keywords=tuple(str(k) for k in item.get("keywords", [])),
                 created_at=now,
+                summary=str(item.get("summary") or ""),
+                sections=tuple(KnowledgeSection(str(s["key"]), str(s.get("title") or s["key"]), str(s.get("content") or ""))
+                               for s in item.get("sections", []) if isinstance(s, dict) and s.get("key")),
             )
             save_node(store, node)
 

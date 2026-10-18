@@ -6,6 +6,7 @@ from typing import Any
 
 from .node import KnowledgeNode, load_node
 from .tiers.carousel import SynapticCarousel
+from .budget import clip, units
 
 
 def active_vram_component_ids(carousel: SynapticCarousel) -> set[int]:
@@ -55,28 +56,55 @@ def build_vram_context(carousel: SynapticCarousel) -> str:
     if not open_nodes:
         open_nodes = [vram_nodes[0]]
 
-    focus = open_nodes[0]
-    previous_open = open_nodes[1:]
+    budget = carousel.prompt_budget
+    lines = ["Fatti noti:"]
+    exposed: list[int] = []
+    truncated: list[int] = []
 
-    lines: list[str] = [
-        "Fatti noti:",
-        f"- [FOCUS CORRENTE] {focus.title}: {focus.content}",
-    ]
-    for node in previous_open:
-        lines.append(f"- [CONTESTO GIÀ APERTO] {node.title}: {node.content}")
+    def append_node(node: KnowledgeNode, label: str, *, opened: bool = True) -> None:
+        source = load_node(carousel.store, node.id) if not node.content_complete else node
+        source = source or node
+        body = source.summary or source.content
+        section_title = ""
+        if carousel.section_focus and carousel.section_focus[0] == node.id:
+            section = next((s for s in source.sections if s.key == carousel.section_focus[1]), None)
+            if section:
+                body = section.content
+                section_title = " / " + section.title
+        prefix = f"- {label} {clip(source.title + section_title, 256)}: "
+        remaining = budget.memory_limit - units("\n".join(lines)) - 1
+        if remaining <= units(prefix) + 40:
+            truncated.append(node.id)
+            return
+        allowance = min(budget.per_node_limit, remaining - units(prefix) - 40)
+        excerpt = clip(body, allowance)
+        if units(excerpt) < units(body):
+            excerpt += " [estratto parziale]"
+            truncated.append(node.id)
+        lines.append(prefix + excerpt)
+        if opened:
+            exposed.append(node.id)
+
+    for index, node in enumerate(open_nodes):
+        append_node(node, "[FOCUS CORRENTE]" if index == 0 else "[CONTESTO GIÀ APERTO]")
 
     conv = carousel.last_convergence
     if conv is not None and conv.mode == "strict" and conv.has_only_partial_matches:
         # Plain Italian only: small models echo any technical label they read (see doc 05).
-        lines.append("- Non conosco nessun fatto che riguardi insieme tutto quello che è stato chiesto.")
+        notice = "- Non conosco nessun fatto che riguardi insieme tutto quello che è stato chiesto."
+        # Reserve the notice before adding partial candidates.
+        while len(lines) > 1 and units("\n".join([*lines, notice])) > budget.memory_limit:
+            lines.pop()
+        lines.append(notice)
         for match in conv.partial_matches[:3]:
             partial_node = load_node(carousel.store, match.node_id)
             if partial_node is not None:
-                lines.append(
-                    f"- So soltanto questo, che riguarda solo una parte della domanda: "
-                    f"{partial_node.title}: {partial_node.content}"
-                )
-    return "\n".join(lines)
+                append_node(partial_node, "So soltanto questo, che riguarda solo una parte della domanda:", opened=False)
+    text = clip("\n".join(lines), budget.memory_limit)
+    carousel.context_report = {"node_ids": exposed, "truncated_ids": truncated,
+                               "input_units": units(text), "limit": budget.memory_limit,
+                               "accounting": "utf8_bytes_conservative", "section": carousel.section_focus}
+    return text
 
 
 EMPTY_STRICT_LABEL = "[INTERSEZIONE VINCOLANTE VUOTA]"

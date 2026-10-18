@@ -40,3 +40,22 @@ limitata. Rinforzano gli archi solo attraversamenti effettivi o collegamenti che
 giustificano il richiamo scelto. Esposizione significa contenuto fornito per una
 risposta riuscita, non prova di utilizzo corretto da parte del modello.
 La tabella SQLite `node_usage` conserva l'utilizzo separato dal testo indicizzato.
+
+## Punto 4 implementato
+
+`runtime.context_budget` configura l'intera richiesta e i sotto-budget di memoria
+e cronologia. L'accounting usa byte UTF-8 in modo conservativo: non è il tokenizer
+del provider né una garanzia per template arbitrari. La finestra va impostata
+entro quella reale del modello sul server. Le domande troppo grandi sono
+rifiutate, non tagliate silenziosamente.
+VRAM e RAM limitano anche il payload serializzato conservato (`vram_bytes`,
+`ram_bytes`), non RSS del processo o allocazione fisica GPU. I nodi troppo grandi
+hanno viste parziali in cache che non possono sovrascrivere la conoscenza SSD.
+Caricare una sorgente completa per estrarne una sezione può ancora allocarla
+temporaneamente.
+
+I nodi supportano `summary` e `sections` con `key`, `title`, `content`.
+Il backend verifica `/api/section` mantenendo l'ID del documento come focus ed
+esponendo la sezione scelta. Gli estratti sono marcati come parziali. La GUI
+mostra budget e controlli per le sezioni, senza eseguire logica di memoria.
+Contenuto sorgente e indice non cambiano quando si aggiorna soltanto l'utilizzo.

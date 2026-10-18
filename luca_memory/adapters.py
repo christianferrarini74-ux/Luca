@@ -8,6 +8,7 @@ import re
 
 from .llm import LLMConfigurationError, LLMConnector, LMStudioModelManager
 from .protocol import LanguageIntent
+from .budget import PromptBudget
 
 
 class LanguageAdapter(Protocol):
@@ -107,6 +108,8 @@ class LMStudioAdapter:
             }
         )
         self.assignment = assignment
+        self.prompt_budget = PromptBudget()
+        self.last_prompt_report: dict[str, Any] = {}
 
     @classmethod
     def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> "LMStudioAdapter":
@@ -129,6 +132,7 @@ class LMStudioAdapter:
             assignment=assignment,
         )
         LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds).ensure_loaded(adapter.model)
+        adapter.prompt_budget = PromptBudget.from_config(config.get("runtime", {}))
         return adapter
 
     def interpret(self, text: str, current_subject: str | None = None) -> LanguageIntent:
@@ -164,25 +168,23 @@ class LMStudioAdapter:
             + json.dumps({"focus": focus, "operation": operation, "candidates": candidates}, ensure_ascii=False)
         )
         try:
+            messages, _ = self.prompt_budget.messages(instruction, "", [], text[:2000])
             content = self.connector.create_chat_model(self.assignment).complete(
-                [{"role": "system", "content": instruction}, {"role": "user", "content": text[:2000]}],
-                response_format={"type": "json_object"}, max_tokens=80,
+                messages, response_format={"type": "json_object"}, max_tokens=min(80, self.prompt_budget.output_reserve),
             )
             value = json.loads(content)
             return value if isinstance(value, dict) else {}
-        except (LLMConfigurationError, json.JSONDecodeError, TypeError):
+        except (LLMConfigurationError, ValueError, TypeError):
             return {}
 
     def respond(self, text: str, memory_context: str, history: list[dict[str, str]]) -> str:
         """Generate a natural response without constraining the conversational output to JSON."""
 
-        messages = [
-            {"role": "system", "content": self._conversation_instruction(memory_context)},
-            *history[-4:],
-            {"role": "user", "content": text},
-        ]
+        messages, self.last_prompt_report = self.prompt_budget.messages(
+            self._conversation_instruction(""), memory_context, history, text
+        )
         try:
-            raw = self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=512).strip()
+            raw = self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=self.prompt_budget.output_reserve).strip()
             return self._sanitize_response(raw)
         except LLMConfigurationError as error:
             raise LanguageAdapterUnavailable("LM Studio non ha restituito una risposta conversazionale valida.") from error

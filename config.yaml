@@ -10,6 +10,17 @@ runtime:
   ram_capacity: 12
   memory_search_policy: fast
   memory_planner: hybrid
+  recent_window: 8
+  vram_bytes: 8000000
+  ram_bytes: 32000000
+  context_budget:
+    context_window: 8192
+    output_reserve: 512
+    framing_reserve: 256
+    memory_limit: 4096
+    per_node_limit: 1536
+    history_limit: 1024
+    task_limit: 512
   api:
     host: 127.0.0.1
     port: 8765

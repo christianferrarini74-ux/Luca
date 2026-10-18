@@ -12,6 +12,13 @@ from .store import Cell, MemoryStore
 
 
 @dataclass(frozen=True, slots=True)
+class KnowledgeSection:
+    key: str
+    title: str
+    content: str
+
+
+@dataclass(frozen=True, slots=True)
 class KnowledgeNode:
     """A self-contained block of articulated knowledge stored in a Cell."""
 
@@ -23,6 +30,10 @@ class KnowledgeNode:
     created_at: int = 0
     last_recalled_at: int = 0
     recall_count: int = 0
+    summary: str = ""
+    sections: tuple[KnowledgeSection, ...] = ()
+    content_complete: bool = True
+    full_content_bytes: int = 0
 
     def to_cell(self) -> Cell:
         created = self.created_at or int(time.time())
@@ -35,22 +46,15 @@ class KnowledgeNode:
             "created_at": created,
             "last_recalled_at": self.last_recalled_at,
             "recall_count": self.recall_count,
+            "summary": self.summary,
+            "sections": [{"key": section.key, "title": section.title, "content": section.content} for section in self.sections],
         }
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return Cell(id=self.id, content=encoded, created_at=created)
 
     def with_recall(self, timestamp: int | None = None) -> "KnowledgeNode":
         now = int(time.time()) if timestamp is None else timestamp
-        return KnowledgeNode(
-            id=self.id,
-            slug=self.slug,
-            title=self.title,
-            content=self.content,
-            keywords=self.keywords,
-            created_at=self.created_at,
-            last_recalled_at=now,
-            recall_count=self.recall_count + 1,
-        )
+        return replace(self, last_recalled_at=now, recall_count=self.recall_count + 1)
 
     @classmethod
     def from_cell(cls, cell: Cell) -> "KnowledgeNode":
@@ -75,6 +79,9 @@ class KnowledgeNode:
                 created_at=int(payload.get("created_at") or cell.created_at),
                 last_recalled_at=int(payload.get("last_recalled_at") or 0),
                 recall_count=int(payload.get("recall_count") or 0),
+                summary=str(payload.get("summary") or ""),
+                sections=tuple(KnowledgeSection(str(s["key"]), str(s.get("title") or s["key"]), str(s.get("content") or ""))
+                               for s in payload.get("sections", []) if isinstance(s, dict) and s.get("key")),
             )
 
         # Fallback for Phase 0 legacy cells
@@ -99,6 +106,8 @@ def normalise_key(value: str) -> str:
 def save_node(store: MemoryStore, node: KnowledgeNode) -> None:
     """Insert or update a KnowledgeNode and register its slug and keyword aliases."""
 
+    if not node.content_complete:
+        raise ValueError("A partial cache view cannot overwrite durable knowledge.")
     cell = node.to_cell()
     store.upsert_cell(cell)
     if node.slug:

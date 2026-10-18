@@ -52,6 +52,7 @@ class LucaRuntime:
             ram_capacity=ram_cap,
             search_policy=str(runtime_config.get("memory_search_policy", "fast")),
             planner_mode=str(runtime_config.get("memory_planner", "hybrid")),
+            memory_settings=runtime_config,
         )
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
@@ -92,6 +93,12 @@ class LucaRuntime:
             self._last_trace = reply.trace
             return {"reply": self._reply_payload(reply), "state": self.state()}
 
+    def open_section(self, node_id: int, key: str) -> dict[str, Any]:
+        with self._lock:
+            self.session.open_section(node_id, key)
+            self._last_trace = self.session.carousel.vram.node_ids()
+            return {"state": self.state()}
+
     def state(self) -> dict[str, Any]:
         with self._lock:
             memory = self._build_memory_items()
@@ -123,15 +130,21 @@ class LucaRuntime:
                 "memory_search_policy": carousel.search_policy,
                 "recall_plan": self.session.last_plan.payload() if self.session.last_plan else None,
                 "memory_activity": carousel.activity.snapshot(),
+                "context_budget": carousel.context_report,
+                "model_request": getattr(self.session.adapter, "last_prompt_report", {}),
                 "tiers": {
                     "vram": {
                         "capacity": carousel.vram.capacity,
+                        "payload_bytes": carousel.vram.used_bytes,
+                        "max_bytes": carousel.vram.max_bytes,
                         "nodes": vram_nodes,
                         "chains": chains,
                         "families": families,
                     },
                     "ram": {
                         "capacity": carousel.ram.capacity,
+                        "payload_bytes": carousel.ram.used_bytes,
+                        "max_bytes": carousel.ram.max_bytes,
                         "nodes": ram_nodes,
                     },
                     "ssd": {
@@ -214,7 +227,10 @@ class LucaRuntime:
                     source = load_node(self.session.store, edge.source_id)
                     if source is not None:
                         facts.append({"predicate": f"*:{node.slug}", "object": source.title})
-                memory.append({"id": node.id, "label": node.title, "slug": node.slug, "content": node.content, "facts": facts})
+                memory.append({"id": node.id, "label": node.title, "slug": node.slug,
+                               "content": node.content[:2000], "content_truncated": len(node.content) > 2000,
+                               "summary": node.summary[:512],
+                               "sections": [{"key": s.key, "title": s.title} for s in node.sections[:32]], "facts": facts})
             return memory
 
         for result in self.search.cells_by_kind("concept", limit=100):
@@ -247,7 +263,8 @@ class LucaRuntime:
             "id": node.id,
             "slug": node.slug,
             "title": node.title,
-            "content": node.content,
+            "content": node.content[:2000],
+            "content_truncated": not node.content_complete or len(node.content) > 2000,
             "expanded": node.id in carousel.expanded_in_vram if in_vram else False,
             "recall_count": node.recall_count,
             "incoming_ids": incoming,
@@ -306,14 +323,20 @@ class ApiHandler(BaseHTTPRequestHandler):
             self._json({"status": "shutting_down"}, status=202)
             threading.Thread(target=self.shutdown_server, daemon=True).start()
             return
-        if self.path in {"/api/recall", "/api/alternative"}:
+        if self.path in {"/api/recall", "/api/alternative", "/api/section"}:
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict):
                     raise ValueError("The request body must be an object.")
                 node_id = int(payload.get("node_id"))
-                self._json(self.runtime.recall_node(node_id, alternative=self.path == "/api/alternative"))
+                if self.path == "/api/section":
+                    key = payload.get("key")
+                    if not isinstance(key, str):
+                        raise ValueError("A section key is required.")
+                    self._json(self.runtime.open_section(node_id, key))
+                else:
+                    self._json(self.runtime.recall_node(node_id, alternative=self.path == "/api/alternative"))
             except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
                 self._json({"error": str(error)}, status=400)
             return

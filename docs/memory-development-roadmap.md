@@ -39,3 +39,20 @@ demotion. Recent priority expires after a bounded activity window; only actual
 traversals or links supporting the selected recall reinforce edges. Exposure
 means content supplied for a successful response, not proof the model used it
 correctly. SQLite `node_usage` stores usage separately from indexed content.
+
+## Stage 4 implemented
+
+`runtime.context_budget` configures the whole request envelope and memory/history
+sub-budgets. UTF-8 bytes are used conservatively; this is not a provider tokenizer
+or proof for arbitrary model templates. Configure a window no larger than the
+server model's real window. Oversized questions are rejected, not silently cut.
+VRAM/RAM additionally bound retained serialized payload bytes (`vram_bytes`,
+`ram_bytes`); these are not process RSS or physical GPU allocation limits.
+Oversized nodes have partial cache views, which cannot overwrite SSD knowledge.
+Loading a full source to extract a section can still transiently allocate it.
+
+Knowledge nodes support optional `summary` and `sections` (`key`, `title`,
+`content`). The backend validates `/api/section` and keeps the document ID as
+focus while exposing the chosen section. Context excerpts are explicitly marked
+partial. The dashboard displays budgets and section controls; all logic remains
+in Python. The source content and index are unchanged by usage updates.

@@ -11,9 +11,10 @@ from .context_builder import active_vram_component_ids, build_vram_context
 from .curriculum import Curriculum, cell_payload, curriculum_from_file, load_curriculum
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
-from .node import normalise_key
+from .node import normalise_key, load_node
 from .protocol import EvidenceBundle, LanguageIntent
 from .planning import RecallPlanner, RecallPlan
+from .budget import PromptBudget, clip
 from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
@@ -53,6 +54,7 @@ class LucaSession:
         ram_capacity: int = 32,
         search_policy: str = "fast",
         planner_mode: str = "hybrid",
+        memory_settings: dict | None = None,
     ) -> None:
         self.store = store
         self.seed_path = Path(seed_path)
@@ -65,7 +67,13 @@ class LucaSession:
         self.language = ItalianSeedInterface(store, self.curriculum)
         self.editor = MemoryEditor(store)
         self.search = MemorySearch(store)
-        self.carousel = SynapticCarousel(store, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy)
+        settings = memory_settings or {}
+        self.carousel = SynapticCarousel(
+            store, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy,
+            recent_window=int(settings.get("recent_window", 8)),
+            vram_bytes=int(settings.get("vram_bytes", 8_000_000)), ram_bytes=int(settings.get("ram_bytes", 32_000_000)),
+            prompt_budget=PromptBudget.from_config(settings),
+        )
         self.adapter = adapter or RuleAdapter()
         self.current_subject_id: int | None = None
         self.history: list[dict[str, str]] = []
@@ -83,6 +91,7 @@ class LucaSession:
         ram_capacity: int = 32,
         search_policy: str = "fast",
         planner_mode: str = "hybrid",
+        memory_settings: dict | None = None,
     ) -> "LucaSession":
         store = MemoryStore(database)
         seed_file = Path(seed_path)
@@ -91,10 +100,21 @@ class LucaSession:
                 ensure_knowledge_seed(store, seed_file)
             elif not store.has_cells():
                 load_curriculum(store, seed_file)
-        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy, planner_mode=planner_mode)
+        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy, planner_mode=planner_mode, memory_settings=memory_settings)
 
     def close(self) -> None:
         self.store.close()
+
+    def open_section(self, node_id: int, key: str) -> None:
+        """Open a validated document section while retaining its node identity."""
+        node = load_node(self.store, node_id)
+        if node is None or key not in {section.key for section in node.sections}:
+            raise ValueError("Unknown document section.")
+        self.carousel.begin_turn()
+        self.carousel.step_to(node_id)
+        self.carousel.section_focus = (node_id, key)
+        self.current_subject_id = node_id
+        self.last_plan = None
 
     def reset(self) -> None:
         """Reset conversational history and empty VRAM/RAM slots while keeping SSD up to date."""
@@ -109,6 +129,10 @@ class LucaSession:
             vram_capacity=self.carousel.vram.capacity,
             ram_capacity=self.carousel.ram.capacity,
             search_policy=self.carousel.search_policy,
+            recent_window=self.carousel.activity.window,
+            vram_bytes=self.carousel.vram.max_bytes,
+            ram_bytes=self.carousel.ram.max_bytes,
+            prompt_budget=self.carousel.prompt_budget,
         )
 
     def handle(self, text: str) -> SessionReply:
@@ -122,6 +146,7 @@ class LucaSession:
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
             response = self.adapter.respond(text, self._memory_context(text), self.history)
+            self.carousel.mark_exposed(self.carousel.context_report.get("node_ids", ()))
             trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
             if not self.is_v1:
                 try:
@@ -164,7 +189,7 @@ class LucaSession:
                 ).strip()
                 return SessionReply(text_reply, tuple(self.carousel.vram.node_ids()))
             top_node = self.carousel.vram.nodes()[0]
-            return SessionReply(f"{top_node.title}: {top_node.content}", tuple(self.carousel.vram.node_ids()))
+            return SessionReply(clip(f"{top_node.title}: {top_node.content}", self.carousel.prompt_budget.per_node_limit), tuple(self.carousel.vram.node_ids()))
 
         if intent.kind == "describe" and intent.subject:
             subject = self.store.cell_by_alias(intent.subject)
@@ -210,6 +235,7 @@ class LucaSession:
         return tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
 
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
+        self.carousel.context_report = {}
         if self.is_v1 and self.last_plan is not None and not self.last_plan.expose_memory:
             return "Nessun ricordo locale pertinente alla domanda; usa la tua conoscenza generale senza attribuirla a ricordi locali."
         sections: list[str] = []
