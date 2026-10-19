@@ -13,6 +13,7 @@ from ..activity import MemoryActivity
 from ..budget import PromptBudget
 from .graph_view import GraphView
 from .slot import TierSlot
+from .device_slot import DeviceSlot
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,13 +42,17 @@ class SynapticCarousel:
         vram_bytes: int = 8_000_000,
         ram_bytes: int = 32_000_000,
         prompt_budget: PromptBudget | None = None,
+        memory_backend: str = "host",
+        gpu_device: int = 0,
     ) -> None:
         self.store = store
         if search_policy not in {"fast", "complete"}:
             raise ValueError("search_policy must be 'fast' or 'complete'.")
         self.search_policy = search_policy
-        self.vram = TierSlot("VRAM", vram_capacity, vram_bytes)
-        self.ram = TierSlot("RAM", ram_capacity, ram_bytes)
+        if memory_backend not in {"host", "cuda"}:
+            raise ValueError("memory_backend must be 'host' or 'cuda'.")
+        self.memory_backend, self.gpu_device = memory_backend, gpu_device
+        self.ram = TierSlot("RAM", ram_capacity, ram_bytes, compact=memory_backend != "cuda")
         self.prompt_budget = prompt_budget or PromptBudget()
         self.context_report: dict = {}
         self.section_focus: tuple[int, str] | None = None
@@ -59,6 +64,10 @@ class SynapticCarousel:
         self.last_convergence: ConvergenceResult | None = None
         self.previous_convergence: ConvergenceResult | None = None
         self._clock = int(time.time())
+        self.disk_loads = 0
+        self.disk_payload_bytes = 0
+        # Acquire external resources only after validating all host-side state.
+        self.vram = DeviceSlot(vram_capacity, vram_bytes, gpu_device) if memory_backend == "cuda" else TierSlot("HOST", vram_capacity, vram_bytes)
 
     def _next_tick(self) -> int:
         self._clock = max(self._clock + 1, int(time.time()))
@@ -131,12 +140,11 @@ class SynapticCarousel:
             if node is not None:
                 neighbours.append(node)
 
-        self.ram.remove(center.id)
-        for neighbour in neighbours:
-            self.ram.remove(neighbour.id)
-
         batch = [center, *neighbours]
         evicted_from_vram = self.vram.promote_many(batch)
+        # Do not discard host copies until the device transaction succeeds.
+        for node in batch:
+            self.ram.remove(node.id)
         self.expanded_in_vram.add(center.id)
         self.activity.record("open", center.id)
         for neighbor in neighbours:
@@ -302,7 +310,31 @@ class SynapticCarousel:
         return tuple(node for node in self.vram.nodes() if node.id in self.expanded_in_vram)
 
     def _fetch_node(self, node_id: int) -> KnowledgeNode | None:
-        return self.vram.get(node_id) or self.ram.get(node_id) or load_node(self.store, node_id)
+        node = self.vram.get(node_id)
+        if node is not None:
+            self.activity.record("read_gpu" if self.memory_backend == "cuda" else "read_host", node_id)
+            return node
+        node = self.ram.get(node_id)
+        if node is not None:
+            self.activity.record("read_ram", node_id)
+            return node
+        node = load_node(self.store, node_id)
+        if node is not None:
+            self.disk_loads += 1
+            self.disk_payload_bytes += len(node.to_cell().content)
+            self.activity.record("load_disk", node_id)
+        return node
+
+    def physical_state(self) -> dict:
+        if self.memory_backend == "cuda":
+            return {**self.vram.memory.stats(), "disk_loads": self.disk_loads,
+                    "disk_payload_bytes": self.disk_payload_bytes}
+        return {"backend": "host", "physical_vram": False, "allocated_bytes": 0,
+                "allocations": 0, "upload_bytes": 0, "download_bytes": 0}
+
+    def close(self) -> None:
+        self.vram.close()
+        self.ram.close()
 
     def _is_knowledge_cell(self, cell_id: int) -> bool:
         cell = self.store.cell(cell_id)

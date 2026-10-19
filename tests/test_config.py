@@ -6,6 +6,14 @@ from luca_memory.config import ConfigurationError, load_config
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_invalid_memory_backend_and_device_are_rejected(self) -> None:
+        for options in ("memory_backend: automatic", "gpu_device: -1", "gpu_device: true", "gpu_device: abc"):
+            with self.subTest(options=options), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "config.yaml"
+                path.write_text("runtime:\n  " + options + "\n", encoding="utf-8")
+                with self.assertRaises(ConfigurationError):
+                    load_config(path)
+
     def test_load_config_resolves_paths_and_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -20,7 +28,8 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(config["storage"]["database"], str((root / "data" / "luca.sqlite").resolve()))
             self.assertEqual(config["storage"]["seed"], str((root / "seed" / "italian_base_v0.json").resolve()))
             self.assertEqual(config["runtime"]["api"]["port"], 8765)
-            self.assertEqual(config["frontend"]["directory"], str((root / "gui").resolve()))
+            self.assertNotIn("directory", config["frontend"])
+            self.assertEqual(config["runtime"]["memory_backend"], "host")
 
     def test_invalid_adapter_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

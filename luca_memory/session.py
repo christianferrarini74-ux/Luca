@@ -74,13 +74,19 @@ class LucaSession:
             recent_window=int(settings.get("recent_window", 8)),
             vram_bytes=int(settings.get("vram_bytes", 8_000_000)), ram_bytes=int(settings.get("ram_bytes", 32_000_000)),
             prompt_budget=PromptBudget.from_config(settings),
+            memory_backend=str(settings.get("memory_backend", "host")),
+            gpu_device=int(settings.get("gpu_device", 0)),
         )
-        self.adapter = adapter or RuleAdapter()
-        self.current_subject_id: int | None = None
-        self.history: list[dict[str, str]] = []
-        self.planner = RecallPlanner(store, mode=planner_mode)
-        self.last_plan: RecallPlan | None = None
-        self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit)
+        try:
+            self.adapter = adapter or RuleAdapter()
+            self.current_subject_id: int | None = None
+            self.history: list[dict[str, str]] = []
+            self.planner = RecallPlanner(store, mode=planner_mode)
+            self.last_plan: RecallPlan | None = None
+            self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit)
+        except BaseException:
+            self.carousel.close()
+            raise
 
     @classmethod
     def open(
@@ -97,15 +103,22 @@ class LucaSession:
     ) -> "LucaSession":
         store = MemoryStore(database)
         seed_file = Path(seed_path)
-        if seed_file.exists():
-            if is_v1_seed(seed_file):
-                ensure_knowledge_seed(store, seed_file)
-            elif not store.has_cells():
-                load_curriculum(store, seed_file)
-        return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy, planner_mode=planner_mode, memory_settings=memory_settings)
+        try:
+            if seed_file.exists():
+                if is_v1_seed(seed_file):
+                    ensure_knowledge_seed(store, seed_file)
+                elif not store.has_cells():
+                    load_curriculum(store, seed_file)
+            return cls(store, seed_file, adapter, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy, planner_mode=planner_mode, memory_settings=memory_settings)
+        except BaseException:
+            store.close()
+            raise
 
     def close(self) -> None:
-        self.store.close()
+        try:
+            self.carousel.close()
+        finally:
+            self.store.close()
 
     def open_section(self, node_id: int, key: str) -> None:
         """Open a validated document section while retaining its node identity."""
@@ -133,13 +146,12 @@ class LucaSession:
     def reset(self) -> None:
         """Reset conversational history and empty VRAM/RAM slots while keeping SSD up to date."""
 
-        if self.is_v1 and self.seed_path.exists():
-            ensure_knowledge_seed(self.store, self.seed_path)
         self.history.clear()
         self.current_subject_id = None
         self.last_plan = None
         self.task.update({"clear": True})
-        self.carousel = SynapticCarousel(
+        previous = self.carousel
+        replacement = SynapticCarousel(
             self.store,
             vram_capacity=self.carousel.vram.capacity,
             ram_capacity=self.carousel.ram.capacity,
@@ -148,7 +160,15 @@ class LucaSession:
             vram_bytes=self.carousel.vram.max_bytes,
             ram_bytes=self.carousel.ram.max_bytes,
             prompt_budget=self.carousel.prompt_budget,
+            memory_backend=self.carousel.memory_backend,
+            gpu_device=self.carousel.gpu_device,
         )
+        try:
+            previous.close()
+        except BaseException:
+            replacement.close()
+            raise
+        self.carousel = replacement
 
     def handle(self, text: str) -> SessionReply:
         budget = self.carousel.prompt_budget

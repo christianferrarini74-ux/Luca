@@ -12,7 +12,7 @@ from ..budget import payload_size, cache_view
 class TierSlot:
     """Fixed-capacity slot where recalled nodes jump to the head and unused nodes slide to the tail."""
 
-    def __init__(self, name: str, capacity: int, max_bytes: int | None = None) -> None:
+    def __init__(self, name: str, capacity: int, max_bytes: int | None = None, *, compact: bool = True) -> None:
         if capacity < 1:
             raise ValueError(f"TierSlot '{name}' capacity must be >= 1.")
         self.name = name
@@ -20,6 +20,7 @@ class TierSlot:
         if max_bytes is not None and max_bytes < 2048:
             raise ValueError("Cache payload budget must be at least 2048 bytes.")
         self.max_bytes = max_bytes
+        self.compact = compact
         self._nodes: OrderedDict[int, KnowledgeNode] = OrderedDict()
 
     def __len__(self) -> int:
@@ -48,7 +49,10 @@ class TierSlot:
     def promote(self, node: KnowledgeNode) -> list[KnowledgeNode]:
         """Place `node` at the head of the slot and return any oldest nodes evicted from the tail."""
 
-        node = cache_view(node, self.max_bytes) if self.max_bytes else node
+        if self.max_bytes and not self.compact and payload_size(node) > self.max_bytes:
+            self._nodes.pop(node.id, None)
+            return [node]
+        node = cache_view(node, self.max_bytes) if self.max_bytes and self.compact else node
         self._nodes[node.id] = node
         self._nodes.move_to_end(node.id, last=False)
         evicted: list[KnowledgeNode] = []
@@ -72,3 +76,6 @@ class TierSlot:
         """Remove and return a node if present (e.g., when promoted to a higher tier)."""
 
         return self._nodes.pop(node_id, None)
+
+    def close(self) -> None:
+        self._nodes.clear()

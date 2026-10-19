@@ -385,10 +385,17 @@ function renderMemoryControls(state) {
   const vram = state.tiers?.vram || {};
   const ram = state.tiers?.ram || {};
   const plan = state.recall_plan;
+  const physical = state.physical_memory || {};
+  $("physical-memory-status").textContent = physical.physical_vram
+    ? `Memoria GPU reale · GPU ${physical.device_index} · ${physical.device_name} · ${physical.allocated_bytes} byte allocati · ${physical.allocations} buffer`
+    : "Modalità HOST di riferimento: entrambi i livelli sono in RAM, nessuna VRAM GPU utilizzata.";
   $("context-status").textContent = (plan ? `Piano: ${plan.operation} (${plan.source}). ${plan.reason} ` : "") +
     `Politica: ${state.memory_policy || "grounded"}. Richiesta: ${request.input_units ?? "—"}/${request.input_limit ?? "—"} unità UTF-8 conservative; ` +
     `riserva risposta ${request.output_reserve ?? "—"}. Memoria esposta: ${context.input_units ?? 0}/${context.limit ?? "—"}. ` +
-    `Payload cache VRAM ${vram.payload_bytes ?? 0}/${vram.max_bytes ?? "—"} byte; RAM ${ram.payload_bytes ?? 0}/${ram.max_bytes ?? "—"} byte. ` +
+    (physical.physical_vram
+      ? `VRAM fisica: GPU ${physical.device_index} (${physical.device_name}), ${physical.allocated_bytes} byte in ${physical.allocations} allocazioni; trasferiti RAM→GPU ${physical.upload_bytes} byte, GPU→RAM ${physical.download_bytes} byte; caricamenti SQLite ${physical.disk_loads} (${physical.disk_payload_bytes} byte di payload). `
+      : "Modalità HOST: primo livello in RAM, nessuna allocazione VRAM fisica. ") +
+    `Payload livelli: attivo ${vram.payload_bytes ?? 0}/${vram.max_bytes ?? "—"} byte; RAM ${ram.payload_bytes ?? 0}/${ram.max_bytes ?? "—"} byte. ` +
     `Estratti parziali: ${(context.truncated_ids || []).join(", ") || "nessuno"}.`;
   $("document-sections").innerHTML = (state.memory || []).flatMap(node => (node.sections || []).map(section =>
     `<button type="button" class="secondary" data-section-node="${node.id}" data-section-key="${encodeURIComponent(section.key)}">` +

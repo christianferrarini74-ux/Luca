@@ -73,7 +73,7 @@ def load_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed:
 
 
 def ensure_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed:
-    """Load the v1 seed if the store is empty or if the seed file version changed."""
+    """Initialize an empty store; never replace an existing knowledge library."""
 
     expected = knowledge_seed_from_file(path)
     if not store.has_cells():
@@ -84,11 +84,11 @@ def ensure_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed
     if row is not None:
         try:
             loaded_version = json.loads(row["payload"]).get("version")
-            if loaded_version == expected.version and store.cell_count() == len(expected.ids):
+            if loaded_version == expected.version:
                 return expected
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
             pass
-    return load_knowledge_seed(store, path)
+    raise ValueError("Existing memory does not match the configured seed version. Use a separate experimental database or an explicit migration; existing knowledge was not replaced.")
 
 
 def knowledge_seed_from_file(path: str | Path) -> KnowledgeSeed:

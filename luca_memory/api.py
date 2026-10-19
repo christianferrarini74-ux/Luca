@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
-import subprocess
 import threading
 import time
-from urllib.request import urlopen
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -123,6 +120,7 @@ class LucaRuntime:
 
             return {
                 "status": "ready",
+                "physical_memory": carousel.physical_state(),
                 "adapter": self.config["runtime"]["language_adapter"],
                 "memory": memory,
                 "convergence": convergence,
@@ -394,7 +392,11 @@ def create_server(config: dict[str, Any]) -> ThreadingHTTPServer:
 
     BoundApiHandler.runtime = runtime
     api_config = config["runtime"]["api"]
-    server = ThreadingHTTPServer((api_config["host"], api_config["port"]), BoundApiHandler)
+    try:
+        server = ThreadingHTTPServer((api_config["host"], api_config["port"]), BoundApiHandler)
+    except BaseException:
+        runtime.close()
+        raise
     BoundApiHandler.shutdown_server = server.shutdown
     server.runtime = runtime  # type: ignore[attr-defined]
     return server

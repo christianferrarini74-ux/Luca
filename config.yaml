@@ -8,6 +8,9 @@ runtime:
   adapter_role: orchestrator
   vram_capacity: 5
   ram_capacity: 12
+  memory_backend: cuda
+  # CUDA ordinal 1 keeps Luca's node storage separate from the current LLM on GPU 0.
+  gpu_device: 1
   memory_search_policy: fast
   memory_planner: hybrid
   # The current seed contains deliberate counterfactual experiments.
@@ -45,6 +48,3 @@ llm:
 
 frontend:
   enabled: true
-  directory: gui
-  api_url: http://127.0.0.1:8765
-  url: http://localhost:3000

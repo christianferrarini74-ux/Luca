@@ -44,6 +44,12 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     runtime.setdefault("memory_search_policy", "fast")
     runtime.setdefault("memory_planner", "hybrid")
     runtime.setdefault("memory_policy", "grounded")
+    runtime.setdefault("memory_backend", "host")
+    runtime.setdefault("gpu_device", 0)
+    if runtime["memory_backend"] not in {"host", "cuda"}:
+        raise ConfigurationError("runtime.memory_backend must be 'host' or 'cuda'.")
+    if isinstance(runtime["gpu_device"], bool) or not isinstance(runtime["gpu_device"], int) or runtime["gpu_device"] < 0:
+        raise ConfigurationError("runtime.gpu_device must be a non-negative integer.")
     if runtime["memory_policy"] not in {"grounded", "experimental"}:
         raise ConfigurationError("runtime.memory_policy must be 'grounded' or 'experimental'.")
     try:
@@ -73,9 +79,9 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     frontend = _mapping(config.setdefault("frontend", {}))
     config["frontend"] = frontend
     frontend.setdefault("enabled", True)
-    frontend.setdefault("directory", "gui")
-    frontend.setdefault("url", "http://127.0.0.1:3000")
-    frontend["directory"] = str(_resolve_path(frontend["directory"], config_path.parent))
+    # The cockpit is bundled and served by the same Python HTTP server.
+    for obsolete in ("directory", "url", "api_url"):
+        frontend.pop(obsolete, None)
     return config
 
 
