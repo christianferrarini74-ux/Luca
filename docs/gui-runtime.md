@@ -1,5 +1,10 @@
 # Luca dashboard runtime
 
+Current update: the bundled cockpit is served directly by Python, without Vite
+or a Node child process. Orderly shutdown releases CUDA buffers and the database.
+See [physical memory](physical-memory.md); the frontend process description below
+is retained as historical background, not current startup instructions.
+
 The dashboard is a frontend, not part of Luca's cognitive runtime.
 
 ```text

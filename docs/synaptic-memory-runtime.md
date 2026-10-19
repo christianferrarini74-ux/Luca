@@ -2,6 +2,10 @@
 
 Date: 2026-10-19
 
+Superseding milestone: [physical SSD/RAM/GPU carousel](physical-memory.md).
+The logical-cache and seed-refresh limitations below describe Phase 1.07,
+not the current CUDA backend and non-destructive startup policy.
+
 [Italiano](it/fase-1-sinapsi/07-completamento-runtime.md)
 
 This document records the completion of the Phase 1 runtime. Earlier phase

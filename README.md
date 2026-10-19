@@ -2,7 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Latest milestone: [memory development stages 1–5](docs/memory-development-roadmap.md).
+Latest milestone: [physical SSD/RAM/GPU carousel](docs/physical-memory.md).
+Complete nodes now use real CUDA device allocations, with no new Python packages.
+The configured GPU is ordinal 1; select an available device in `config.yaml`.
+See the [dependency audit](docs/dependency-audit.md) and run the synthetic check
+with `python -m luca_memory.hardware_check`. Real-library tests remain joint work.
+
+Previous milestone: [memory development stages 1–5](docs/memory-development-roadmap.md).
 
 Current Phase 1 runtime: [synaptic memory, search policies and dashboard](docs/synaptic-memory-runtime.md).
 Start with `python run_luca.py`; the current cockpit is served by Python on port 8765.

@@ -1,5 +1,11 @@
 # Configurazione di Luca
 
+Aggiornamento operativo: vedere [memoria fisica](fase-1-sinapsi/09-memoria-fisica.md).
+`runtime.memory_backend: cuda` attiva lo storage GPU reale e `gpu_device` sceglie
+l'ordinale a partire da zero; `host` seleziona il riferimento CPU. Oggi si usa solo
+`frontend.enabled`: il cockpit incluso condivide il server API. Le impostazioni
+directory/URL descritte nel testo storico seguente sono superate.
+
 Luca ha un solo file di configurazione del runtime: `config.yaml` nella radice
 del repository. Il punto di avvio configurato è:
 

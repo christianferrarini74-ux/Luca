@@ -2,7 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Ultimo milestone: [sviluppo della memoria, punti 1–5](docs/it/fase-1-sinapsi/08-roadmap-utilizzo-memoria.md).
+Ultimo milestone: [giostra fisica SSD/RAM/GPU](docs/it/fase-1-sinapsi/09-memoria-fisica.md).
+I nodi completi usano allocazioni CUDA reali, senza nuovi pacchetti Python.
+La GPU configurata è la numero 1; scegliere un dispositivo disponibile in `config.yaml`.
+Vedere la [verifica delle dipendenze](docs/it/dependency-audit.md); prova sintetica:
+`python -m luca_memory.hardware_check`. La biblioteca reale sarà testata insieme.
+
+Milestone precedente: [sviluppo della memoria, punti 1–5](docs/it/fase-1-sinapsi/08-roadmap-utilizzo-memoria.md).
 
 Runtime attuale di Fase 1: [memoria sinaptica, politiche di ricerca e cruscotto](docs/it/fase-1-sinapsi/07-completamento-runtime.md).
 Avvio: `python run_luca.py`; il cockpit attuale è servito da Python sulla porta 8765.

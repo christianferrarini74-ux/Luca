@@ -1,5 +1,10 @@
 # Runtime della dashboard di Luca
 
+Aggiornamento: il cockpit incluso è servito direttamente da Python, senza Vite
+o processi figli Node. L'arresto ordinato libera buffer CUDA e database.
+Vedere [memoria fisica](fase-1-sinapsi/09-memoria-fisica.md); la descrizione del
+processo frontend seguente è storica, non rappresenta l'avvio attuale.
+
 La dashboard è un frontend, non fa parte del runtime cognitivo di Luca.
 
 ```text

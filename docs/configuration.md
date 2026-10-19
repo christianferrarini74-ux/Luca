@@ -1,5 +1,11 @@
 # Luca configuration
 
+Current operational update: see [physical memory](physical-memory.md).
+`runtime.memory_backend: cuda` selects real GPU storage and `gpu_device` selects
+its zero-based ordinal; `host` explicitly selects the CPU reference. Only
+`frontend.enabled` is used now: the bundled cockpit shares the API server.
+The directory/URL settings described in this historical document are obsolete.
+
 Luca has one runtime configuration file: `config.yaml` at the repository root.
 The configured entry point is:
 

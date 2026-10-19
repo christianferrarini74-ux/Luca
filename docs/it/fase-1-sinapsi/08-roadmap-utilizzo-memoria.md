@@ -2,6 +2,10 @@
 
 Data: 2026-10-19. Ambito: solo Luca; integrazione con Cesare rinviata.
 
+Milestone successivo: [memoria fisica](09-memoria-fisica.md), che supera le cache
+soltanto logiche e protegge la conoscenza esistente durante avvio/reset.
+Le note seguenti registrano i precedenti punti 1–5.
+
 [English](../../memory-development-roadmap.md)
 
 1. Rendere eseguibile il dialogo dei sommergibili: riferimento ai mezzi gialli,

@@ -7,6 +7,11 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Aggiornamento 2026-10-19: [Fase 1.09 — Giostra fisica SSD/RAM/GPU](fase-1-sinapsi/09-memoria-fisica.md)
+([English](../physical-memory.md)): allocazioni CUDA native, nodi completi,
+trasferimenti verificati, diagnostica e rilascio risorse. [Audit dipendenze](dependency-audit.md).
+Biblioteca reale da verificare insieme a Christian; nessuna integrazione Cesare.
+
 Aggiornamento 2026-10-19: [Fase 1.08 — Utilizzo della memoria, punti 1–5](fase-1-sinapsi/08-roadmap-utilizzo-memoria.md)
 ([English](../memory-development-roadmap.md)): planner, attività e oblio, budget,
 documenti e sezioni, continuità del compito. Integrazione con Cesare rinviata.

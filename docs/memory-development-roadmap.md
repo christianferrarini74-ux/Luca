@@ -2,6 +2,10 @@
 
 Date: 2026-10-19. Scope: Luca only; integration with Cesare is deferred.
 
+Subsequent milestone: [physical memory](physical-memory.md) replaces the
+logical-only cache backend and protects existing knowledge during startup/reset.
+The implementation notes below record the preceding stages 1–5.
+
 [Italiano](it/fase-1-sinapsi/08-roadmap-utilizzo-memoria.md)
 
 1. Make the submarine conversation an executable contract, including references

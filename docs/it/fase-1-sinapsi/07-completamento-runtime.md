@@ -2,6 +2,10 @@
 
 Data: 2026-10-19
 
+Milestone successivo: [giostra fisica SSD/RAM/GPU](09-memoria-fisica.md).
+I limiti delle cache logiche e del ripristino seed descritti sotto appartengono
+alla Fase 1.07, non al backend CUDA e all'avvio non distruttivo attuali.
+
 [English](../../synaptic-memory-runtime.md)
 
 Questo documento registra il completamento del runtime di Fase 1. I documenti
