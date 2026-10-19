@@ -85,8 +85,12 @@ class DeviceSlot:
             for key in kept:
                 if key in incoming:
                     payload = payloads[key]
+                    checksum = hashlib.sha256(payload).digest()
+                    previous = self._entries.get(key)
+                    if previous is not None and previous[1] == len(payload) and previous[2] == checksum:
+                        continue
                     pointer = self.memory.upload(payload)
-                    staged[key] = (pointer, len(payload), hashlib.sha256(payload).digest())
+                    staged[key] = (pointer, len(payload), checksum)
                     # Verify the actual round trip before replacing any existing entry.
                     if self.memory.download(pointer) != payload:
                         raise DeviceMemoryError(f"Upload verification failed for node {key}.")

@@ -261,7 +261,7 @@ class LucaSession:
                     + ("So soltanto qualcosa su una parte: " + " | ".join(partials) if partials else "")
                 ).strip()
                 return SessionReply(clip(text_reply, self.carousel.prompt_budget.memory_limit), tuple(self.carousel.vram.node_ids()))
-            top_node = self.carousel.vram.nodes()[0]
+            top_node = self.carousel.vram.get(self.carousel.vram.node_ids()[0])
             body = top_node.content
             if self.carousel.section_focus and self.carousel.section_focus[0] == top_node.id:
                 source = load_node(self.store, top_node.id)

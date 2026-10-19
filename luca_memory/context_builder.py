@@ -12,12 +12,12 @@ from .budget import clip, units
 def active_vram_component_ids(carousel: SynapticCarousel) -> set[int]:
     """Return the node IDs in VRAM connected via prefix:suffix edges to the current focus node."""
 
-    vram_nodes = carousel.vram.nodes()
-    if not vram_nodes:
+    vram_ids = carousel.vram.node_ids()
+    if not vram_ids:
         return set()
 
-    valid_ids = {node.id for node in vram_nodes}
-    focus_id = vram_nodes[0].id
+    valid_ids = set(vram_ids)
+    focus_id = vram_ids[0]
     visited: set[int] = {focus_id}
     queue: list[int] = [focus_id]
 
@@ -43,18 +43,15 @@ def active_vram_component_ids(carousel: SynapticCarousel) -> set[int]:
 def build_vram_context(carousel: SynapticCarousel) -> str:
     """Expose only opened ([APERTA]) nodes in the active connected VRAM component to prevent premature spoilers."""
 
-    vram_nodes = carousel.vram.nodes()
-    if not vram_nodes:
+    vram_ids = carousel.vram.node_ids()
+    if not vram_ids:
         return "Fatti noti:\n- Nessun dettaglio registrato su questo argomento."
 
     connected_ids = active_vram_component_ids(carousel)
-    open_nodes: list[KnowledgeNode] = [
-        node
-        for node in vram_nodes
-        if node.id in connected_ids and node.id in carousel.expanded_in_vram
-    ]
-    if not open_nodes:
-        open_nodes = [vram_nodes[0]]
+    open_ids = [node_id for node_id in vram_ids
+                if node_id in connected_ids and node_id in carousel.expanded_in_vram]
+    # Topology needs IDs only. Download only the payloads actually exposed to the prompt.
+    open_nodes = [carousel.vram.get(node_id) for node_id in (open_ids or vram_ids[:1])]
 
     budget = carousel.prompt_budget
     lines = ["Fatti noti:"]

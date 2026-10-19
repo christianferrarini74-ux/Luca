@@ -2,7 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Ultimo milestone: [giostra fisica SSD/RAM/GPU](docs/it/fase-1-sinapsi/09-memoria-fisica.md).
+Ultima verifica: [sicurezza seed, contatori alias e trasferimenti GPU misurati](docs/it/fase-1-sinapsi/10-verifica-claude.md).
+
+Milestone memoria fisica: [giostra SSD/RAM/GPU](docs/it/fase-1-sinapsi/09-memoria-fisica.md).
 I nodi completi usano allocazioni CUDA reali, senza nuovi pacchetti Python.
 La GPU configurata è la numero 1; scegliere un dispositivo disponibile in `config.yaml`.
 Vedere la [verifica delle dipendenze](docs/it/dependency-audit.md); prova sintetica:

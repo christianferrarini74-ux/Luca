@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
+([English](../review-hardening.md)): impronta seed, migrazione contatori alias
+con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.
+
 Aggiornamento 2026-10-19: [Fase 1.09 — Giostra fisica SSD/RAM/GPU](fase-1-sinapsi/09-memoria-fisica.md)
 ([English](../physical-memory.md)): allocazioni CUDA native, nodi completi,
 trasferimenti verificati, diagnostica e rilascio risorse. [Audit dipendenze](dependency-audit.md).

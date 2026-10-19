@@ -2,7 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Latest milestone: [physical SSD/RAM/GPU carousel](docs/physical-memory.md).
+Latest review: [seed safety, exact alias summaries and measured GPU transfers](docs/review-hardening.md).
+
+Physical memory milestone: [SSD/RAM/GPU carousel](docs/physical-memory.md).
 Complete nodes now use real CUDA device allocations, with no new Python packages.
 The configured GPU is ordinal 1; select an available device in `config.yaml`.
 See the [dependency audit](docs/dependency-audit.md) and run the synthetic check

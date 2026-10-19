@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from luca_memory.node import KnowledgeNode, KnowledgeSection, load_node, save_node
-from luca_memory.store import MemoryStore
+from luca_memory.store import Edge, MemoryStore
 from luca_memory.tiers import SynapticCarousel
 from luca_memory.tiers.cuda import CudaMemory, DeviceMemoryError
 from luca_memory.tiers.device_slot import DeviceSlot, encode_node, decode_node
@@ -78,6 +78,45 @@ class DeviceSlotTests(unittest.TestCase):
         self.assertEqual(self.slot.node_ids(), (1,))
         self.assertEqual(self.slot.get(1), self.nodes[0])
         self.assertEqual(len(self.memory.buffers), 1)
+
+    def test_identical_payload_reuses_allocation_and_preserves_pointer(self):
+        self.slot.promote_many(self.nodes[:2])
+        old = self.slot._entries[1][0]
+        uploads = self.memory.next_id
+        self.slot.promote(self.nodes[0])
+        self.assertEqual(self.slot._entries[1][0], old)
+        self.assertEqual(self.memory.next_id, uploads)
+        self.assertEqual(self.slot.get(1), self.nodes[0])
+        self.assertIn(old, self.memory.buffers)
+        self.slot.promote(replace(self.nodes[0], recall_count=1))
+        self.assertNotEqual(self.slot._entries[1][0], old)
+        self.assertNotIn(old, self.memory.buffers)
+
+    def test_reused_entry_survives_failure_of_another_batch_upload(self):
+        self.slot.promote_many(self.nodes[:2])
+        pointers = dict(self.slot._entries)
+        self.memory.fail_after = self.memory.next_id
+        with self.assertRaises(DeviceMemoryError):
+            self.slot.promote_many([self.nodes[0], self.nodes[2]])
+        self.assertEqual(self.slot._entries, pointers)
+        self.assertEqual(self.slot.get(1), self.nodes[0])
+        self.assertEqual(len(self.memory.buffers), 2)
+
+    def test_component_traversal_never_reads_payload_and_prompt_reads_open_nodes_only(self):
+        from luca_memory.context_builder import active_vram_component_ids, build_vram_context
+        with MemoryStore(":memory:") as store:
+            carousel = SynapticCarousel(store)
+            carousel.vram.close()
+            carousel.vram = self.slot
+            self.slot.promote_many(self.nodes[:2])
+            carousel.vram_graph.add_edges([Edge(1, 2)])
+            carousel.expanded_in_vram.add(1)
+            with patch.object(self.memory, "download", wraps=self.memory.download) as reads:
+                self.assertEqual(active_vram_component_ids(carousel), {1, 2})
+                self.assertEqual(reads.call_count, 0)
+                context = build_vram_context(carousel)
+                self.assertIn(self.nodes[0].content, context)
+                self.assertEqual(reads.call_count, 1)
 
     def test_corrupt_upload_is_rejected_and_released(self):
         self.memory.corrupt = True

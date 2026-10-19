@@ -73,3 +73,59 @@ usage maintenance and 0.00175 ms without it: about 0.00345 ms extra here. The
 benchmark disables triggers only inside its disposable fixture and rolls back
 after measurement. These are warm SQL timings, not commit/fsync or startup
 migration timings, and not a universal performance guarantee.
+
+## GPU transfers: measured, then minimized
+
+The initial benchmark established a non-negligible cost, so the implementation
+was changed. DeviceSlot reuses an allocation only when serialized length and
+SHA-256 match its verified payload. Reused entries are excluded from the free
+path. Changed recall metadata changes the payload and still requires an upload.
+New or changed allocations retain upload/readback verification; reads still
+verify integrity. Tests cover unchanged pointer reuse, metadata changes and
+failure of a neighboring upload without freeing the reused pointer.
+
+Rather than adding a turn-scoped host cache with invalidation rules, connected
+component traversal now uses IDs and graph metadata only: zero payload reads.
+Context assembly downloads only opened nodes to be exposed. The deterministic
+response path reads the focus only, not every node. This removes redundant work
+at its source without retaining a second host payload cache. Dashboard snapshots
+still read nodes and their actual transfer cost remains visible in diagnostics.
+
+`python -m luca_memory.review_benchmark --mode turns --repeats 15`
+
+Five synthetic nodes, identical five-question dialogues, two warmup dialogues,
+5-slot capacity, 16 MB active and 32 MB warm payload budgets, GPU ordinal 1.
+The larger budget lets all five complete 1.65 MB nodes fit identically in both
+backends; it is a benchmark override, not a change to `config.yaml`. Before
+optimization, 5 measured dialogues yielded 25 turns per case; after optimization,
+15 yielded 75. SHA-256 of exposed contexts and recall traces match between
+HOST/CUDA. The adapter is deterministic and makes no LLM calls. Timings include
+Core planning, storage, serialization and prompt preparation, but exclude seed
+import, initial CUDA context creation, model inference, HTTP and dashboard work.
+
+| Node bytes | Backend | Before median / p95 | After median / p95 |
+| --- | --- | ---: | ---: |
+| 64,000 | HOST | 2.837 / 3.335 ms | 2.531 / 2.961 ms |
+| 64,000 | CUDA | 6.145 / 6.559 ms | 2.372 / 2.801 ms |
+| 1,650,000 | HOST | 81.471 / 83.225 ms | 71.512 / 74.164 ms |
+| 1,650,000 | CUDA | 152.414 / 154.221 ms | 54.086 / 55.440 ms |
+
+In the fixture CUDA copies fall from 3 uploads/26 downloads per turn to 1/6.
+For 1.65 MB nodes, downloads fall from about 42.9 MB to 9.9 MB per turn.
+The HOST reference still has different serialization/compaction accounting work;
+these results do not establish general CUDA superiority or real-library quality.
+They justify removing this specific redundancy while preserving the physical
+carousel. These are local small-sample measurements, not performance assertions
+in CI. The complete benchmark is available with `--mode all`.
+
+## Validation and boundaries
+
+105 tests pass with real CUDA enabled, including migration and allocation-reuse
+regressions. Ordinary test runs skip the three opt-in hardware tests. No packages
+were installed. No personal runtime database was opened. Real-library evaluation
+remains joint work with Christian; Cesare remains excluded.
+
+A separate live check with the configured LM Studio model and a temporary seed
+database preserved focus 7 → 7 → 19 → 14 across the four submarine questions,
+returned non-empty relevant replies, and released all owned CUDA buffers. It
+does not turn the synthetic timing benchmark into an inference benchmark.
