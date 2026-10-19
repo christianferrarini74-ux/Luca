@@ -143,9 +143,14 @@ class MemoryStore:
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.execute("PRAGMA journal_mode = WAL")
         self.connection.execute("PRAGMA synchronous = NORMAL")
-        self._create_schema()
-        self._ensure_edge_usage_columns()
-        self._rebuild_cell_search_index()
+        try:
+            self._create_schema()
+            self._ensure_edge_usage_columns()
+            self._ensure_cell_usage_summary()
+            self._rebuild_cell_search_index()
+        except BaseException:
+            self.connection.close()
+            raise
 
     def close(self) -> None:
         self.connection.close()
@@ -207,11 +212,10 @@ class MemoryStore:
             """SELECT cells.*
                FROM cell_aliases
                JOIN cells ON cells.id = cell_aliases.cell_id
-               LEFT JOIN edges ON edges.source_id = cells.id OR edges.target_id = cells.id
+               LEFT JOIN cell_degrees AS d ON d.cell_id = cells.id
                WHERE cell_aliases.alias = ?
-               GROUP BY cells.id
-               ORDER BY COALESCE(MAX(edges.last_used_at), 0) DESC,
-                        COALESCE(SUM(edges.use_count), 0) DESC,
+               ORDER BY COALESCE(d.last_used_at, 0) DESC,
+                        COALESCE(d.use_count, 0) DESC,
                         cells.id ASC
                LIMIT ?""",
             (alias, limit),
@@ -717,12 +721,6 @@ class MemoryStore:
             CREATE INDEX IF NOT EXISTS edges_by_target
                 ON edges (target_id, source_id);
 
-            CREATE INDEX IF NOT EXISTS idx_edges_outgoing_synaptic
-                ON edges (source_id, last_used_at DESC, use_count DESC, target_id ASC);
-
-            CREATE INDEX IF NOT EXISTS idx_edges_incoming_synaptic
-                ON edges (target_id, last_used_at DESC, use_count DESC, source_id ASC);
-
             CREATE TABLE IF NOT EXISTS cell_degrees (
                 cell_id     INTEGER PRIMARY KEY REFERENCES cells(id) ON DELETE CASCADE,
                 out_degree  INTEGER NOT NULL DEFAULT 0,
@@ -831,6 +829,55 @@ class MemoryStore:
                 """
             )
         self.connection.commit()
+
+    def _ensure_cell_usage_summary(self) -> None:
+        """Migrate once, then maintain exact alias-ranking aggregates transactionally."""
+        # Each endpoint uses its ordered index: decreasing/deleting a maximum never scans a hub.
+        latest = """COALESCE((SELECT MAX(stamp) FROM (
+            SELECT (SELECT last_used_at FROM edges WHERE source_id = cell_degrees.cell_id
+                    ORDER BY last_used_at DESC, use_count DESC, target_id ASC LIMIT 1) AS stamp
+            UNION ALL
+            SELECT (SELECT last_used_at FROM edges WHERE target_id = cell_degrees.cell_id
+                    ORDER BY last_used_at DESC, use_count DESC, source_id ASC LIMIT 1)
+        )), 0)"""
+        with self.transaction():
+            columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(cell_degrees)")}
+            migrate = "last_used_at" not in columns or "use_count" not in columns
+            for column in ("last_used_at", "use_count"):
+                if column not in columns:
+                    self.connection.execute(f"ALTER TABLE cell_degrees ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+            if migrate:
+                self.connection.execute(f"""UPDATE cell_degrees SET last_used_at = {latest},
+                    use_count = COALESCE((SELECT SUM(use_count) FROM edges WHERE source_id = cell_degrees.cell_id), 0)
+                              + COALESCE((SELECT SUM(use_count) FROM edges WHERE target_id = cell_degrees.cell_id
+                                          AND source_id != target_id), 0)""")
+            self.connection.execute(f"""CREATE TRIGGER IF NOT EXISTS trg_edges_ai_usage
+                AFTER INSERT ON edges BEGIN
+                    INSERT INTO cell_degrees(cell_id, last_used_at, use_count)
+                    VALUES(NEW.source_id, NEW.last_used_at, NEW.use_count)
+                    ON CONFLICT(cell_id) DO UPDATE SET
+                        last_used_at = {latest}, use_count = cell_degrees.use_count + NEW.use_count;
+                    INSERT INTO cell_degrees(cell_id, last_used_at, use_count)
+                    SELECT NEW.target_id, NEW.last_used_at, NEW.use_count WHERE NEW.target_id != NEW.source_id
+                    ON CONFLICT(cell_id) DO UPDATE SET
+                        last_used_at = {latest}, use_count = cell_degrees.use_count + NEW.use_count;
+                END""")
+            self.connection.execute(f"""CREATE TRIGGER IF NOT EXISTS trg_edges_au_usage
+                AFTER UPDATE OF last_used_at, use_count ON edges BEGIN
+                    UPDATE cell_degrees SET last_used_at = {latest},
+                        use_count = MAX(0, use_count + NEW.use_count - OLD.use_count)
+                    WHERE cell_id IN (NEW.source_id, NEW.target_id);
+                END""")
+            self.connection.execute(f"""CREATE TRIGGER IF NOT EXISTS trg_edges_ad_usage
+                AFTER DELETE ON edges BEGIN
+                    UPDATE cell_degrees SET last_used_at = {latest},
+                        use_count = MAX(0, use_count - OLD.use_count)
+                    WHERE cell_id IN (OLD.source_id, OLD.target_id);
+                END""")
+            self.connection.execute("""CREATE TRIGGER IF NOT EXISTS trg_edges_immutable_address
+                BEFORE UPDATE OF source_id, target_id ON edges
+                WHEN NEW.source_id != OLD.source_id OR NEW.target_id != OLD.target_id
+                BEGIN SELECT RAISE(ABORT, 'Edge addresses are immutable; remove and insert the edge instead.'); END""")
 
     def _rebuild_cell_search_index(self) -> None:
         cell_count = int(self.connection.execute("SELECT COUNT(*) FROM cells").fetchone()[0])

@@ -33,3 +33,43 @@ reordering/topology changes, read-only legacy acceptance/rejection, personal
 growth and invalid seed preservation. Version changes still require an explicit
 migration or a separate experimental database; changing the version is not a
 command to replace existing knowledge.
+
+## Exact materialized alias ranking
+
+`cells_by_alias` now joins per-cell usage in `cell_degrees` rather than aggregating
+all incident edges for each lookup. One transactional migration adds columns,
+backfills them, then creates the usage triggers. Incoming/outgoing ordering
+indexes are created only after legacy edge-usage columns exist.
+
+Unlike the proposed historical maximum, recency remains the exact maximum over
+currently existing incident edges. Deleting the newest edge or lowering its
+timestamp can therefore change the winner exactly as before. Each update uses
+two ordered index-head lookups per affected cell, not a hub-sized scan. Insert,
+update and delete all maintain usage, independent of degree-trigger order.
+Self-loops contribute once to usage, matching the old `OR` join, although they
+still contribute one incoming and one outgoing degree. Endpoint IDs are immutable
+edge addresses; change an address by removing and inserting an edge.
+
+Tests compare materialized values and ranking against the original aggregation
+after 100 deterministic random operations, plus ties, isolated aliases, nonzero
+inserts, self-loops, rollback, newest-edge deletion, timestamp decreases, old
+schemas with/without usage columns and repeated reopen without double counting.
+
+## Local alias benchmark
+
+`python -m luca_memory.review_benchmark --mode aliases --repeats 15`
+
+Fixture: a temporary SQLite database on D:, 500,000 synthetic cells, a 100,000-edge
+hub, and an isolated cell sharing its alias. Two warmups precede 15 timed lookups.
+The reference executes the old aggregation; current also constructs Cell objects.
+
+| Lookup | Median | p95 |
+| --- | ---: | ---: |
+| Original aggregation | 43.491 ms | 44.294 ms |
+| Materialized summary | 0.0166 ms | 0.0205 ms |
+
+For 100 timed touches inside an open transaction, SQL median was 0.00520 ms with
+usage maintenance and 0.00175 ms without it: about 0.00345 ms extra here. The
+benchmark disables triggers only inside its disposable fixture and rolls back
+after measurement. These are warm SQL timings, not commit/fsync or startup
+migration timings, and not a universal performance guarantee.
