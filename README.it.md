@@ -2,6 +2,8 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Sintesi progettuale, non ancora implementata: [memoria navigabile e riorganizzabile](docs/it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md), base della prossima roadmap.
+
 Ultima verifica: [sicurezza seed, contatori alias e trasferimenti GPU misurati](docs/it/fase-1-sinapsi/10-verifica-claude.md).
 
 Milestone memoria fisica: [giostra SSD/RAM/GPU](docs/it/fase-1-sinapsi/09-memoria-fisica.md).

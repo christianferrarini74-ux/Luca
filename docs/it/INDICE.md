@@ -7,6 +7,12 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Sintesi progettuale 2026-10-20: [Fase 1.11 — Memoria navigabile e riorganizzabile](fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md)
+([English](../bounded-synaptic-memory-design.md)): indice del libro, connettività
+completa, limiti morbidi, nodi intermedi e manutenzione locale. È la base per la
+prossima roadmap, non una funzionalità implementata. Luca è autonomo: i riferimenti
+storici a Cesare riportati sotto non sono vincoli per la sua architettura attuale.
+
 Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
 ([English](../review-hardening.md)): impronta seed, migrazione contatori alias
 con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.
