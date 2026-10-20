@@ -2,7 +2,7 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Sintesi progettuale, non ancora implementata: [memoria navigabile e riorganizzabile](docs/it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md), base della prossima roadmap.
+Specifica concettuale confermata e chiusa, non ancora implementata: [memoria navigabile e riorganizzabile](docs/it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md), pronta per la roadmap.
 
 Ultima verifica: [sicurezza seed, contatori alias e trasferimenti GPU misurati](docs/it/fase-1-sinapsi/10-verifica-claude.md).
 

@@ -4,9 +4,10 @@ Date: 2026-10-20
 
 [Italiano](it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md)
 
-Status: design synthesis of the discussion with Christian, intended as the basis
-for the next roadmap. This document does not describe implemented features and
-does not, by itself, authorize changes to the personal graph.
+Status: conceptual specification for navigation and edge management closed by
+Christian's confirmation on 2026-10-20, ready as the basis for an implementation
+roadmap. It does not describe implemented features or authorize personal-graph
+changes. Content distillation remains background for a separate phase.
 
 Addendum dated 2026-10-20: measure information in words, or exact tokens when
 counting is straightforward; retain the original node's complete directory
@@ -18,6 +19,13 @@ Content distillation/splitting (§8–9) is a separate, deferred system. The upp
 edge limit is 50 and the lower target 45, both configuration parameters; visible
 directory entries contain only ID and title. Section 14 records the updated decisions.
 
+Final confirmations: a family consists of A and its star-connected parts An,
+all representing the same synaptic identity A. The 50/45 threshold applies only
+to the family's external directory; internal connections are counted separately.
+An edge-grouping node G is distinct from fragments An: it has its own identity
+and directory and does not inherit A's. These rules supersede earlier readings
+of fragment-local external edges or limits on total physical vertex degree.
+
 ## 1. Goal and boundaries
 
 Luca should retain complete, connected and progressively growing knowledge while
@@ -28,6 +36,10 @@ its contents with summaries.
 Luca is an autonomous system. Its architecture must not inherit constraints from
 Cesare or another application. Any future integration is a separate assessment
 and does not drive the decisions in this document.
+
+The product is a complete synaptic-memory management engine usable by other
+systems, with an LLM and cockpit as a test bench. A “perfect” conversational
+assistant is not required to validate memory.
 
 The brain and its “sleep” are functional metaphors for a memory-maintenance phase,
 not a demonstrated biological reproduction.
@@ -100,8 +112,8 @@ the knowledge.
 
 ## 6. Soft connection limits
 
-Christian selected an initial limit of 50 incident connections, incoming plus
-outgoing, and a maintenance target of 45. Both belong in the configuration file,
+Christian selected an initial limit of 50 external family connections, incoming
+plus outgoing, and a maintenance target of 45. Both belong in the configuration file,
 not hard-coded constants. This replaces the earlier 100/90 hypothesis. The gap
 between intervention and target avoids reorganization after every addition.
 The threshold is soft: acquisition may temporarily exceed it
@@ -117,13 +129,15 @@ Exact configuration key names are implementation details. Validation will requir
 positive integers and a target below the upper limit. Inert keys are not added
 now to config.yaml while the runtime does not implement this feature yet.
 
-A candidate definition consistent with current counters is in-degree plus
-out-degree. A self-loop would therefore consume two incidences; this convention
-must be explicitly confirmed rather than left implicit.
+Count the shared directory once, not once per fragment. Internal A–An links have
+a separate count and do not trigger this threshold. Total physical vertex degree
+is therefore insufficient: the Core must distinguish membership from external
+connections. This separation does not eliminate internal-navigation prompt cost.
 
-Grouping seven direct connections behind one intermediary reduces degree 51
-to 45 in the simple example. The new parent-to-group connection counts against
-the parent's budget; the group's parent connection counts against its own.
+Grouping seven direct connections behind one intermediary reduces the external
+directory from 51 to 45 in the simple example. The origin-to-group connection
+counts against the origin's external budget; the group's connection to that
+origin counts against its own.
 Explicit reverse or cross-connections consume additional capacity. Counting
 only new outgoing branches would be incorrect.
 
@@ -133,6 +147,13 @@ Grouping inserts navigation nodes with meaningful titles and short descriptions.
 Direct connections become paths through a group: knowledge remains reachable,
 but distances can increase. “Thermodynamics” may help navigation; “Group 7” alone
 does not.
+
+Grouping node G is an ordinary index node with an identity distinct from A and
+its own directory. It is not a content fragment An and does not inherit A's
+directory. A previous A→B route may become A→G→B, retaining the original mapping
+for traceability. If G inherited A's entire directory, no alternatives would be
+removed; there would only be another step. No special node classes are required:
+the engine's data must distinguish role and membership.
 
 This resolves a crucial ambiguity: retaining every old edge as an active direct
 connection cannot simultaneously reduce the focus's degree. Previous connections
@@ -185,29 +206,30 @@ cannot establish the correct semantic boundary by themselves.
 
 ### Synaptic continuity across a split
 
-If A is split into A1, A2, A3, A4 and A5, opening any part must retain access to
-all of A's active incoming and outgoing edges, plus the part's own connections.
-Navigation between parts remains available and the current part is identified.
-A parent-return link alone is insufficient: the LLM must not leave the detail
-to recover the original map. A becomes the knowledge anchor; Ai is the reading focus.
+A family consists of A and its parts A1…An in a star around parent A. These are
+ordinary nodes representing a single synaptic identity. Membership is explicit:
+being A's neighbor does not make B or G a content part of A.
 
-The requirement is complete availability in every fragment, not necessarily
-physical edge duplication. The implementation proposal to evaluate is a shared
-directory referenced by the split family, combined with local connections. Each
-part materializes its complete view on opening, without loading other parts'
-contents for that purpose.
+Opening A2 changes the reading focus, not the synaptic focus, which stays A.
+Every part consults the same complete external incoming/outgoing directory.
+A return-to-parent link alone is insufficient: the map accompanies reading.
+Parent-to-part connections organize internal access.
 
-Origin and direction stay explicit: an inherited A:B navigation route is not
-presented as a new A1:B assertion. The Core must validate choices against the
-reading context's effective directory, not just edges physically owned by Ai.
-Identical edges appear once while retaining their identity; an entry targeting
-the already open part is recognizable as such.
+Leaving A2 for B traverses A→B. It does not create A1→B, A2→B and so on, and
+B's incoming edges do not multiply with the number of parts. Likewise X→A
+remains X→A while A2 is read. Fragments have no independent external synaptic
+directories; any new external connection belongs to A.
 
-Inheritance follows an explicit split relationship, not arbitrary graph links.
-If A1 is split again, its new parts must retain anchor A, family continuity and
-all connections of the split levels. Shared-directory updates must
-refresh part views coherently without divergent copies. Concrete representation
-and versioning remain roadmap decisions.
+The shared directory is agreed, not a proposal awaiting evaluation. The Core
+keeps identity A separate from the current reading part and validates external
+operations against A. It does not replace every edge prefix with Ai and thus
+does not create artificial self-loops. The internal current-part reference
+changes; the directory remains unchanged and does not require loading other
+parts' contents.
+
+Future subdivisions must retain this common identity. Directory changes become
+available coherently to all parts without divergent copies. Reference formats
+and versioning are roadmap implementation details, not open conceptual decisions.
 
 ## 9. Distill the map, not the knowledge away
 
@@ -242,13 +264,11 @@ The chosen directory format is ID and title, without extra generated description
 Titles still have a cost. Exposure therefore needs an overall feasibility
 check. The edge limit is a structural ceiling, not a target to reach everywhere.
 
-For a fragment, the effective directory includes inherited family edges, local
-edges and part navigation, without duplicating the same edge. Storing a directory
-once saves storage, not the context needed to expose it. Ai's physical degree
-alone cannot certify budget compliance: the combined view must also be checked,
-including multilevel splits. Count content words and descriptor words separately,
-then validate the complete prompt. Arbitrarily hiding inherited connections is
-not a valid remedy for exceeding the budget.
+For a fragment, apply 50/45 to A's external directory regardless of the part being
+read. Internal part navigation has a separate count but still consumes context
+when shown: sharing saves storage, not exposure tokens. Measure contents,
+external directory and internal navigation separately, then check the complete
+prompt. Hiding directory edges arbitrarily is not an overflow remedy.
 
 Temporary graph overflow does not authorize silent prompt truncation. If a focus
 cannot be fully exposed under the selected contract, that condition must be
@@ -264,14 +284,14 @@ check connections and exposure cost without introducing text segmentation now.
 
 ## 11. “Sleep”: local maintenance, not a global rebuild
 
-Current-phase maintenance groups edges into families and creates the associated
+Current-phase maintenance groups edges into thematic sets and creates the associated
 navigation nodes; it does not distill or split node contents. Two modes are
 specified: manual invocation with confirmation on selected nodes, and automatic
 execution while the LLM is not in use only for nodes exceeding the configured
 upper limit. Both aim for the configured lower target.
 
 The logical cycle is detection; deduplicated queueing; proposed edge grouping;
-validation of families and routes; publication; and rechecking affected nodes.
+validation of groups and routes; publication; and rechecking affected nodes.
 
 Work and resource consumption must be bounded, interruptible and resumable,
 without repeated oscillation. If data changes after planning, the proposal must
@@ -285,7 +305,7 @@ interruptions must leave the previous organization recoverable, not half of
 an applied transformation.
 
 The organizer itself has finite context. This phase organizes connections through
-IDs and titles without distilling book contents. If no reliable families are
+IDs and titles without distilling book contents. If no reliable groups are
 identified, leave a proposal pending or request review rather than delete edges
 or invent groups solely to meet a numeric threshold.
 
@@ -296,6 +316,8 @@ or invent groups solely to meet a numeric threshold.
 - Reorganization changes paths without asserting new facts between group members.
 - Existing identities/references remain resolvable or explicitly migrated.
 - Every fragment retains the split node's complete directory while serving as the reading focus.
+- Fragments share identity A; an edge-grouping node G has its own identity and directory.
+- The 50/45 threshold counts external family edges, not internal star connections.
 - New nodes also meet budgets; depth does not grow without control.
 - VRAM residency is real and distinct from LLM exposure.
 - No partial reorganization is exposed to an ongoing conversation.
@@ -322,18 +344,18 @@ configurable thresholds, managed navigation nodes, a maintenance queue and
 coherent transformation publication. Book ingestion, PDF extraction and content
 distillation/splitting remain separate developments, not prerequisites for this phase.
 
-## 14. Updated decisions for the navigation roadmap
+## 14. Confirmed decisions: conceptual specification closed
 
-1. **Agreed:** initial maximum 50 edges, incoming and outgoing combined; compression
-   target 45. Parameters belong in configuration, not code constants. Content-size
+1. **Agreed:** initial maximum 50 external family edges, incoming and outgoing combined; compression
+   target 45. Parameters belong in configuration, not code constants. Internal
+   A–An connections are counted separately. Content-size
    thresholds concern the separate distillation system and must not delay this phase.
 2. **Agreed:** expose only ID and title of connected nodes, without mandatory
    additional descriptions.
-3. **Agreed:** children inherit the parent's shared directory without independent
-   copies. Christian specifies that only the edge representing the child changes.
-   Clarify only that edge's precise meaning: the candidate interpretation is the
-   current-part reference within the family, not a change to the whole directory.
-   Internal representation remains an implementation detail.
+3. **Agreed and clarified:** family = A plus every star-connected An. Synaptic
+   identity and directory remain A; only the reading part and its internal
+   reference change. Leaving A2 for B traverses A→B without duplicated edges to B.
+   Children are ordinary nodes, not special types with different navigation.
 4. **Evaluate, not a blocker:** the concern was the total conversational context,
    not one node alone. With suitable contents and a bounded directory, measure
    actual behavior. Do not introduce conversation compression or a new opening-
@@ -346,8 +368,9 @@ distillation/splitting remain separate developments, not prerequisites for this 
    on the user.
 6. **Narrow scope:** assume nodes already contain suitable information. Content
    generation, distillation and text splitting belong to a separate system not
-   being designed now. Edge-family grouping through secondary nodes during
-   “sleep” remains in scope.
+   being designed now. Grouping edges through nodes G during “sleep” remains in
+   scope. G is distinct from fragments An, has its own identity and directory,
+   and does not inherit A's directory.
 7. **Agreed:** manual invocation with confirmation and node selection down to the
    lower target; automatic invocation while the LLM is not in use only for nodes
    above the upper limit. Idle detection and coherent updates are technical
@@ -355,7 +378,11 @@ distillation/splitting remain separate developments, not prerequisites for this 
 8. **Deferred:** the book, chapter and real-library evaluation will be chosen
    jointly later; they are not prerequisites for completing navigation design.
 
-These decisions do not start implementation yet. The next roadmap concerns
+Christian's confirmation leaves no blocking conceptual decisions for this phase.
+Operational parameters, request/reference formats, idle detection, transactions
+and tests belong to the roadmap. Deferred context/library evaluations do not
+prevent writing it. Closing the specification does not start implementation.
+The next roadmap concerns
 navigation, directory continuity and edge management only. With already suitable
 nodes, it will measure alternative completeness, route correctness, LLM choices,
 context, latency and grouping/rollback correctness.

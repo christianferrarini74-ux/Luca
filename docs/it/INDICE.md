@@ -22,6 +22,12 @@ soglie configurabili 50/45, rubrica ID/titolo, manutenzione manuale confermata
 oppure automatica in inattività per i soli sforamenti. Distillazione dei contenuti
 e biblioteca reale rinviate, non prerequisiti della fase corrente.
 
+Chiusura concettuale confermata: famiglia A = padre e parti An con un'unica
+identità e rubrica; uscire da una parte verso B percorre A→B. Il limite 50/45
+riguarda i soli archi esterni, con collegamenti interni contati separatamente.
+I nodi G di raggruppamento hanno invece identità e rubrica proprie. La specifica
+è pronta per la roadmap; il nuovo modello non è ancora implementato.
+
 Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
 ([English](../review-hardening.md)): impronta seed, migrazione contatori alias
 con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.

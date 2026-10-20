@@ -2,7 +2,7 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Design synthesis, not yet implemented: [navigable and reorganizable memory](docs/bounded-synaptic-memory-design.md), the basis for the next roadmap.
+Confirmed and closed conceptual specification, not yet implemented: [navigable and reorganizable memory](docs/bounded-synaptic-memory-design.md), ready for the roadmap.
 
 Latest review: [seed safety, exact alias summaries and measured GPU transfers](docs/review-hardening.md).
 

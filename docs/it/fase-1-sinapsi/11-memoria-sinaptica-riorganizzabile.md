@@ -4,9 +4,10 @@ Data: 2026-10-20
 
 [English](../../bounded-synaptic-memory-design.md)
 
-Stato: sintesi progettuale della discussione con Christian, da usare per definire
-la prossima roadmap. Questo documento non descrive funzionalità già implementate
-e non autorizza da solo modifiche al grafo personale.
+Stato: specifica concettuale della navigazione e gestione degli archi chiusa con
+la conferma di Christian del 2026-10-20, pronta come base per la roadmap esecutiva.
+Non descrive funzionalità già implementate e non autorizza da sola modifiche al
+grafo personale. Le sezioni sulla distillazione rimangono contesto per una fase separata.
 
 Integrazione del 2026-10-20: dimensione informativa in parole, oppure in token
 quando il conteggio esatto è semplice; continuità dell'intera rubrica del nodo
@@ -19,6 +20,13 @@ separato e rinviato. Sono fissati limite superiore 50 e obiettivo inferiore 45,
 entrambi nel file di configurazione; rubrica esposta con soli ID e titolo.
 Le risposte ai punti del §14 sono aggiornate di conseguenza.
 
+Conferme conclusive: una famiglia è A più le sue parti An a stella; tutte sono
+la stessa identità sinaptica A. La soglia 50/45 riguarda soltanto la rubrica
+esterna della famiglia. I collegamenti interni si contano separatamente.
+Un nodo G che raggruppa archi è distinto dai frammenti An: possiede una propria
+rubrica e non eredita quella di A. Queste regole superano le interpretazioni
+precedenti di archi esterni locali ai figli e di limite sul grado fisico totale.
+
 ## 1. Obiettivo e confini
 
 Luca deve conservare conoscenza completa, collegata e progressivamente crescente,
@@ -29,6 +37,10 @@ ridurla obbligatoriamente a riassunti.
 Luca è progettato come sistema autonomo. Le sue strutture non devono derivare da
 vincoli di Cesare o di un altro programma. Qualsiasi integrazione futura sarà
 valutata separatamente e non determina le decisioni di questo documento.
+
+Il prodotto è un motore di gestione completa della memoria sinaptica, utilizzabile
+anche da altri sistemi, con LLM e cruscotto come banco di prova. Non si richiede
+un assistente conversazionale “perfetto” per verificare la memoria.
 
 Il riferimento al cervello e al suo “sonno” è una metafora funzionale: indica una
 fase di manutenzione della memoria, non una riproduzione biologica dimostrata.
@@ -102,8 +114,8 @@ tutti i nodi non garantisce che l'LLM scelga il percorso corretto o li esamini t
 
 ## 6. Limite morbido delle connessioni
 
-Christian ha scelto un limite iniziale di 50 connessioni incidenti, sommando
-prefissi e suffissi, e un obiettivo di riordino di 45. Sono parametri modificabili
+Christian ha scelto un limite iniziale di 50 connessioni esterne della famiglia,
+sommando prefissi e suffissi, e un obiettivo di riordino di 45. Sono parametri modificabili
 nel file di configurazione, non costanti inserite nel codice. La precedente
 ipotesi 100/90 è superata. Il margine fra intervento e obiettivo evita di
 riorganizzare a ogni nuova aggiunta.
@@ -120,13 +132,15 @@ I nomi tecnici delle chiavi saranno fissati nell'implementazione. La validazione
 richiederà valori interi positivi e obiettivo inferiore al limite. Non si aggiungono
 ora chiavi inerti al config.yaml di un runtime che non implementa ancora il riordino.
 
-Per allinearsi ai contatori attuali, una definizione candidata è grado entrante
-più grado uscente. Un auto-collegamento conterebbe quindi due incidenze: questa
-convenzione va dichiarata e confermata, non lasciata implicita.
+Il conteggio riguarda la rubrica condivisa una sola volta, non una copia per
+ciascuna parte. I collegamenti A–An interni alla famiglia si contano separatamente
+e non fanno scattare questa soglia. Il grado fisico totale dei vertici non è quindi
+la metrica sufficiente: il Core deve distinguere appartenenza e connessioni esterne.
+La loro separazione non rende gratuito il costo dei collegamenti interni nel prompt.
 
 Raggruppare sette archi diretti in una sola connessione a un intermediario
-riduce, nell'esempio semplice, un grado 51 a 45. Anche l'intermediario consuma
-una connessione sul nodo padre; il suo collegamento al padre consuma capacità
+riduce, nell'esempio semplice, una rubrica esterna da 51 a 45. Anche l'intermediario consuma
+una connessione esterna sul nodo di origine; il suo collegamento a quel nodo consuma capacità
 nel proprio budget. Collegamenti inversi espliciti o trasversali consumano altra
 capacità. Non basta contare soltanto le nuove diramazioni.
 
@@ -136,6 +150,13 @@ Il raggruppamento inserisce nodi intermedi di orientamento con titoli e brevi
 descrizioni significative. Il percorso diretto viene sostituito da un percorso
 attraverso il gruppo: la memoria resta raggiungibile ma la distanza può crescere.
 Un gruppo chiamato “Termodinamica” può aiutare a scegliere; “Gruppo 7” da solo no.
+
+Il nodo di raggruppamento G è un normale nodo d'indice con identità distinta da
+A e rubrica propria. Non è una parte An della conoscenza A e non ne eredita la
+rubrica. Un vecchio percorso A→B può diventare A→G→B, mantenendo la mappatura
+originale per tracciabilità. Se G ereditasse l'intera rubrica di A, non si ridurrebbero
+le alternative: si aggiungerebbe soltanto un passaggio. Non servono classi speciali
+di nodo: occorre distinguere ruolo e appartenenza nei dati del motore.
 
 Questa è una precisazione decisiva: non possiamo mantenere tutti i vecchi archi
 come connessioni attive del focus e contemporaneamente dichiararne ridotto il
@@ -191,32 +212,32 @@ occorre intervenire, non stabilisce automaticamente il confine corretto.
 
 ### Continuità sinaptica durante la suddivisione
 
-Se A viene suddiviso in A1, A2, A3, A4 e A5, aprire una qualsiasi parte deve
-conservare disponibili tutti gli archi attivi di A, entranti e uscenti, oltre
-agli eventuali collegamenti propri della parte. La navigazione tra le parti
-rimane disponibile e la parte corrente è identificata. Non è sufficiente un
-arco per tornare al padre: l'LLM non deve abbandonare il dettaglio per ritrovare
-la mappa originale. A diventa l'ancora della conoscenza; Ai è il focus di lettura.
+Una famiglia è A insieme alle sue parti A1…An, collegate a stella sul padre A.
+Sono nodi ordinari che rappresentano una sola identità sinaptica. L'appartenenza
+è esplicita: non basta essere vicino di A per esserne una parte; B o G collegati
+ad A non entrano per questo nella sua famiglia.
 
-Il requisito è disponibilità completa in ogni frammento, non necessariamente
-duplicazione fisica degli stessi archi. La proposta implementativa da valutare
-è una rubrica condivisa, riferita dall'intera famiglia di suddivisione, più i
-collegamenti locali. Ogni parte ne materializza la vista completa quando viene
-aperta. I contenuti delle altre parti non devono essere caricati per questo.
+Aprire A2 cambia il focus di lettura ma non il focus sinaptico, che rimane A.
+Tutte le parti consultano la medesima rubrica esterna di A, completa di entranti
+e uscenti. Non basta un collegamento per tornare al padre: la mappa accompagna
+la lettura. Le connessioni fra padre e parti servono all'organizzazione interna.
 
-Direzione e origine dei collegamenti restano esplicite: un arco A:B ereditato
-per la navigazione non viene presentato come una nuova affermazione A1:B.
-Il Core dovrà validare la scelta rispetto alla rubrica effettiva del contesto
-di lettura, non soltanto rispetto agli archi fisicamente intestati ad Ai.
-Gli archi identici sono esposti una volta sola, conservando la loro identità;
-una voce diretta alla parte già aperta è riconoscibile come tale.
+Se si passa da A2 a B, si percorre A→B. Non si creano A1→B, A2→B e così via;
+gli archi entranti di B non si moltiplicano per il numero delle parti. Analogamente
+X→A rimane X→A anche mentre si legge A2. Non esistono rubriche sinaptiche esterne
+autonome dei frammenti: l'eventuale nuova connessione esterna appartiene ad A.
 
-L'ereditarietà riguarda la relazione esplicita di suddivisione, non qualunque
-collegamento del grafo. Se anche A1 viene suddiviso, le nuove parti non devono
-perdere l'ancora A: ereditano la continuità della famiglia e tutte le connessioni
-dei livelli di suddivisione. Una modifica della rubrica condivisa
-deve aggiornare coerentemente le viste delle parti, senza copie divergenti.
-Versionamento e rappresentazione concreta sono decisioni per la roadmap.
+La rubrica condivisa è una scelta concordata, non una proposta ancora da valutare.
+Il Core mantiene identità A e parte corrente distinte e valida le operazioni
+esterne rispetto ad A. Non riscrive il prefisso di tutti gli archi sostituendolo
+con Ai, quindi non introduce auto-collegamenti artificiali. Il riferimento alla
+parte in lettura cambia; la rubrica rimane la stessa e non richiede di caricare
+i contenuti delle altre parti.
+
+Ogni futura articolazione dei frammenti deve mantenere questa identità comune.
+Gli aggiornamenti della rubrica diventano disponibili coerentemente a tutte le
+parti, senza copie divergenti. Formato dei riferimenti e versionamento appartengono
+alla roadmap implementativa, non sono decisioni concettuali ancora aperte.
 
 ## 9. Distillare la mappa, non eliminare la conoscenza
 
@@ -253,14 +274,12 @@ aggiuntive. Anche questi titoli hanno un costo. Perciò la fattibilità
 dell'esposizione deve avere un proprio controllo complessivo. Il numero massimo
 di archi è un tetto strutturale, non un obiettivo da raggiungere sempre.
 
-Per un frammento conta la rubrica effettivamente esposta: archi ereditati dalla
-famiglia, archi locali e navigazione delle parti, senza duplicare lo stesso arco.
-Memorizzare la rubrica una volta sola risparmia storage, non il contesto necessario
-per mostrarla. Il solo grado fisico di Ai non basta a certificare il rispetto
-della soglia; anche la vista combinata deve essere controllata. Lo stesso vale
-per suddivisioni su più livelli. Per l'informazione si contano separatamente le
-parole del contenuto e quelle dei descrittori, verificando poi l'intero prompt.
-Non si risolve uno sforamento nascondendo arbitrariamente gli archi ereditati.
+Per un frammento, il limite 50/45 si verifica sulla rubrica esterna di A,
+indipendentemente dalla parte aperta. La navigazione interna fra parti ha un
+conteggio separato, ma occupa comunque contesto se viene mostrata: condividere
+la rubrica risparmia storage, non i token necessari a esporla. Si misurano quindi
+separatamente contenuto, rubrica esterna e navigazione interna, verificando anche
+il prompt totale. Non si risolve uno sforamento nascondendo archi della rubrica.
 
 Lo sforamento temporaneo del grafo non autorizza il taglio silenzioso del prompt.
 Se il focus non è esponibile integralmente secondo il contratto scelto, occorre
@@ -277,14 +296,14 @@ della loro esposizione senza introdurre ora una procedura di suddivisione del te
 
 ## 11. Il “sonno”: manutenzione locale, non ricostruzione globale
 
-La manutenzione della fase corrente raggruppa archi in famiglie e genera i relativi
+La manutenzione della fase corrente raggruppa archi in insiemi tematici e genera i relativi
 nodi intermedi: non distilla e non suddivide il contenuto dei nodi. Sono previste
 due modalità: comando manuale con conferma sui nodi selezionati, oppure esecuzione
 automatica durante il non utilizzo dell'LLM soltanto sui nodi oltre il limite
 superiore configurato. Entrambe mirano al limite inferiore configurato.
 
 La sequenza logica è: rilevare lo sforamento; accodare il nodo senza duplicare
-il lavoro; proporre il raggruppamento degli archi; verificare famiglie e rotte;
+il lavoro; proporre il raggruppamento degli archi; verificare gruppi e rotte;
 pubblicare la nuova organizzazione; ricontrollare i nodi coinvolti.
 
 Il processo deve essere limitato per lavoro e risorse, interrompibile e
@@ -300,7 +319,7 @@ devono lasciare recuperabile l'assetto precedente, non una struttura a metà.
 
 Anche il riordinatore lavora con contesto finito. In questa fase organizza le
 connessioni tramite ID e titoli, senza dover distillare il contenuto dei libri.
-Se non individua famiglie affidabili, lascia una proposta in sospeso o richiede
+Se non individua gruppi affidabili, lascia una proposta in sospeso o richiede
 revisione, senza cancellare archi o inventare gruppi soltanto per rispettare una soglia.
 
 ## 12. Invarianti da usare come criteri di accettazione
@@ -310,6 +329,8 @@ revisione, senza cancellare archi o inventare gruppi soltanto per rispettare una
 - La riorganizzazione cambia i percorsi, non inventa nuovi fatti fra i membri.
 - Identità e riferimenti preesistenti restano risolvibili o esplicitamente migrati.
 - Ogni parte mantiene l'intera rubrica del nodo suddiviso anche mentre è il focus di lettura.
+- I frammenti condividono l'identità A; un gruppo di archi G ha identità e rubrica proprie.
+- La soglia 50/45 conta gli archi esterni della famiglia, non i collegamenti interni della stella.
 - Anche i nuovi nodi rispettano i budget e la profondità non cresce senza controllo.
 - La presenza in VRAM è reale; l'esposizione all'LLM è una decisione distinta.
 - Nessun riordino viene applicato parzialmente a una conversazione in corso.
@@ -338,19 +359,18 @@ pubblicazione coerente delle trasformazioni. Importazione dei libri, estrazione
 PDF e distillazione/suddivisione dei contenuti restano sviluppi separati e non
 sono prerequisiti per questa fase.
 
-## 14. Decisioni aggiornate per la roadmap di navigazione
+## 14. Decisioni confermate: specifica concettuale chiusa
 
-1. **Concordato:** massimo iniziale 50 archi, somma di prefissi e suffissi;
+1. **Concordato:** massimo iniziale 50 archi esterni della famiglia, somma di prefissi e suffissi;
    obiettivo di compressione 45. Parametri nel file di configurazione, non nel
-   codice. Le soglie del contenuto riguardano la distillazione separata e non
+   codice. I collegamenti interni A–An si contano separatamente. Le soglie del contenuto riguardano la distillazione separata e non
    devono rallentare questa fase.
 2. **Concordato:** nella rubrica si espongono soltanto ID e titolo dei nodi
    collegati, senza descrizioni aggiuntive obbligatorie.
-3. **Concordato:** i figli ereditano la stessa rubrica del padre, senza copie
-   indipendenti. Christian precisa che cambia soltanto l'arco che rappresenta
-   il figlio. Da chiarire solo il significato puntuale di tale arco: l'interpretazione
-   candidata è il riferimento alla parte corrente nella famiglia, non una modifica
-   dell'intera rubrica. La rappresentazione interna rimane un dettaglio tecnico.
+3. **Concordato e chiarito:** famiglia = A più tutti gli An a stella. Identità
+   sinaptica e rubrica rimangono A; cambia soltanto la parte letta e il suo
+   riferimento interno. Uscire da A2 verso B percorre A→B, senza archi duplicati
+   verso B. I figli sono nodi ordinari, non tipi speciali con navigazione diversa.
 4. **Da valutare, non bloccante:** la preoccupazione era il contesto totale della
    conversazione, non il solo nodo. Con nodi già adeguati e rubrica limitata si
    misura il comportamento; non si introduce ora un compressore della cronologia
@@ -364,7 +384,8 @@ sono prerequisiti per questa fase.
 6. **Ambito ristretto:** i nodi si assumono già dotati dei contenuti dovuti.
    Generazione, distillazione e suddivisione del testo sono un sistema separato
    che non stiamo progettando ora. Resta in questa fase il raggruppamento degli
-   archi in famiglie tramite nodi secondari durante il “sonno”.
+   archi tramite nodi di raggruppamento G durante il “sonno”. G è distinto dai
+   frammenti An: ha identità e rubrica proprie e non eredita la rubrica di A.
 7. **Concordato:** avvio manuale con conferma e selezione dei nodi, fino al limite
    inferiore; avvio automatico durante il non utilizzo dell'LLM, esclusivamente
    per chi supera il limite superiore. Rilevazione dell'inattività e coerenza delle
@@ -372,7 +393,11 @@ sono prerequisiti per questa fase.
 8. **Rinviato:** libro, capitolo e verifica della biblioteca verranno scelti insieme
    successivamente; non sono richiesti per chiudere la progettazione della navigazione.
 
-Queste decisioni non avviano ancora lo sviluppo. La prossima roadmap riguarda
+Con la conferma di Christian non rimangono decisioni concettuali bloccanti per
+questa fase. Parametri operativi, formato delle richieste e dei riferimenti,
+rilevazione dell'inattività, transazioni e test appartengono alla roadmap.
+Le valutazioni rinviate del contesto e della biblioteca non ne impediscono la stesura.
+La chiusura della specifica non avvia ancora lo sviluppo. La prossima roadmap riguarda
 solo navigazione, continuità della rubrica e gestione degli archi: misurerà
 completezza delle alternative, correttezza delle rotte, scelta dell'LLM, contesto,
 latenza e correttezza del raggruppamento/ripristino, usando nodi già conformi.
