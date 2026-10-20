@@ -133,6 +133,52 @@ Sintesi: globale per trovare l'ingresso, rapido per le connessioni contigue,
 giostra per rendere residenti i contenuti scelti. Nessun framework aggiuntivo
 è stato adottato e questi due ruoli non richiedono di duplicare la conoscenza.
 
+### Aggiornamenti atomici di nodi, archi e indici
+
+Esiste un solo archivio persistente autorevole. Indice globale, indice rapido e
+copie residenti non sono fonti indipendenti: devono riflettere una revisione
+coerente della memoria. I due ruoli degli indici non richiedono due database
+separati; i dati persistenti e la ricerca globale possono risiedere nello stesso
+database SQLite, mentre il rapido è una struttura derivata e ricostruibile.
+
+Ogni modifica passa dal Core, anche quando riguarda un solo nodo. La sua unità
+atomica comprende contenuto e metadati modificati, indicizzazione globale,
+eventuali alias e relazioni interessate, revisione e registrazione dell'operazione.
+Una lettura vede la versione precedente oppure quella nuova, mai un nodo
+aggiornato a metà o contenuto e rubrica appartenenti a revisioni incompatibili.
+Gli ID restano stabili; gli alias superati vengono rimossi oppure mantenuti
+esplicitamente come alias storici, non lasciati obsoleti per errore.
+
+Il protocollo concordato è:
+
+1. Individuare nodi, famiglie e indici coinvolti dalla modifica.
+2. Aggiornare archivio, indice globale e revisione in una sola transazione SQLite:
+   tutte le modifiche persistenti vengono confermate insieme oppure annullate.
+3. Coordinare la pubblicazione della revisione con l'aggiornamento o invalidazione
+   dell'indice rapido e delle copie in RAM/VRAM interessate.
+4. Prima dell'uso, verificare la revisione e riallineare le strutture obsolete.
+   Le letture già in corso possono completarsi su una vista precedente coerente,
+   senza mescolarla con parti della nuova. Una scelta dell'LLM basata su una
+   rubrica precedente deve essere riconvalidata prima della navigazione.
+
+Cambiare il contenuto di A aggiorna la sua indicizzazione e invalida il payload
+residente; cambiarne il titolo aggiorna anche i riferimenti ID/titolo nei rapidi
+coinvolti. Aggiungere o rimuovere A → B interessa entrambe le estremità. Per A e
+i suoi An la rubrica condivisa cambia una sola volta, senza duplicare gli archi.
+Un raggruppamento del “sonno” che introduce G è un'unica operazione persistente,
+non una sequenza di stati intermedi visibili.
+
+L'atomicità osservabile non significa che SQLite possa aggiornare fisicamente
+anche la GPU nella propria transazione. Se il riallineamento di una copia
+residente fallisce, quella copia resta inutilizzabile finché non viene ricaricata:
+non si espone silenziosamente una versione obsoleta e non si finge di annullare
+una modifica persistente già confermata. Si aggiornano le sole strutture coinvolte,
+non tutti gli indici a ogni modifica. Al riavvio, le strutture volatili vengono
+ricostruite dallo stato persistente confermato.
+
+Questa è una specifica da implementare: le transazioni e l'indicizzazione già
+presenti non costituiscono ancora il protocollo completo di coerenza delle copie.
+
 ## 4. Chi sceglie il percorso
 
 Il ruolo desiderato dell'LLM è scegliere il prossimo nodo da aprire, sulla base
@@ -385,6 +431,7 @@ revisione, senza cancellare archi o inventare gruppi soltanto per rispettare una
 - Anche i nuovi nodi rispettano i budget e la profondità non cresce senza controllo.
 - La presenza in VRAM è reale; l'esposizione all'LLM è una decisione distinta.
 - Nessun riordino viene applicato parzialmente a una conversazione in corso.
+- Anche l'aggiornamento di un singolo nodo è atomico; indici e copie residenti non espongono revisioni incompatibili.
 - Il cruscotto rende visibili stato, scelte e manutenzione; non contiene la logica.
 - Non si impongono nuovi framework per convenienza: ogni dipendenza va motivata.
 

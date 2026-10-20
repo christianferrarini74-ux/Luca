@@ -128,6 +128,50 @@ In short: global to find an entry, fast to navigate nearby connections, carousel
 to make selected contents resident. No additional framework has been adopted,
 and separating these roles does not require duplicating knowledge.
 
+### Atomic updates to nodes, edges and indexes
+
+There is one authoritative persistent store. The global index, fast index and
+resident copies are not independent sources: they must reflect a coherent memory
+revision. The two index roles do not require separate databases; persistent data
+and global search can share the same SQLite database, while the fast index is a
+derived, rebuildable structure.
+
+Every mutation goes through the Core, including changes to a single node. Its
+atomic unit includes changed content and metadata, global indexing, affected
+aliases and relationships, the revision and the operation record. A reader sees
+either the previous version or the new one, never a partially updated node or
+content and directory from incompatible revisions. IDs remain stable; superseded
+aliases are removed or explicitly retained as historical aliases, not accidentally
+left stale.
+
+The agreed protocol is:
+
+1. Identify nodes, families and indexes affected by the mutation.
+2. Update the store, global index and revision in one SQLite transaction: all
+   persistent changes commit together or are rolled back.
+3. Coordinate revision publication with updates to or invalidation of affected
+   fast-index entries and RAM/VRAM copies.
+4. Before use, check revisions and refresh stale structures. In-flight readers
+   may finish on a coherent previous snapshot without mixing in pieces of the
+   new one. A model choice based on an earlier directory must be revalidated
+   before navigation.
+
+Changing A's content updates its indexing and invalidates its resident payload;
+changing its title also updates ID/title references in affected fast indexes.
+Adding or removing A → B affects both endpoints. A and its An parts update their
+shared directory once, without duplicating edges. A “sleep” grouping that
+introduces G is one persistent operation, not a sequence of visible partial states.
+
+Observable atomicity does not mean SQLite can physically update the GPU within
+its transaction. If refreshing a resident copy fails, that copy stays unusable
+until reloaded: the system neither silently exposes a stale version nor pretends
+to roll back an already committed persistent mutation. Only affected structures
+are updated, rather than rebuilding every index after each change. On restart,
+volatile structures are rebuilt from committed persistent state.
+
+This is a specification to implement: existing transactions and indexing do not
+yet provide the complete resident-copy coherence protocol.
+
 ## 4. Who chooses the path
 
 The intended role of the LLM is to select the next node from the question, focus
@@ -369,6 +413,7 @@ or invent groups solely to meet a numeric threshold.
 - New nodes also meet budgets; depth does not grow without control.
 - VRAM residency is real and distinct from LLM exposure.
 - No partial reorganization is exposed to an ongoing conversation.
+- Even a single-node update is atomic; indexes and resident copies never expose incompatible revisions.
 - The cockpit displays decisions, state and maintenance; it contains no Core logic.
 - Frameworks are not adopted for convenience alone; dependencies require justification.
 
