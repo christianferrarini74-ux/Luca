@@ -14,6 +14,8 @@ from ..budget import PromptBudget
 from .graph_view import GraphView
 from .slot import TierSlot
 from .device_slot import DeviceSlot
+from .coherent_slot import CoherentSlot
+from ..synaptic import SynapticMemory
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,13 +48,16 @@ class SynapticCarousel:
         gpu_device: int = 0,
     ) -> None:
         self.store = store
+        self.synaptic = SynapticMemory(store)
+        self.focus_id: int | None = None
+        self.reading_id: int | None = None
         if search_policy not in {"fast", "complete"}:
             raise ValueError("search_policy must be 'fast' or 'complete'.")
         self.search_policy = search_policy
         if memory_backend not in {"host", "cuda"}:
             raise ValueError("memory_backend must be 'host' or 'cuda'.")
         self.memory_backend, self.gpu_device = memory_backend, gpu_device
-        self.ram = TierSlot("RAM", ram_capacity, ram_bytes, compact=memory_backend != "cuda")
+        self.ram = CoherentSlot(TierSlot("RAM", ram_capacity, ram_bytes, compact=memory_backend != "cuda"), store)
         self.prompt_budget = prompt_budget or PromptBudget()
         self.context_report: dict = {}
         self.section_focus: tuple[int, str] | None = None
@@ -67,7 +72,8 @@ class SynapticCarousel:
         self.disk_loads = 0
         self.disk_payload_bytes = 0
         # Acquire external resources only after validating all host-side state.
-        self.vram = DeviceSlot(vram_capacity, vram_bytes, gpu_device) if memory_backend == "cuda" else TierSlot("HOST", vram_capacity, vram_bytes)
+        slot = DeviceSlot(vram_capacity, vram_bytes, gpu_device) if memory_backend == "cuda" else TierSlot("HOST", vram_capacity, vram_bytes)
+        self.vram = CoherentSlot(slot, store)
 
     def _next_tick(self) -> int:
         self._clock = max(self._clock + 1, int(time.time()))
@@ -100,7 +106,7 @@ class SynapticCarousel:
         return event
 
     def recall(self, node_id: int) -> RecallEvent:
-        """Catapult `node_id` into VRAM head with top-K 1st-degree `*:B` and `B:*` edges and nodes."""
+        """Open a reading part and preload bounded contents, never truncate its directory."""
 
         if self.section_focus is not None and self.section_focus[0] != node_id:
             self.section_focus = None
@@ -112,13 +118,16 @@ class SynapticCarousel:
         self.opened_in_session = set(self.activity.recent)
 
         tick = self._next_tick()
-        edge_fetch_limit = max(32, self.vram.capacity * 4)
-        incoming = tuple(self.store.incoming(node_id, limit=edge_fetch_limit))
-        outgoing = tuple(self.store.outgoing(node_id, limit=edge_fetch_limit))
+        directory = self.synaptic.directory(node_id)
+        root = directory.focus_id
+        incoming_ids = {entry.id for entry in directory.incoming}
+        outgoing_ids = {entry.id for entry in directory.outgoing}
+        incoming = tuple(edge for edge in self.store.incoming(root) if edge.source_id in incoming_ids)
+        outgoing = tuple(edge for edge in self.store.outgoing(root) if edge.target_id in outgoing_ids)
 
         neighbour_ids: list[int] = []
         for edge in (*outgoing, *incoming):
-            other_id = edge.target_id if edge.source_id == node_id else edge.source_id
+            other_id = edge.target_id if edge.source_id == root else edge.source_id
             if other_id != node_id and other_id not in neighbour_ids:
                 neighbour_ids.append(other_id)
 
@@ -145,6 +154,7 @@ class SynapticCarousel:
         # Do not discard host copies until the device transaction succeeds.
         for node in batch:
             self.ram.remove(node.id)
+        self.focus_id, self.reading_id = root, node_id
         self.expanded_in_vram.add(center.id)
         self.activity.record("open", center.id)
         for neighbor in neighbours:
@@ -180,10 +190,11 @@ class SynapticCarousel:
     def step_to(self, node_id: int, *, reinforce: bool = True) -> RecallEvent:
         """Shift thought focus onto `node_id` (e.g. a 1st-degree neighbour), opening its own cluster."""
 
-        previous = self.vram.node_ids()[0] if len(self.vram) else None
+        previous = self.focus_id
         event = self.recall(node_id)
-        if previous is not None and previous != node_id and reinforce:
-            edges = [self.store.edge(previous, node_id), self.store.edge(node_id, previous)]
+        target = self.focus_id
+        if previous is not None and previous != target and reinforce:
+            edges = [self.store.edge(previous, target), self.store.edge(target, previous)]
             with self.store.transaction():
                 for edge in edges:
                     if edge:

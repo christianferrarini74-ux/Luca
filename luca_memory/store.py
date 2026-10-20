@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import sqlite3
 import time
+import threading
 from typing import Iterable, Iterator, Literal
 
 
@@ -137,6 +138,8 @@ class MemoryStore:
 
     def __init__(self, database: str | Path) -> None:
         self.path = Path(database)
+        self.lock = threading.RLock()
+        self._savepoint = 0
         # The API serves requests from worker threads; the runtime serializes access.
         self.connection = sqlite3.connect(self.path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
@@ -147,6 +150,8 @@ class MemoryStore:
             self._create_schema()
             self._ensure_edge_usage_columns()
             self._ensure_cell_usage_summary()
+            from .synaptic_schema import ensure_synaptic_schema
+            ensure_synaptic_schema(self)
             self._rebuild_cell_search_index()
         except BaseException:
             self.connection.close()
@@ -163,14 +168,29 @@ class MemoryStore:
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
-        try:
-            self.connection.execute("BEGIN")
-            yield
-        except BaseException:
-            self.connection.rollback()
-            raise
-        else:
-            self.connection.commit()
+        with self.lock:
+            nested = self.connection.in_transaction
+            self._savepoint += 1
+            name = f"luca_{self._savepoint}"
+            self.connection.execute(f"SAVEPOINT {name}" if nested else "BEGIN IMMEDIATE")
+            try:
+                yield
+                self.connection.execute(f"RELEASE {name}" if nested else "COMMIT")
+            except BaseException:
+                if nested:
+                    self.connection.execute(f"ROLLBACK TO {name}")
+                    self.connection.execute(f"RELEASE {name}")
+                else:
+                    self.connection.rollback()
+                raise
+
+    @property
+    def revision(self) -> int:
+        return int(self.connection.execute("SELECT revision FROM graph_revision").fetchone()[0])
+
+    def node_revision(self, node_id: int) -> tuple[int, int]:
+        row = self.connection.execute("SELECT content_revision, directory_revision FROM node_versions WHERE node_id=?", (node_id,)).fetchone()
+        return tuple(row) if row else (-1, -1)
 
     def add_cell(self, cell: Cell) -> None:
         self.connection.execute(
@@ -890,6 +910,9 @@ class MemoryStore:
         self.connection.commit()
 
     def _index_cell_for_search(self, cell: Cell) -> None:
+        from .node import KnowledgeNode
+        title = KnowledgeNode.from_cell(cell).title
+        self.connection.execute("INSERT INTO node_catalog VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET title=excluded.title", (cell.id, title))
         try:
             payload = json.loads(cell.content)
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError):

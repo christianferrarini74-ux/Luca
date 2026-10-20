@@ -117,3 +117,9 @@ class DeviceSlot:
             self.memory.close()
             self._entries.clear()
             self.closed = True
+
+    def discard(self, node_id):
+        """Invalidate a payload without downloading obsolete bytes."""
+        entry = self._entries.pop(node_id, None)
+        if entry is not None:
+            self.memory.free(entry[0])

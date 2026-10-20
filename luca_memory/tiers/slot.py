@@ -79,3 +79,6 @@ class TierSlot:
 
     def close(self) -> None:
         self._nodes.clear()
+
+    def discard(self, node_id):
+        self._nodes.pop(node_id, None)

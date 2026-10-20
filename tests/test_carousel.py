@@ -112,7 +112,8 @@ class SynapticCarouselTests(unittest.TestCase):
         # Turn 1: open old context hubs 100 and 101
         carousel.recall(101)
         event_100 = carousel.recall(100)
-        self.assertNotIn(999, event_100.first_degree_ids)  # #999 was NOT preloaded by recall(100)!
+        self.assertIn(999, event_100.first_degree_ids)  # Complete metadata is independent of payload preload.
+        self.assertNotIn(999, carousel.vram.node_ids())
 
         # Turn 2: ask about Family 200 -> must intersect 200 with context (100) on full SSD and open #999 (NOT #888!)
         carousel.recall_with_convergence([200])

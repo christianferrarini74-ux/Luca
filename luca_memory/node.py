@@ -108,16 +108,14 @@ def save_node(store: MemoryStore, node: KnowledgeNode) -> None:
 
     if not node.content_complete:
         raise ValueError("A partial cache view cannot overwrite durable knowledge.")
-    cell = node.to_cell()
-    store.upsert_cell(cell)
-    if node.slug:
-        store.add_alias(normalise_key(node.slug), node.id)
-    if node.title:
-        store.add_alias(normalise_key(node.title), node.id)
-    for keyword in node.keywords:
-        normalised = normalise_key(keyword)
-        if normalised:
-            store.add_alias(normalised, node.id)
+    with store.transaction():
+        store.upsert_cell(node.to_cell())
+        store.connection.execute("""DELETE FROM cell_aliases WHERE cell_id=? AND alias IN
+            (SELECT alias FROM managed_aliases WHERE node_id=?)""", (node.id, node.id))
+        store.connection.execute("DELETE FROM managed_aliases WHERE node_id=?", (node.id,))
+        for alias in {normalise_key(value) for value in (node.slug, node.title, *node.keywords)} - {""}:
+            store.add_alias(alias, node.id)
+            store.connection.execute("INSERT INTO managed_aliases VALUES (?, ?)", (node.id, alias))
 
 
 def load_node(store: MemoryStore, cell_id: int) -> KnowledgeNode | None:
