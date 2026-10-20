@@ -82,6 +82,57 @@ In particolare, un libro può rimanere quasi interamente su SSD mentre indice e
 indirizzi rendono raggiungibili i suoi contenuti. Il caricamento di un capitolo
 ha comunque un costo reale di lettura e trasferimento, proporzionato al payload.
 
+### Due indici: globale e rapido
+
+La proposta di Christian distingue due funzioni di indirizzamento, separate dai
+contenuti che la giostra trasferisce:
+
+| Indice | Ambito | Funzione |
+| --- | --- | --- |
+| Globale | Intera memoria persistente. | Individua dove si trova un argomento/nodo e restituisce il riferimento da richiamare. |
+| Rapido | Intorno al focus sinaptico corrente. | Mantiene disponibili ID e titoli di tutti i nodi di primo grado, tramite collegamenti entranti e uscenti, senza richiederne i contenuti residenti. |
+
+Il globale permette di entrare nella rete o cambiare argomento; il rapido
+permette di continuare la navigazione nelle connessioni contigue. L'LLM sceglie
+quale ingresso o collegamento aprire; il Core risolve e verifica il riferimento,
+quindi la giostra richiama il nodo e il grappolo compatibile con le risorse.
+Modalità di ricerca e ordinamento dell'indice globale sono dettagli da specificare
+nella roadmap, non un nuovo algoritmo già implementato.
+
+L'indice rapido deve restare utilizzabile anche quando un grande payload occupa
+la VRAM disponibile. Conservare l'indice dei vicini non significa caricare il
+contenuto di tutti i vicini: scelto il prossimo nodo, la giostra può prima
+scaricare payload e poi trasferire quelli necessari. La proposta operativa è
+mantenere i metadati rapidi in RAM con un budget riservato, distinto da quelli
+dei contenuti. Residenza concreta, dimensionamento e parametri configurabili
+verranno verificati nell'implementazione.
+
+Il primo grado deve essere completo e non dipendere dagli slot di precaricamento.
+Il secondo grado resta un'estensione da valutare, con budget e copertura distinti:
+già 50 vicini con 50 collegamenti ciascuno possono produrre migliaia di riferimenti
+prima di deduplicazione e sovrapposizioni. La sua eventuale preparazione non deve
+sacrificare o filtrare il primo grado, né riversarlo automaticamente nel prompt.
+
+L'indice rapido segue l'identità sinaptica: leggendo A2 rimane quello di A;
+cambiare parte non richiede di ricostruire la rubrica. I riferimenti interni alla
+famiglia restano distinguibili dagli archi esterni soggetti al limite 50/45.
+Se invece si apre un nodo distinto G o B, il rapido si aggiorna al nuovo focus.
+
+Anche modifiche ai collegamenti, durante l'uso o il “sonno”, devono aggiornare
+o invalidare coerentemente l'indice rapido. Nessuna scelta dell'LLM può essere
+eseguita su un riferimento obsoleto senza verifica nel Core. Pubblicazione e
+versionamento degli indici vanno coordinati con quelli del grafo.
+
+Questa soluzione mantiene gli indirizzi disponibili nella memoria del sistema,
+non aumenta la finestra del modello. Nel prompt si espone la rubrica completa
+del focus nel formato concordato ID/titolo; un eventuale secondo grado conservato
+nel rapido non è automaticamente esposto. Il controllo del contesto totale rimane
+distinto dal controllo della memoria fisica.
+
+Sintesi: globale per trovare l'ingresso, rapido per le connessioni contigue,
+giostra per rendere residenti i contenuti scelti. Nessun framework aggiuntivo
+è stato adottato e questi due ruoli non richiedono di duplicare la conoscenza.
+
 ## 4. Chi sceglie il percorso
 
 Il ruolo desiderato dell'LLM è scegliere il prossimo nodo da aprire, sulla base
@@ -354,7 +405,8 @@ ibrido e spesso sceglie mediante regole, non tramite una navigazione autonoma
 dell'LLM su tutte le alternative.
 
 Nel perimetro immediato mancano contratto di rubrica completa, navigazione guidata
-dall'LLM, soglie configurabili, nodi intermedi gestiti, coda di manutenzione e
+dall'LLM, separazione operativa fra indice globale e rapido, soglie configurabili,
+nodi intermedi gestiti, coda di manutenzione e
 pubblicazione coerente delle trasformazioni. Importazione dei libri, estrazione
 PDF e distillazione/suddivisione dei contenuti restano sviluppi separati e non
 sono prerequisiti per questa fase.
@@ -381,6 +433,9 @@ sono prerequisiti per questa fase.
    contenuti, né di delegare al Core la scelta semantica. Formato delle richieste
    e protezioni contro cicli/errori sono dettagli dell'implementazione, non nuove
    scelte concettuali da imporre all'utente.
+   L'ingresso usa l'indice globale; la continuità locale usa l'indice rapido del
+   focus, con primo grado completo. Il secondo grado e la dimensione del budget
+   riservato restano valutazioni implementative, non blocchi della specifica.
 6. **Ambito ristretto:** i nodi si assumono già dotati dei contenuti dovuti.
    Generazione, distillazione e suddivisione del testo sono un sistema separato
    che non stiamo progettando ora. Resta in questa fase il raggruppamento degli

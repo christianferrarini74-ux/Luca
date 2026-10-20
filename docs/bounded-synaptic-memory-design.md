@@ -80,6 +80,54 @@ A book can remain almost entirely on SSD while its index and addresses make its
 contents reachable. Loading a chapter still incurs actual reading and transfer
 costs related to payload size.
 
+### Two indexes: global and fast
+
+Christian's proposal separates two addressing functions from the contents moved
+by the carousel:
+
+| Index | Scope | Function |
+| --- | --- | --- |
+| Global | Entire persistent memory. | Locates a topic/node and returns the reference to recall. |
+| Fast | Neighborhood of the current synaptic focus. | Retains IDs and titles of all first-degree nodes through incoming/outgoing connections without requiring their contents to be resident. |
+
+The global index supports entry or a topic change; the fast index supports
+continued navigation through adjacent connections. The LLM selects an entry
+or connection; the Core resolves and validates it, and the carousel recalls
+the node and the cluster compatible with available resources. Global search
+and ranking methods belong to the roadmap, not an already implemented algorithm.
+
+The fast index must remain usable when a large payload occupies available VRAM.
+Keeping neighbor references does not require keeping every neighbor's contents.
+After the next node is selected, the carousel can demote existing payloads before
+transferring the required ones. The operational proposal is RAM-resident fast
+metadata with a reserved budget separate from content budgets. Concrete residency,
+sizing and configurable parameters will be validated during implementation.
+
+The first degree must be complete and independent of preload slots. A second
+degree is an optional extension to evaluate with separate budget and coverage:
+50 neighbors with 50 connections each can already yield thousands of references
+before deduplication/overlap. Preparing it must not sacrifice or filter the first
+degree or automatically inject the additional neighborhood into the prompt.
+
+The fast index follows synaptic identity: while A2 is read it remains A's index;
+switching parts does not require rebuilding the directory. Internal family
+references remain distinguishable from external edges governed by 50/45.
+Opening a distinct G or B updates the fast index to the new focus.
+
+Connection changes during use or “sleep” must coherently update or invalidate
+the fast index. The Core must validate stale references before executing a model
+choice. Index publication/versioning must be coordinated with graph publication.
+
+This keeps addresses available in system memory; it does not enlarge model
+context. The prompt exposes the focus's complete directory as agreed: ID/title.
+An optional second-degree neighborhood cached by the fast index is not
+automatically exposed. Complete-context checks remain distinct from physical
+memory checks.
+
+In short: global to find an entry, fast to navigate nearby connections, carousel
+to make selected contents resident. No additional framework has been adopted,
+and separating these roles does not require duplicating knowledge.
+
 ## 4. Who chooses the path
 
 The intended role of the LLM is to select the next node from the question, focus
@@ -340,7 +388,7 @@ tier capacity. Planning remains hybrid, often using rules rather than autonomous
 LLM navigation across the complete alternatives.
 
 Immediate missing components are a complete-directory contract, LLM-led navigation,
-configurable thresholds, managed navigation nodes, a maintenance queue and
+operational separation of global/fast indexes, configurable thresholds, managed navigation nodes, a maintenance queue and
 coherent transformation publication. Book ingestion, PDF extraction and content
 distillation/splitting remain separate developments, not prerequisites for this phase.
 
@@ -366,6 +414,9 @@ distillation/splitting remain separate developments, not prerequisites for this 
    a transfer of semantic choice to the Core. Request formats and loop/error
    safeguards are implementation details, not new conceptual choices to impose
    on the user.
+   Entry uses the global index; local continuity uses the focus's fast index
+   with complete first-degree coverage. Second-degree coverage and reserved
+   budget sizing remain implementation evaluations, not specification blockers.
 6. **Narrow scope:** assume nodes already contain suitable information. Content
    generation, distillation and text splitting belong to a separate system not
    being designed now. Grouping edges through nodes G during “sleep” remains in

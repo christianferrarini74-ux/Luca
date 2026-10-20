@@ -28,6 +28,11 @@ riguarda i soli archi esterni, con collegamenti interni contati separatamente.
 I nodi G di raggruppamento hanno invece identità e rubrica proprie. La specifica
 è pronta per la roadmap; il nuovo modello non è ancora implementato.
 
+Integrazione sui punti d'ingresso: indice globale per individuare l'argomento
+nell'intera memoria e indice rapido del primo grado per continuare dal focus,
+separati dai contenuti trasferiti dalla giostra. Secondo grado opzionale da
+valutare; residenza e budget del rapido da verificare nell'implementazione.
+
 Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
 ([English](../review-hardening.md)): impronta seed, migrazione contatori alias
 con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.
