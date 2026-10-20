@@ -121,9 +121,10 @@ def save_node(store: MemoryStore, node: KnowledgeNode) -> None:
 def load_node(store: MemoryStore, cell_id: int) -> KnowledgeNode | None:
     """Load a cell from the store and decode it as a KnowledgeNode."""
 
-    cell = store.cell(cell_id)
-    if cell is None:
-        return None
-    node = KnowledgeNode.from_cell(cell)
-    usage = store.node_usage(cell_id)
-    return replace(node, recall_count=usage[0], last_recalled_at=usage[1]) if usage else node
+    with store.lock:
+        cell = store.cell(cell_id)
+        if cell is None:
+            return None
+        node = KnowledgeNode.from_cell(cell)
+        usage = store.node_usage(cell_id)
+        return replace(node, recall_count=usage[0], last_recalled_at=usage[1]) if usage else node

@@ -8,6 +8,14 @@ def ensure_synaptic_schema(store):
             singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL
         );
         INSERT OR IGNORE INTO graph_revision VALUES (1, 0);
+        CREATE TABLE IF NOT EXISTS node_id_sequence (
+            singleton INTEGER PRIMARY KEY CHECK(singleton = 1), last_id INTEGER NOT NULL
+        );
+        INSERT OR IGNORE INTO node_id_sequence SELECT 1, COALESCE(MAX(id),0) FROM cells;
+        UPDATE node_id_sequence SET last_id = MAX(last_id, (SELECT COALESCE(MAX(id),0) FROM cells));
+        CREATE TRIGGER IF NOT EXISTS synaptic_id_allocation AFTER INSERT ON cells BEGIN
+            UPDATE node_id_sequence SET last_id = MAX(last_id, NEW.id);
+        END;
         CREATE TABLE IF NOT EXISTS node_versions (
             node_id INTEGER PRIMARY KEY REFERENCES cells(id) ON DELETE CASCADE,
             content_revision INTEGER NOT NULL DEFAULT 0,
@@ -31,9 +39,13 @@ def ensure_synaptic_schema(store):
             id INTEGER PRIMARY KEY, payload TEXT NOT NULL, active INTEGER NOT NULL
         );
         CREATE TRIGGER IF NOT EXISTS synaptic_cell_insert AFTER INSERT ON cells BEGIN
+            UPDATE node_id_sequence SET last_id = MAX(last_id, NEW.id);
             UPDATE graph_revision SET revision = revision + 1;
             INSERT INTO node_versions VALUES(NEW.id,
                 (SELECT revision FROM graph_revision), (SELECT revision FROM graph_revision));
+        END;
+        CREATE TRIGGER IF NOT EXISTS synaptic_cell_delete AFTER DELETE ON cells BEGIN
+            UPDATE graph_revision SET revision = revision + 1;
         END;
         CREATE TRIGGER IF NOT EXISTS synaptic_cell_update AFTER UPDATE OF content ON cells
         WHEN OLD.content != NEW.content BEGIN
@@ -69,11 +81,16 @@ def ensure_synaptic_schema(store):
                 END;
             """)
     # Populate only missing metadata, once per legacy node; no durable content is rewritten.
-    from .node import KnowledgeNode
+    from .node import KnowledgeNode, normalise_key
     from .store import Cell
     rows = db.execute("""SELECT c.* FROM cells c LEFT JOIN node_catalog n ON n.node_id=c.id
-                         WHERE n.node_id IS NULL""").fetchall()
+                         WHERE n.node_id IS NULL""")
     for row in rows:
         node = KnowledgeNode.from_cell(Cell(row["id"], row["content"], row["created_at"]))
         db.execute("INSERT INTO node_catalog VALUES (?, ?)", (node.id, node.title))
+        if node.slug and node.title:
+            for alias in {normalise_key(value) for value in (node.slug, node.title, *node.keywords)} - {""}:
+                db.execute("""INSERT OR IGNORE INTO managed_aliases SELECT ?, ?
+                    WHERE EXISTS(SELECT 1 FROM cell_aliases WHERE cell_id=? AND alias=?)""",
+                           (node.id, alias, node.id, alias))
     db.commit()

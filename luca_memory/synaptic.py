@@ -1,12 +1,22 @@
 """Canonical families, complete metadata directories and atomic Core mutations."""
 
 from dataclasses import asdict, dataclass
+from functools import wraps
 import json
 import time
 
-from .node import KnowledgeNode, save_node
+from .node import KnowledgeNode, save_node, normalise_key
 from .search import MemorySearch
 from .store import Edge, MemoryStore
+
+
+def serialized(method):
+    """Serialize consumers with Core mutations on the owning store connection."""
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self.store.lock:
+            return method(self, *args, **kwargs)
+    return call
 
 
 class StaleRevision(ValueError):
@@ -82,7 +92,7 @@ class SynapticMemory:
 
     def global_lookup(self, query: str, limit: int = 20) -> tuple[DirectoryEntry, ...]:
         with self.store.lock:
-            exact = self.store.cells_by_alias(query.lower().strip(), limit)
+            exact = self.store.cells_by_alias(normalise_key(query), limit)
             found = {cell.id: cell for cell in exact}
             for result in self.search.cells_by_text(query, limit=limit):
                 found.setdefault(result.cell.id, result.cell)
@@ -100,6 +110,8 @@ class SynapticMemory:
     def update_node(self, node: KnowledgeNode, *, expected_revision=None):
         with self.store.transaction():
             self._check(expected_revision)
+            if self.store.cell(node.id) is None and node.id < self.store.next_cell_id():
+                raise ValueError("Retired or reserved node IDs cannot be reused; allocate a fresh ID.")
             save_node(self.store, node)
             self._event("update_node", {"node_id": node.id})
 
@@ -121,6 +133,9 @@ class SynapticMemory:
                 raise ValueError("A part must be independent and families cannot be nested.")
             if self.store.cell(root) is None or self.store.cell(part) is None:
                 raise ValueError("Both family nodes must exist.")
+            for row in self.store.connection.execute("SELECT payload FROM maintenance_operations WHERE active=1"):
+                if part in json.loads(row[0])["created_ids"]:
+                    raise ValueError("A navigation grouping node cannot become a content fragment.")
             edges = (*self.store.incoming(part), *self.store.outgoing(part))
             for edge in edges:
                 self.store.remove_edge(edge.source_id, edge.target_id)
@@ -128,7 +143,7 @@ class SynapticMemory:
             for edge in edges:
                 source = root if edge.source_id == part else edge.source_id
                 target = root if edge.target_id == part else edge.target_id
-                if source != target:
+                if source != target or edge.source_id == edge.target_id:
                     self.store.add_edge(Edge(source, target))
             self.store.add_edge(Edge(root, part))
             self._event("attach_part", {"root": root, "part": part})

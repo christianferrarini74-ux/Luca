@@ -6,6 +6,15 @@ from luca_memory.config import ConfigurationError, load_config
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_synaptic_settings_are_validated_without_hardcoded_runtime_limits(self):
+        from luca_memory.synaptic_settings import SynapticSettings
+        settings = SynapticSettings.from_config({"synaptic": {"edge_upper": 12, "edge_target": 9}})
+        self.assertEqual((settings.edge_upper, settings.edge_target), (12, 9))
+        for options in ({"edge_upper": 45}, {"edge_target": 1}, {"navigation_steps": True},
+                        {"automatic_sleep": "true"}, {"idle_seconds": 0}):
+            with self.assertRaises(ValueError):
+                SynapticSettings.from_config({"synaptic": options})
+
     def test_invalid_memory_backend_and_device_are_rejected(self) -> None:
         for options in ("memory_backend: automatic", "gpu_device: -1", "gpu_device: true", "gpu_device: abc"):
             with self.subTest(options=options), tempfile.TemporaryDirectory() as directory:

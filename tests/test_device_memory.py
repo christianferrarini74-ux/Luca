@@ -175,6 +175,31 @@ class DeviceSlotTests(unittest.TestCase):
 
 @unittest.skipUnless(os.getenv("LUCA_TEST_CUDA") == "1", "Set LUCA_TEST_CUDA=1 for real NVIDIA hardware tests")
 class PhysicalCudaTests(unittest.TestCase):
+    def test_committed_node_update_invalidates_real_vram_and_reloads_new_version(self):
+        from luca_memory.synaptic import SynapticMemory
+        root = Path(os.getenv("LUCA_TEST_DIRECTORY", "D:/Test/Luca"))
+        root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="hardware-revision-", dir=root) as directory:
+            with MemoryStore(Path(directory) / "synthetic.sqlite") as store:
+                memory = SynapticMemory(store)
+                memory.update_node(KnowledgeNode(1, "synthetic", "Before", "Original content"))
+                carousel = SynapticCarousel(store, vram_capacity=1, memory_backend="cuda",
+                    gpu_device=int(os.getenv("LUCA_TEST_GPU", "1")))
+                gpu = carousel.vram.memory
+                try:
+                    carousel.recall(1)
+                    self.assertEqual(carousel.vram.get(1).content, "Original content")
+                    memory.update_node(KnowledgeNode(1, "synthetic", "After", "Updated content è 🧠"))
+                    self.assertIsNone(carousel.vram.get(1))
+                    self.assertEqual(carousel.physical_state()["allocations"], 0)
+                    carousel.recall(1)
+                    self.assertEqual(carousel.vram.get(1).content, "Updated content è 🧠")
+                    self.assertEqual(carousel.vram.get(1).title, "After")
+                finally:
+                    carousel.close()
+                self.assertTrue(gpu.closed)
+                self.assertEqual(gpu._buffers, {})
+
     def test_http_worker_reset_and_shutdown_release_context_and_buffers(self):
         from urllib.request import Request, urlopen
         import json

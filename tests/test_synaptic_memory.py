@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
+import threading
 from unittest.mock import patch
 
 from luca_memory.node import KnowledgeNode, load_node, save_node
@@ -134,6 +135,91 @@ class SynapticTests(unittest.TestCase):
         self.assertEqual((carousel.focus_id, carousel.reading_id), (1, 2))
         carousel.step_to(4)
         self.assertEqual(self.store.prefix_family_ids(1, limit=1), (4,))
+
+    def test_reader_cannot_observe_half_updated_node(self):
+        entered, release, read = threading.Event(), threading.Event(), threading.Event()
+        original = self.store._index_cell_for_search
+        result, errors = [], []
+        def paused_index(cell):
+            entered.set()
+            if not release.wait(3):
+                raise RuntimeError("Writer test timed out")
+            original(cell)
+        def writer():
+            try:
+                self.memory.update_node(KnowledgeNode(1, "updated", "Updated", "New body"))
+            except Exception as error:
+                errors.append(error)
+        def reader():
+            result.append(load_node(self.store, 1))
+            read.set()
+        with patch.object(self.store, "_index_cell_for_search", side_effect=paused_index):
+            writing = threading.Thread(target=writer)
+            writing.start()
+            self.assertTrue(entered.wait(2))
+            reading = threading.Thread(target=reader)
+            reading.start()
+            try:
+                self.assertFalse(read.wait(0.05))
+            finally:
+                release.set()
+                writing.join(3)
+                reading.join(3)
+        self.assertFalse(writing.is_alive())
+        self.assertFalse(reading.is_alive())
+        self.assertEqual(errors, [])
+        self.assertEqual(result[0].title, "Updated")
+
+    def test_gpu_failure_after_committed_update_cannot_resurrect_old_payload(self):
+        from test_device_memory import FakeDevice
+        from luca_memory.tiers.coherent_slot import CoherentSlot
+        from luca_memory.tiers.device_slot import DeviceSlot
+        from luca_memory.tiers.cuda import DeviceMemoryError
+        carousel = SynapticCarousel(self.store, vram_capacity=1)
+        self.addCleanup(carousel.close)
+        carousel.vram.close()
+        device = FakeDevice()
+        carousel.vram = CoherentSlot(DeviceSlot(1, 10000, memory=device), self.store)
+        carousel.recall(1)
+        self.memory.update_node(replace(load_node(self.store, 1), content="Committed new version"))
+        device.fail_after = device.next_id
+        with self.assertRaises(DeviceMemoryError):
+            carousel.recall(1)
+        self.assertIsNone(carousel.vram.get(1))
+        self.assertEqual(device.buffers, {})
+        self.assertEqual(load_node(self.store, 1).content, "Committed new version")
+        device.fail_after = None
+        carousel.recall(1)
+        self.assertEqual(carousel.vram.get(1).content, "Committed new version")
+
+    def test_legacy_migration_preserves_content_and_routes_and_replaces_old_generated_alias(self):
+        import sqlite3
+        path = Path(self.temp.name) / "legacy.sqlite"
+        node = KnowledgeNode(1, "legacy", "Legacy heading", "Original knowledge", created_at=123)
+        connection = sqlite3.connect(path)
+        connection.executescript("""CREATE TABLE cells(id INTEGER PRIMARY KEY, content BLOB, created_at INTEGER);
+            CREATE TABLE edges(source_id INTEGER, target_id INTEGER, PRIMARY KEY(source_id,target_id));
+            CREATE TABLE cell_aliases(alias TEXT PRIMARY KEY,cell_id INTEGER);""")
+        connection.execute("INSERT INTO cells VALUES(?,?,?)", (1, node.to_cell().content, 123))
+        connection.execute("INSERT INTO cell_aliases VALUES('legacy heading',1)")
+        connection.execute("INSERT INTO cell_aliases VALUES('explicit historical alias',1)")
+        connection.execute("INSERT INTO edges VALUES(1,1)")
+        connection.commit()
+        connection.close()
+        with MemoryStore(path) as migrated:
+            memory = SynapticMemory(migrated)
+            self.assertEqual(migrated.cell(1).content, node.to_cell().content)
+            self.assertIsNotNone(migrated.edge(1, 1))
+            self.assertEqual(memory.parts(1), ())
+            memory.update_node(replace(node, title="New heading"))
+            self.assertIsNone(migrated.cell_by_alias("legacy heading"))
+            self.assertEqual(migrated.cell_by_alias("explicit historical alias").id, 1)
+
+    def test_attaching_a_part_preserves_its_self_loop_as_a_root_route(self):
+        self.memory.connect(2, 2)
+        self.memory.attach_part(1, 2)
+        self.assertIsNotNone(self.store.edge(1, 1))
+        self.assertEqual(self.memory.directory(1).external_degree, 2)
 
 
 if __name__ == "__main__":

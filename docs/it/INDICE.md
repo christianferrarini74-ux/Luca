@@ -7,6 +7,13 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Implementazione 2026-10-21: [Fase 1.11 — Esecuzione, contratti e verifiche](fase-1-sinapsi/12-implementazione-memoria-navigabile.md)
+([English](../phase-1-11-implementation.md)). Realizzati famiglie canoniche,
+aggiornamenti atomici, indici globale/rapido, navigazione LLM e manutenzione con
+conferma/ripristino e worker in inattività. Il resoconto distingue test controllati,
+CUDA reale e prova conversazionale ancora da effettuare con LM Studio disponibile.
+Le annotazioni progettuali seguenti descrivono il momento precedente all'implementazione.
+
 Sintesi progettuale 2026-10-20: [Fase 1.11 — Memoria navigabile e riorganizzabile](fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md)
 ([English](../bounded-synaptic-memory-design.md)): indice del libro, connettività
 completa, limiti morbidi, nodi intermedi e manutenzione locale. È la base per la

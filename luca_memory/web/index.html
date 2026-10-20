@@ -177,6 +177,27 @@
             </div>
 
             <div class="chat-transcript" id="chat-transcript"></div>
+            <details class="card">
+              <summary>Rubrica sinaptica · indice globale e rapido</summary>
+              <p id="synaptic-status" class="muted" aria-live="polite"></p>
+              <div id="synaptic-directory" class="tier-list"></div>
+              <form id="global-search-form" class="form-card">
+                <label>Ingresso globale <input id="global-search-query" type="search" maxlength="2000" required></label>
+                <button type="submit" class="secondary">Cerca nella memoria</button>
+              </form>
+              <div id="global-search-results" class="tier-list"></div>
+            </details>
+            <details class="card">
+              <summary>Sonno · riorganizzazione degli archi</summary>
+              <p id="sleep-status" class="muted" aria-live="polite"></p>
+              <form id="maintenance-form" class="form-card">
+                <label>Nodo selezionato <input id="maintenance-node" type="number" min="1" required></label>
+                <button type="submit" class="secondary">Prepara anteprima</button>
+              </form>
+              <pre id="maintenance-preview" style="white-space:pre-wrap;"></pre>
+              <button type="button" id="maintenance-apply" disabled>Conferma riorganizzazione</button>
+              <div id="maintenance-operations" class="tier-list"></div>
+            </details>
             <details class="card" id="search-details">
               <summary>Richiamo della memoria e alternative</summary>
               <div id="convergence-summary" class="muted" aria-live="polite"></div>

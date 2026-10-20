@@ -14,8 +14,13 @@ from .node import KnowledgeNode, load_node, save_node
 from .tiers import GraphView, RecallEvent, SynapticCarousel, TierSlot
 from .seed_v1 import KnowledgeSeed, is_v1_seed, knowledge_seed_from_file, load_knowledge_seed
 from .context_builder import build_vram_context
+from .synaptic import SynapticMemory, Directory, DirectoryEntry, StaleRevision
+from .synaptic_settings import SynapticSettings
+from .maintenance import MemoryMaintenance, MaintenancePlan, IdleMaintenance
 
 __all__ = [
+    "SynapticMemory", "Directory", "DirectoryEntry", "StaleRevision",
+    "SynapticSettings", "MemoryMaintenance", "MaintenancePlan", "IdleMaintenance",
     "Cell",
     "Edge",
     "MemoryStore",

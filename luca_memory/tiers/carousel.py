@@ -15,7 +15,7 @@ from .graph_view import GraphView
 from .slot import TierSlot
 from .device_slot import DeviceSlot
 from .coherent_slot import CoherentSlot
-from ..synaptic import SynapticMemory
+from ..synaptic import SynapticMemory, serialized
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +88,20 @@ class SynapticCarousel:
         self.activity.advance()
         self.opened_in_session = set(self.activity.recent)
 
+    def synchronize(self):
+        """Refresh topology metadata without downloading resident payloads."""
+        valid = set(self.vram.node_ids())
+        self.expanded_in_vram.intersection_update(valid)
+        if self.reading_id is not None:
+            if self.store.cell(self.reading_id) is None:
+                self.reading_id = self.focus_id = None
+            else:
+                self.focus_id = self.synaptic.root(self.reading_id)
+        self.vram_graph = GraphView()
+        for node_id in valid:
+            self.vram_graph.add_edges(edge for edge in self.store.outgoing(node_id)
+                                      if edge.target_id in valid)
+
     def open_alternative(self, node_id: int) -> RecallEvent:
         """Open a registered alternative only after an explicit user selection."""
         convergence = self.last_convergence or self.previous_convergence
@@ -105,6 +119,7 @@ class SynapticCarousel:
         self.context_report = {}
         return event
 
+    @serialized
     def recall(self, node_id: int) -> RecallEvent:
         """Open a reading part and preload bounded contents, never truncate its directory."""
 
@@ -161,6 +176,7 @@ class SynapticCarousel:
             self.activity.record("preload", neighbor.id)
         self.opened_in_session = set(self.activity.recent)
         self.vram_graph.add_edges((*incoming, *outgoing))
+        self.vram_graph.add_edges(Edge(root, entry.id) for entry in directory.parts)
 
         # Only nodes actually evicted from VRAM slide into RAM; excess unchosen family members stay in SSD.
         to_ram = list(evicted_from_vram)
@@ -187,6 +203,7 @@ class SynapticCarousel:
             evicted_to_ssd=tuple(item.id for item in evicted_from_ram),
         )
 
+    @serialized
     def step_to(self, node_id: int, *, reinforce: bool = True) -> RecallEvent:
         """Shift thought focus onto `node_id` (e.g. a 1st-degree neighbour), opening its own cluster."""
 

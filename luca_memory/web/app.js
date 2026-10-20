@@ -440,6 +440,42 @@ function renderAll(state) {
   renderOperational(state);
   renderConvergence(state);
   renderMemoryControls(state);
+  renderSynapticControls(state);
+}
+
+let pendingMaintenance = null;
+
+function renderSynapticControls(state) {
+  const synaptic = state.synaptic || {};
+  const directory = synaptic.directory;
+  $("synaptic-status").textContent = `Revisione ${synaptic.revision ?? "—"} · Focus #${synaptic.focus_id ?? "—"} · Parte letta #${synaptic.reading_id ?? "—"} · Navigazione ${synaptic.planner || "—"}`;
+  $("synaptic-directory").innerHTML = directory
+    ? [["Entranti", directory.incoming], ["Uscenti", directory.outgoing], ["Parti della famiglia", directory.parts]].map(([label, entries]) =>
+      `<div><strong>${label}</strong> (${entries.length})</div>` + entries.map(entry =>
+        `<button type="button" class="secondary" data-route-id="${entry.id}">#${entry.id} ${escapeHtml(entry.title)}</button>`).join("")).join("")
+    : "Nessun focus attivo.";
+  $("sleep-status").textContent = `Soglie esterne ${synaptic.edge_upper ?? "—"} → ${synaptic.edge_target ?? "—"} · Sonno automatico ${synaptic.automatic_sleep ? "attivo" : "disattivo"}` +
+    (synaptic.sleep_error ? ` · Ultimo tentativo non applicato: ${synaptic.sleep_error}` : "");
+  if (!$("maintenance-node").value && synaptic.focus_id) $("maintenance-node").value = synaptic.focus_id;
+  $("maintenance-operations").innerHTML = (synaptic.operations || []).map(operation =>
+    `<div>Operazione #${operation.id} · ${operation.active ? "attiva" : "ripristinata"} ` +
+    (operation.active ? `<button type="button" class="secondary" data-restore-id="${operation.id}">Ripristina rotte originali</button>` : "") + "</div>").join("");
+}
+
+async function synapticRequest(path, payload) {
+  if (busy || stopped) return null;
+  setBusy(true);
+  showError("");
+  try {
+    const result = await apiFetch(path, {method: "POST", body: JSON.stringify(payload)});
+    if (result.state) renderAll(result.state);
+    return result;
+  } catch (error) {
+    showError(error.message);
+    return null;
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function apiFetch(path, options = {}) {
@@ -555,6 +591,33 @@ async function updateTask(values) {
 }
 
 function bindEvents() {
+  $("global-search-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const result = await synapticRequest("/api/memory/search", {query: $("global-search-query").value});
+    if (result) $("global-search-results").innerHTML = result.candidates.length
+      ? result.candidates.map(entry => `<button type="button" class="secondary" data-recall-id="${entry.id}">#${entry.id} ${escapeHtml(entry.title)}</button>`).join("")
+      : "Nessun risultato: prova una ricerca più specifica o termini diversi.";
+  });
+  $("maintenance-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    pendingMaintenance = null;
+    $("maintenance-apply").disabled = true;
+    const result = await synapticRequest("/api/maintenance/preview", {node_id: Number($("maintenance-node").value)});
+    if (result) {
+      pendingMaintenance = result.plan_id;
+      $("maintenance-preview").textContent = JSON.stringify(result.plan, null, 2);
+      $("maintenance-apply").disabled = !result.plan.groups.length;
+    }
+  });
+  $("maintenance-apply").addEventListener("click", async () => {
+    if (!pendingMaintenance || !window.confirm("Confermi questa riorganizzazione degli archi?")) return;
+    const result = await synapticRequest("/api/maintenance/apply", {plan_id: pendingMaintenance, confirmed: true});
+    if (result) {
+      pendingMaintenance = null;
+      $("maintenance-apply").disabled = true;
+      $("maintenance-preview").textContent = `Operazione #${result.operation_id ?? "—"} completata.`;
+    }
+  });
   $("task-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const lines = id => $(id).value.split("\n").map(line => line.trim()).filter(Boolean);
@@ -643,6 +706,17 @@ function bindEvents() {
   });
 
   document.body.addEventListener("click", (e) => {
+    const route = e.target.closest("[data-route-id]");
+    if (route) {
+      void synapticRequest("/api/memory/navigate", {target_id: Number(route.dataset.routeId), directory_revision: appState.synaptic.directory.revision});
+      return;
+    }
+    const restore = e.target.closest("[data-restore-id]");
+    if (restore) {
+      if (window.confirm("Ripristinare le rotte originali di questa operazione?"))
+        void synapticRequest("/api/maintenance/restore", {operation_id: Number(restore.dataset.restoreId), confirmed: true});
+      return;
+    }
     const section = e.target.closest("[data-section-node]");
     if (section) {
       void openSection(section.dataset.sectionNode, decodeURIComponent(section.dataset.sectionKey));
@@ -678,6 +752,16 @@ async function init() {
   } finally {
     setBusy(false);
   }
+  const refresh = setInterval(async () => {
+    if (busy || stopped || document.hidden) return;
+    try {
+      const state = await apiFetch("/api/state");
+      if (!busy && !stopped) renderAll(state);
+    } catch (_) {
+      // The next explicit request reports connection errors without a polling alert loop.
+    }
+  }, 5000);
+  window.addEventListener("pagehide", () => clearInterval(refresh), {once: true});
 }
 
 document.addEventListener("DOMContentLoaded", init);

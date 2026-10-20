@@ -12,7 +12,17 @@ runtime:
   # CUDA ordinal 1 keeps Luca's node storage separate from the current LLM on GPU 0.
   gpu_device: 1
   memory_search_policy: fast
-  memory_planner: hybrid
+  memory_planner: llm
+  synaptic:
+    edge_upper: 50
+    edge_target: 45
+    navigation_steps: 8
+    global_candidates: 20
+    fast_index_bytes: 65536
+    automatic_sleep: true
+    idle_seconds: 60
+    sleep_poll_seconds: 5
+    sleep_retry_seconds: 300
   # The current seed contains deliberate counterfactual experiments.
   memory_policy: experimental
   recent_window: 8

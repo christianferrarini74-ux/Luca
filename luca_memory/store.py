@@ -186,11 +186,13 @@ class MemoryStore:
 
     @property
     def revision(self) -> int:
-        return int(self.connection.execute("SELECT revision FROM graph_revision").fetchone()[0])
+        with self.lock:
+            return int(self.connection.execute("SELECT revision FROM graph_revision").fetchone()[0])
 
     def node_revision(self, node_id: int) -> tuple[int, int]:
-        row = self.connection.execute("SELECT content_revision, directory_revision FROM node_versions WHERE node_id=?", (node_id,)).fetchone()
-        return tuple(row) if row else (-1, -1)
+        with self.lock:
+            row = self.connection.execute("SELECT content_revision, directory_revision FROM node_versions WHERE node_id=?", (node_id,)).fetchone()
+            return tuple(row) if row else (-1, -1)
 
     def add_cell(self, cell: Cell) -> None:
         self.connection.execute(
@@ -208,7 +210,7 @@ class MemoryStore:
         self._index_cell_for_search(cell)
 
     def next_cell_id(self) -> int:
-        row = self.connection.execute("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM cells").fetchone()
+        row = self.connection.execute("SELECT last_id + 1 AS next_id FROM node_id_sequence").fetchone()
         return int(row["next_id"])
 
     def has_cells(self) -> bool:

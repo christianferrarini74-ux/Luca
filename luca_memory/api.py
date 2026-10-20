@@ -8,6 +8,8 @@ from pathlib import Path
 import threading
 import time
 import webbrowser
+import secrets
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -20,6 +22,7 @@ from .node import KnowledgeNode, load_node
 from .search import MemorySearch
 from .session import LucaSession, SessionReply
 from .store import MemoryStore
+from .maintenance import IdleMaintenance, MemoryMaintenance
 
 
 class LucaRuntime:
@@ -53,14 +56,22 @@ class LucaRuntime:
         )
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
-        self._lock = threading.RLock()
+        self._lock = self.session.store.lock
+        self.maintenance = MemoryMaintenance(self.session.carousel.synaptic, self.session.synaptic_settings)
+        self.sleep = IdleMaintenance(self.maintenance, self.session.adapter)
+        self._plans = {}
+        self._closed = False
         self._last_trace: tuple[int, ...] = ()
 
     def close(self) -> None:
+        self.sleep.close()
         with self._lock:
-            self.session.close()
+            if not self._closed:
+                self._closed = True
+                self.session.close()
 
     def chat(self, text: str) -> dict[str, Any]:
+        self.sleep.touch()
         with self._lock:
             reply = self.session.handle(text)
             self._last_trace = reply.trace
@@ -69,6 +80,7 @@ class LucaRuntime:
     def recall_node(self, node_id: int, *, alternative: bool = False) -> dict[str, Any]:
         """Explicitly shift thought focus onto `node_id` and return updated state."""
 
+        self.sleep.touch()
         with self._lock:
             self.session.recall_manual(node_id, alternative=alternative)
             self._last_trace = self.session.carousel.vram.node_ids()
@@ -77,29 +89,111 @@ class LucaRuntime:
     def reset_session(self) -> dict[str, Any]:
         """Clear chat history and reset the VRAM/RAM carousel, then greet fresh."""
 
+        self.sleep.touch()
         with self._lock:
             self.session.reset()
+            self.maintenance.memory = self.session.carousel.synaptic
             self._last_trace = ()
             reply = self.session.handle("Ciao")
             self._last_trace = reply.trace
             return {"reply": self._reply_payload(reply), "state": self.state()}
 
     def open_section(self, node_id: int, key: str) -> dict[str, Any]:
+        self.sleep.touch()
         with self._lock:
             self.session.open_section(node_id, key)
             self._last_trace = self.session.carousel.vram.node_ids()
             return {"state": self.state()}
 
     def update_task(self, values: dict[str, Any]) -> dict[str, Any]:
+        self.sleep.touch()
         with self._lock:
             self.session.task.update(values, self.session.current_subject_id)
             return {"state": self.state()}
+
+    def memory_operation(self, operation, payload):
+        """All mutations stay in the Core; the dashboard only supplies requests."""
+        self.sleep.touch()
+        with self._lock:
+            memory = self.session.carousel.synaptic
+            if operation == "search":
+                query = payload.get("query")
+                if not isinstance(query, str) or not query.strip() or len(query) > 2000:
+                    raise ValueError("A nonempty query of at most 2000 characters is required.")
+                return {"revision": self.session.store.revision, "candidates": [
+                    {"id": entry.id, "title": entry.title} for entry in memory.global_lookup(
+                        query, self.session.synaptic_settings.global_candidates)]}
+            if operation == "navigate":
+                target, revision = payload.get("target_id"), payload.get("directory_revision")
+                if type(target) is not int or type(revision) is not int or self.session.carousel.reading_id is None:
+                    raise ValueError("A reading focus, integer target and directory revision are required.")
+                memory.validate_step(self.session.carousel.reading_id, target, revision)
+                return self.recall_node(target)
+            expected = payload.get("expected_revision")
+            if type(expected) is not int:
+                raise ValueError("An integer expected_revision is required.")
+            if operation == "node":
+                node_id = payload.get("node_id")
+                if type(node_id) is not int or node_id <= 0:
+                    raise ValueError("A positive integer node_id is required.")
+                old = load_node(self.session.store, node_id)
+                if not isinstance(payload.get("title"), str) or not isinstance(payload.get("content"), str):
+                    raise ValueError("Node title and content must be strings.")
+                node = replace(old, title=payload["title"], content=payload["content"]) if old else KnowledgeNode(
+                    node_id, f"node_{node_id}", payload["title"], payload["content"])
+                memory.update_node(node, expected_revision=expected)
+            elif operation == "edge":
+                if type(payload.get("source")) is not int or type(payload.get("target")) is not int:
+                    raise ValueError("Edge endpoints must be integers.")
+                memory.connect(payload["source"], payload["target"], remove=payload.get("remove") is True,
+                               expected_revision=expected)
+            elif operation == "family":
+                if type(payload.get("root")) is not int or type(payload.get("part")) is not int:
+                    raise ValueError("Family IDs must be integers.")
+                memory.attach_part(payload["root"], payload["part"], expected_revision=expected)
+            else:
+                raise ValueError("Unknown memory operation.")
+            return {"state": self.state()}
+
+    def maintenance_operation(self, operation, payload):
+        self.sleep.touch()
+        with self._lock:
+            if operation == "preview":
+                node_id = payload.get("node_id")
+                if type(node_id) is not int:
+                    raise ValueError("An integer node_id is required.")
+                directory = self.maintenance.memory.directory(node_id)
+                groups = payload.get("groups")
+                if groups is None and directory.external_degree > self.session.synaptic_settings.edge_target:
+                    if not hasattr(self.session.adapter, "propose_groups"):
+                        raise ValueError("The configured adapter cannot propose groups; supply explicit groups.")
+                    groups = self.session.adapter.propose_groups(directory, self.session.synaptic_settings)
+                plan = self.maintenance.plan(node_id, groups or [])
+                plan_id = secrets.token_hex(16)
+                # Bound pending previews; clients must prepare a new one after replacement.
+                self._plans = {plan_id: plan}
+                return {"plan_id": plan_id, "plan": plan.payload()}
+            if operation == "apply":
+                plan = self._plans.get(payload.get("plan_id"))
+                if plan is None:
+                    raise ValueError("Unknown maintenance preview; prepare it again.")
+                operation_id = self.maintenance.apply(plan, confirmed=payload.get("confirmed") is True)
+                self._plans.clear()
+                return {"operation_id": operation_id, "state": self.state()}
+            if operation == "restore":
+                operation_id = payload.get("operation_id")
+                if type(operation_id) is not int:
+                    raise ValueError("An integer operation_id is required.")
+                self.maintenance.restore(operation_id, confirmed=payload.get("confirmed") is True)
+                return {"state": self.state()}
+            raise ValueError("Unknown maintenance operation.")
 
     def state(self) -> dict[str, Any]:
         """Return a bounded dashboard view of the authoritative Core state."""
         with self._lock:
             memory = self._build_memory_items()
             carousel = self.session.carousel
+            carousel.synchronize()
             vram_nodes = [self._serialize_tier_node(node, in_vram=True) for node in carousel.vram.nodes()]
             ram_nodes = [self._serialize_tier_node(node, in_vram=False) for node in carousel.ram.nodes()]
             chains = [
@@ -120,6 +214,25 @@ class LucaRuntime:
 
             return {
                 "status": "ready",
+                "synaptic": {
+                    "revision": self.session.store.revision,
+                    "focus_id": carousel.focus_id,
+                    "reading_id": carousel.reading_id,
+                    "family": {"root_id": carousel.synaptic.root(carousel.reading_id),
+                               "part_ids": carousel.synaptic.parts(carousel.synaptic.root(carousel.reading_id))}
+                        if carousel.reading_id is not None else None,
+                    "directory": carousel.synaptic.directory(carousel.focus_id).payload()
+                        if carousel.focus_id is not None and self.session.store.cell(carousel.focus_id) else None,
+                    "planner": self.session.planner_mode,
+                    "navigation": self.session.navigator.trace,
+                    "edge_upper": self.session.synaptic_settings.edge_upper,
+                    "edge_target": self.session.synaptic_settings.edge_target,
+                    "automatic_sleep": self.session.synaptic_settings.automatic_sleep,
+                    "sleep_error": self.sleep.last_error,
+                    "last_operation": self.sleep.last_operation,
+                    "operations": [dict(id=row[0], active=bool(row[1])) for row in self.session.store.connection.execute(
+                        "SELECT id,active FROM maintenance_operations ORDER BY id DESC LIMIT 20")],
+                },
                 "physical_memory": carousel.physical_state(),
                 "adapter": self.config["runtime"]["language_adapter"],
                 "memory": memory,
@@ -319,6 +432,26 @@ class ApiHandler(BaseHTTPRequestHandler):
         self._json({"error": "Not found"}, status=404)
 
     def do_POST(self) -> None:  # noqa: N802
+        origin = self.headers.get("Origin")
+        if origin and origin != "http://" + self.headers.get("Host", ""):
+            self._json({"error": "Cross-origin mutations are not allowed."}, status=403)
+            return
+        if self.path.startswith("/api/maintenance/") or self.path.startswith("/api/memory/"):
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if not 0 < length <= 2_000_000:
+                    raise ValueError("Invalid request size.")
+                payload = json.loads(self.rfile.read(length))
+                if not isinstance(payload, dict):
+                    raise ValueError("The request must be an object.")
+                operation = self.path.rsplit("/", 1)[1]
+                method = self.runtime.maintenance_operation if self.path.startswith("/api/maintenance/") else self.runtime.memory_operation
+                self._json(method(operation, payload))
+            except (ValueError, TypeError, KeyError) as error:
+                self._json({"error": str(error)}, status=400)
+            except Exception as error:
+                self._json({"error": str(error)}, status=500)
+            return
         if self.path == "/api/task":
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -379,7 +512,6 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def _headers(self) -> None:
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
@@ -399,6 +531,7 @@ def create_server(config: dict[str, Any]) -> ThreadingHTTPServer:
         raise
     BoundApiHandler.shutdown_server = server.shutdown
     server.runtime = runtime  # type: ignore[attr-defined]
+    runtime.sleep.start()
     return server
 
 

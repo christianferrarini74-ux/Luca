@@ -20,6 +20,9 @@ from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
 from .tiers import SynapticCarousel
+from .navigation import MemoryNavigator, focus_context
+from .synaptic_settings import SynapticSettings
+from .synaptic import serialized
 
 _STOPWORDS = {
     "a", "ad", "al", "alla", "alle", "altri", "altro", "anche", "argomento", "avere",
@@ -81,7 +84,15 @@ class LucaSession:
             self.adapter = adapter or RuleAdapter()
             self.current_subject_id: int | None = None
             self.history: list[dict[str, str]] = []
-            self.planner = RecallPlanner(store, mode=planner_mode)
+            self.planner_mode = planner_mode
+            self.synaptic_settings = SynapticSettings.from_config(settings)
+            if planner_mode == "llm" and not hasattr(self.adapter, "navigate_memory"):
+                raise ValueError("The llm planner requires an adapter with navigate_memory.")
+            self.planner = RecallPlanner(store, mode="rules" if planner_mode == "llm" else planner_mode)
+            self.navigator = MemoryNavigator(self.carousel,
+                max_steps=self.synaptic_settings.navigation_steps,
+                search_limit=self.synaptic_settings.global_candidates,
+                directory_bytes=self.synaptic_settings.fast_index_bytes)
             self.last_plan: RecallPlan | None = None
             self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit)
         except BaseException:
@@ -114,12 +125,14 @@ class LucaSession:
             store.close()
             raise
 
+    @serialized
     def close(self) -> None:
         try:
             self.carousel.close()
         finally:
             self.store.close()
 
+    @serialized
     def open_section(self, node_id: int, key: str) -> None:
         """Open a validated document section while retaining its node identity."""
         node = load_node(self.store, node_id)
@@ -129,6 +142,7 @@ class LucaSession:
         self.carousel.section_focus = (node_id, key)
         self.task.observe(node_id, node_id, True, key)
 
+    @serialized
     def recall_manual(self, node_id: int, *, alternative: bool = False) -> None:
         """Apply manual focus changes through the same task-continuity boundary."""
         previous = self.current_subject_id
@@ -138,11 +152,12 @@ class LucaSession:
         else:
             self.carousel.begin_turn()
             self.carousel.step_to(node_id)
-        self.current_subject_id = node_id
+        self.current_subject_id = self.carousel.focus_id if self.is_v1 else node_id
         self.last_plan = None
         after = active_vram_component_ids(self.carousel)
         self.task.observe(previous, node_id, not before or not before.isdisjoint(after))
 
+    @serialized
     def reset(self) -> None:
         """Reset conversational history and empty VRAM/RAM slots while keeping SSD up to date."""
 
@@ -169,8 +184,14 @@ class LucaSession:
             replacement.close()
             raise
         self.carousel = replacement
+        self.navigator.carousel = replacement
+        self.navigator.memory = replacement.synaptic
+        self.navigator.trace = []
+        self.navigator.expose_memory = False
 
+    @serialized
     def handle(self, text: str) -> SessionReply:
+        self.carousel.synchronize()
         budget = self.carousel.prompt_budget
         if units(text) > budget.context_window - budget.output_reserve - budget.framing_reserve:
             raise ValueError("Il messaggio supera il budget configurato.")
@@ -197,18 +218,23 @@ class LucaSession:
         else:
             recalled_ids = self._activate_carousel_from_text(text) if self.is_v1 else []
         new_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
-        connected = not prev_component or not prev_component.isdisjoint(new_component)
+        local_steps = [step for step in self.navigator.trace if "target_id" in step] if self.planner_mode == "llm" else []
+        connected = (previous_focus == self.carousel.focus_id or not prev_component
+                     or not prev_component.isdisjoint(new_component)
+                     or bool(local_steps) and all(step.get("source") == "local" for step in local_steps))
         if self.last_plan is None or self.last_plan.operation != "resume":
             self.task.observe(previous_focus, self.current_subject_id, connected,
                               self.carousel.section_focus[1] if self.carousel.section_focus else None)
-        if self.is_v1 and recalled_ids and prev_component:
+        if self.is_v1 and self.planner_mode != "llm" and recalled_ids and prev_component and previous_focus != self.current_subject_id:
             new_component = active_vram_component_ids(self.carousel)
             if prev_component.isdisjoint(new_component):
                 self.history.clear()
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
             context = self._memory_context(text)
-            if hasattr(self.adapter, "respond_with_task"):
+            if self.planner_mode == "llm" and hasattr(self.adapter, "respond_with_navigation"):
+                response = self.adapter.respond_with_navigation(text, context, self.history, self.task.state.render())
+            elif hasattr(self.adapter, "respond_with_task"):
                 response = self.adapter.respond_with_task(text, context, self.history, self.task.state.render())
             else:
                 response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
@@ -292,6 +318,12 @@ class LucaSession:
 
     def _activate_carousel_from_text(self, text: str) -> list[int]:
         """Execute a Core-validated plan rather than guessing from edge order."""
+        if self.planner_mode == "llm":
+            self.navigator.run(text, self.adapter, self.history)
+            self.current_subject_id = self.carousel.focus_id
+            self.last_plan = RecallPlan("llm_navigation", self.current_subject_id,
+                                        expose_memory=self.navigator.expose_memory, source="llm")
+            return [step["target_id"] for step in self.navigator.trace if "target_id" in step]
         plan = self.planner.plan(text, self.current_subject_id, self.adapter)
         self.last_plan = plan
         if plan.section_key is not None and plan.target_id is not None:
@@ -321,6 +353,8 @@ class LucaSession:
         self.carousel.context_report = {}
         if self.is_v1 and self.last_plan is not None and not self.last_plan.expose_memory:
             return "Nessun ricordo locale pertinente alla domanda; usa la tua conoscenza generale senza attribuirla a ricordi locali."
+        if self.planner_mode == "llm":
+            return focus_context(self.carousel)
         sections: list[str] = []
         if len(self.carousel.vram) > 0:
             sections.append(build_vram_context(self.carousel))

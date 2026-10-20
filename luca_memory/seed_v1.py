@@ -63,6 +63,8 @@ def load_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed:
 
     with store.transaction():
         store.connection.execute("DELETE FROM edges")
+        store.connection.execute("DELETE FROM family_parts")
+        store.connection.execute("DELETE FROM maintenance_operations")
         store.connection.execute("DELETE FROM cell_aliases")
         store.connection.execute("DELETE FROM cell_search")
         store.connection.execute("DELETE FROM cells")

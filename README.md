@@ -2,7 +2,10 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
-Confirmed and closed conceptual specification, not yet implemented: [navigable and reorganizable memory](docs/bounded-synaptic-memory-design.md), ready for the roadmap.
+Phase 1.11 implemented: [canonical families, complete indexes, LLM navigation and atomic maintenance](docs/phase-1-11-implementation.md).
+The [confirmed design](docs/bounded-synaptic-memory-design.md) remains the conceptual reference.
+Start with `python run_luca.py`; configuration selects `memory_planner: llm` and 50/45 external-edge limits.
+Tests cover the Core, HTTP and real CUDA. A live test of the new LLM protocol remains pending: LM Studio was not running during development.
 
 Latest review: [seed safety, exact alias summaries and measured GPU transfers](docs/review-hardening.md).
 
