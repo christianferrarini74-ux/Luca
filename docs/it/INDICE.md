@@ -13,6 +13,10 @@ completa, limiti morbidi, nodi intermedi e manutenzione locale. È la base per l
 prossima roadmap, non una funzionalità implementata. Luca è autonomo: i riferimenti
 storici a Cesare riportati sotto non sono vincoli per la sua architettura attuale.
 
+Integrazione Fase 1.11: contenuto misurato in parole (token esatti se semplici da
+ottenere); ogni frammento mantiene l'intera rubrica del nodo suddiviso. La vista
+di navigazione effettiva conta anche gli archi ereditati, non soltanto quelli locali.
+
 Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
 ([English](../review-hardening.md)): impronta seed, migrazione contatori alias
 con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.

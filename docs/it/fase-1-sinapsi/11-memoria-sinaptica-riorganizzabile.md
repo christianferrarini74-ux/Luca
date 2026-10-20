@@ -8,6 +8,10 @@ Stato: sintesi progettuale della discussione con Christian, da usare per definir
 la prossima roadmap. Questo documento non descrive funzionalità già implementate
 e non autorizza da solo modifiche al grafo personale.
 
+Integrazione del 2026-10-20: dimensione informativa in parole, oppure in token
+quando il conteggio esatto è semplice; continuità dell'intera rubrica del nodo
+originale durante la lettura dei suoi frammenti (§8 e §10).
+
 ## 1. Obiettivo e confini
 
 Luca deve conservare conoscenza completa, collegata e progressivamente crescente,
@@ -139,12 +143,23 @@ Un nodo con poche connessioni può comunque contenere un capitolo enorme. Serve
 quindi una soglia separata per il contenuto, con un obiettivo di riduzione che
 lasci margine, come per gli archi.
 
-La dimensione può essere misurata in byte del payload e rispetto al budget di
-esposizione; nessuna di queste misure quantifica da sola la complessità semantica.
-Non abbiamo ancora stabilito valori o una formula unica. I limiti fisici restano
-rigidi: una soglia cognitiva morbida non permette di allocare oltre la VRAM
-disponibile. Un payload non caricabile deve restare persistente e attendere
-suddivisione o una decisione esplicita, senza fingere che sia stato caricato.
+La misura operativa del contenuto è il numero di parole. Un conteggio iniziale
+semplice e riproducibile può contare le sequenze non vuote separate da spazi
+bianchi, senza un analizzatore linguistico. Se il tokenizer esatto del modello
+è già disponibile con costo e integrazione trascurabili, si preferiscono i
+token. Non introduciamo un framework o chiamate remote soltanto per contarli.
+
+Le parole sono una misura pratica per decidere quando suddividere, non una
+garanzia esatta di occupazione del prompt. Lingua, codice, formule e tokenizzazione
+impediscono una conversione fissa valida sempre. Le soglie andranno calibrate sul
+modello e sul tipo di contenuto; il controllo finale del contesto resta distinto.
+Né parole né token misurano da soli la complessità semantica.
+
+I byte rimangono la misura delle allocazioni e dei trasferimenti fisici, non
+la misura primaria della dimensione informativa. Non abbiamo ancora stabilito
+le soglie in parole/token. Una soglia organizzativa morbida non permette di
+allocare oltre la VRAM disponibile: un payload non caricabile resta persistente
+in attesa di suddivisione o di una decisione esplicita, senza fingere il caricamento.
 
 Quando il contenuto è eccessivo, il nodo mantiene la propria identità logica e
 diventa ingresso a un sottoindice; le parti complete passano in nodi figli.
@@ -152,8 +167,37 @@ L'originale e la sua versione restano conservati su SSD: non occorre mantenere
 anche l'intero capitolo duplicato nel payload attivo del padre.
 
 Le divisioni devono seguire unità comprensibili e preservare definizioni,
-condizioni, esempi e rimandi necessari. Un numero di caratteri determina che
+condizioni, esempi e rimandi necessari. Il conteggio di parole/token segnala che
 occorre intervenire, non stabilisce automaticamente il confine corretto.
+
+### Continuità sinaptica durante la suddivisione
+
+Se A viene suddiviso in A1, A2, A3, A4 e A5, aprire una qualsiasi parte deve
+conservare disponibili tutti gli archi attivi di A, entranti e uscenti, oltre
+agli eventuali collegamenti propri della parte. La navigazione tra le parti
+rimane disponibile e la parte corrente è identificata. Non è sufficiente un
+arco per tornare al padre: l'LLM non deve abbandonare il dettaglio per ritrovare
+la mappa originale. A diventa l'ancora della conoscenza; Ai è il focus di lettura.
+
+Il requisito è disponibilità completa in ogni frammento, non necessariamente
+duplicazione fisica degli stessi archi. La proposta implementativa da valutare
+è una rubrica condivisa, riferita dall'intera famiglia di suddivisione, più i
+collegamenti locali. Ogni parte ne materializza la vista completa quando viene
+aperta. I contenuti delle altre parti non devono essere caricati per questo.
+
+Direzione e origine dei collegamenti restano esplicite: un arco A:B ereditato
+per la navigazione non viene presentato come una nuova affermazione A1:B.
+Il Core dovrà validare la scelta rispetto alla rubrica effettiva del contesto
+di lettura, non soltanto rispetto agli archi fisicamente intestati ad Ai.
+Gli archi identici sono esposti una volta sola, conservando la loro identità;
+una voce diretta alla parte già aperta è riconoscibile come tale.
+
+L'ereditarietà riguarda la relazione esplicita di suddivisione, non qualunque
+collegamento del grafo. Se anche A1 viene suddiviso, le nuove parti non devono
+perdere l'ancora A: ereditano la continuità della famiglia e tutte le connessioni
+dei livelli di suddivisione. Una modifica della rubrica condivisa
+deve aggiornare coerentemente le viste delle parti, senza copie divergenti.
+Versionamento e rappresentazione concreta sono decisioni per la roadmap.
 
 ## 9. Distillare la mappa, non eliminare la conoscenza
 
@@ -178,7 +222,7 @@ può essere migliorata senza riscrivere ciò che l'autore ha effettivamente dett
 
 ## 10. Contenuto e connessioni condividono il contesto
 
-I limiti non si esauriscono in “100 archi” e “un certo numero di byte”. Una singola
+I limiti non si esauriscono in “100 archi” e “un certo numero di parole/token”. Una singola
 elaborazione deve contenere istruzioni, domanda, stato del compito, storia utile,
 contenuto esposto, rubrica completa del focus e riserva per la risposta.
 
@@ -186,6 +230,15 @@ I titoli e le descrizioni hanno un costo: cento archi con descrizioni lunghe
 possono essere troppi anche quando il testo del nodo è breve. Perciò la fattibilità
 dell'esposizione deve avere un proprio controllo complessivo. Il numero massimo
 di archi è un tetto strutturale, non un obiettivo da raggiungere sempre.
+
+Per un frammento conta la rubrica effettivamente esposta: archi ereditati dalla
+famiglia, archi locali e navigazione delle parti, senza duplicare lo stesso arco.
+Memorizzare la rubrica una volta sola risparmia storage, non il contesto necessario
+per mostrarla. Il solo grado fisico di Ai non basta a certificare il rispetto
+della soglia; anche la vista combinata deve essere controllata. Lo stesso vale
+per suddivisioni su più livelli. Per l'informazione si contano separatamente le
+parole del contenuto e quelle dei descrittori, verificando poi l'intero prompt.
+Non si risolve uno sforamento nascondendo arbitrariamente gli archi ereditati.
 
 Lo sforamento temporaneo del grafo non autorizza il taglio silenzioso del prompt.
 Se il focus non è esponibile integralmente secondo il contratto scelto, occorre
@@ -232,6 +285,7 @@ in sospeso o chiedere revisione, non forzare un taglio soltanto per rispettare u
 - Tutte le alternative attive del focus sono disponibili, non soltanto un top-K.
 - La riorganizzazione cambia i percorsi, non inventa nuovi fatti fra i membri.
 - Identità e riferimenti preesistenti restano risolvibili o esplicitamente migrati.
+- Ogni parte mantiene l'intera rubrica del nodo suddiviso anche mentre è il focus di lettura.
 - Anche i nuovi nodi rispettano i budget e la profondità non cresce senza controllo.
 - La presenza in VRAM è reale; l'esposizione all'LLM è una decisione distinta.
 - Nessun riordino viene applicato parzialmente a una conversazione in corso.
@@ -244,6 +298,9 @@ Il codice attuale dispone di persistenza SQLite, indirizzi orientati, giostra
 fisica CUDA, budget dei payload e del contesto, diagnostica, planner di richiamo
 e controlli sul seed. Il milestone precedente registra 105 test superati, anche
 con CUDA reale; questo report non costituisce una nuova esecuzione di quei test.
+
+L'attuale contabilità del prompt usa byte UTF-8 conservativi: non è già il
+conteggio in parole o il tokenizer esatto previsto da questa integrazione.
 
 Non implementa ancora il modello descritto qui. In particolare, il richiamo
 limita il recupero degli archi a `max(32, vram_capacity * 4)` per direzione e il
@@ -259,9 +316,9 @@ senza installare automaticamente dipendenze.
 
 ## 14. Decisioni da chiudere prima della roadmap esecutiva
 
-1. Soglie iniziali e margini per archi e contenuto; convenzione di conteggio.
+1. Soglie iniziali e margini per archi e contenuto in parole; token esatti se semplici da ottenere, altrimenti calibrazione e controllo prudente del prompt.
 2. Formato e budget delle descrizioni della rubrica, oltre ai soli ID.
-3. Rappresentazione dei nodi di orientamento e delle rotte originali conservate.
+3. Rappresentazione dei nodi di orientamento, delle rotte originali e della rubrica condivisa dalle parti; conteggio delle alternative effettive e aggiornamento delle viste.
 4. Politica sul focus temporaneamente oltre il budget di esposizione.
 5. Contratto operativo con cui l'LLM consulta, apre, torna indietro e si arresta.
 6. Criteri di raggruppamento e divisione, con revisione umana iniziale.
@@ -283,6 +340,9 @@ dall'LLM; manutenzione che distribuisce gli eccessi senza perdere la fonte.
 Il libro offre la prima organizzazione. I collegamenti fra fonti la estendono.
 La giostra porta vicino ciò che serve. Il “sonno” mantiene percorribile la rete.
 La distillazione costruisce la segnaletica, non sostituisce la conoscenza.
+
+La granularità può aumentare senza perdere l'orientamento: leggere A3 significa
+leggere una parte di A continuando ad avere la mappa delle sue connessioni.
 
 Questa è un'ipotesi architetturale coerente da verificare, non una dimostrazione
 che ogni riordino migliori il richiamo. La prova decisiva sarà mantenere contenuti

@@ -8,6 +8,10 @@ Status: design synthesis of the discussion with Christian, intended as the basis
 for the next roadmap. This document does not describe implemented features and
 does not, by itself, authorize changes to the personal graph.
 
+Addendum dated 2026-10-20: measure information in words, or exact tokens when
+counting is straightforward; retain the original node's complete directory
+while reading any of its fragments (§8 and §10).
+
 ## 1. Goal and boundaries
 
 Luca should retain complete, connected and progressively growing knowledge while
@@ -136,12 +140,22 @@ of choices must be evaluated together, not just the final edge count.
 A node with few edges may still contain a huge chapter. Content needs a separate
 threshold and a lower target that leaves room for growth, just as edges do.
 
-Size can be measured as serialized payload bytes and against the exposure budget;
-neither metric alone measures semantic complexity. Values and a combined policy
-have not been chosen. Physical limits remain hard: soft organizational thresholds
-cannot authorize allocations beyond available VRAM. An unallocatable payload
-must remain persistent pending segmentation or an explicit decision, never be
-reported as loaded when it is not.
+The operational content measure is word count. A simple, reproducible initial
+definition counts nonempty whitespace-separated sequences without a linguistic
+parser. Prefer tokens if the model's exact tokenizer is already available with
+negligible integration and counting cost. Do not add a framework or remote calls
+solely to count them.
+
+Words are a practical segmentation trigger, not an exact prompt-size guarantee.
+Language, code, equations and tokenization prevent a universally fixed conversion.
+Thresholds must be calibrated to the model and content type; final context checks
+remain separate. Neither words nor tokens alone measure semantic complexity.
+
+Bytes remain the physical allocation/transfer measure, not the primary measure
+of information size. Word/token thresholds have not been chosen. A soft
+organizational threshold cannot authorize allocations beyond available VRAM:
+an unallocatable payload remains persistent pending segmentation or an explicit
+decision, never reported as loaded when it is not.
 
 When content is excessive, the node keeps its logical identity and becomes an
 entry with a subindex; complete portions move into child nodes. The original and
@@ -149,8 +163,34 @@ its version remain on disk. The active parent payload need not retain a duplicat
 of the entire chapter.
 
 Splits should follow intelligible units and preserve definitions, conditions,
-examples and necessary references. Character counts may trigger maintenance but
+examples and necessary references. Word/token counts can trigger maintenance but
 cannot establish the correct semantic boundary by themselves.
+
+### Synaptic continuity across a split
+
+If A is split into A1, A2, A3, A4 and A5, opening any part must retain access to
+all of A's active incoming and outgoing edges, plus the part's own connections.
+Navigation between parts remains available and the current part is identified.
+A parent-return link alone is insufficient: the LLM must not leave the detail
+to recover the original map. A becomes the knowledge anchor; Ai is the reading focus.
+
+The requirement is complete availability in every fragment, not necessarily
+physical edge duplication. The implementation proposal to evaluate is a shared
+directory referenced by the split family, combined with local connections. Each
+part materializes its complete view on opening, without loading other parts'
+contents for that purpose.
+
+Origin and direction stay explicit: an inherited A:B navigation route is not
+presented as a new A1:B assertion. The Core must validate choices against the
+reading context's effective directory, not just edges physically owned by Ai.
+Identical edges appear once while retaining their identity; an entry targeting
+the already open part is recognizable as such.
+
+Inheritance follows an explicit split relationship, not arbitrary graph links.
+If A1 is split again, its new parts must retain anchor A, family continuity and
+all connections of the split levels. Shared-directory updates must
+refresh part views coherently without divergent copies. Concrete representation
+and versioning remain roadmap decisions.
 
 ## 9. Distill the map, not the knowledge away
 
@@ -174,13 +214,21 @@ improved without rewriting what the author actually stated.
 
 ## 10. Contents and connections share a context budget
 
-Limits cannot stop at “100 edges” and a payload-size threshold. One computation
+Limits cannot stop at “100 edges” and a word/token threshold. One computation
 must accommodate instructions, question, task state, useful history, exposed
 contents, the focus's complete directory and output reserve.
 
 Titles and descriptions have costs: one hundred long descriptors may exceed
 context even for a short node. Exposure therefore needs an overall feasibility
 check. The edge limit is a structural ceiling, not a target to reach everywhere.
+
+For a fragment, the effective directory includes inherited family edges, local
+edges and part navigation, without duplicating the same edge. Storing a directory
+once saves storage, not the context needed to expose it. Ai's physical degree
+alone cannot certify budget compliance: the combined view must also be checked,
+including multilevel splits. Count content words and descriptor words separately,
+then validate the complete prompt. Arbitrarily hiding inherited connections is
+not a valid remedy for exceeding the budget.
 
 Temporary graph overflow does not authorize silent prompt truncation. If a focus
 cannot be fully exposed under the selected contract, it must first be reorganized
@@ -225,6 +273,7 @@ request review rather than force a boundary solely to meet a numeric threshold.
 - All active focus alternatives are available, not merely a top-K.
 - Reorganization changes paths without asserting new facts between group members.
 - Existing identities/references remain resolvable or explicitly migrated.
+- Every fragment retains the split node's complete directory while serving as the reading focus.
 - New nodes also meet budgets; depth does not grow without control.
 - VRAM residency is real and distinct from LLM exposure.
 - No partial reorganization is exposed to an ongoing conversation.
@@ -237,6 +286,9 @@ Current code has SQLite persistence, directed addresses, a physical CUDA carouse
 payload/context budgets, diagnostics, a recall planner and seed checks. The prior
 milestone records 105 passing tests including real CUDA; this report is not a
 fresh execution of those tests.
+
+Current prompt accounting uses conservative UTF-8 bytes, not the word counts or
+exact model tokenizer specified by this addendum.
 
 It does not implement this design yet. Recall still limits edge retrieval to
 `max(32, vram_capacity * 4)` per direction and neighboring-node preload to active
@@ -251,9 +303,9 @@ automatically installing dependencies.
 
 ## 14. Decisions before an executable roadmap
 
-1. Initial edge/content thresholds, margins and counting convention.
+1. Initial edge/content thresholds and margins in words; exact tokens if straightforward, otherwise calibration and conservative prompt checks.
 2. Directory descriptor format and budget, beyond plain IDs.
-3. Representation of navigation nodes and preserved original-route mappings.
+3. Representation of navigation nodes, original routes and the parts' shared directory; effective alternative counts and coherent view updates.
 4. Handling a focus temporarily over its exposure budget.
 5. The operational contract for LLM inspection, opening, backtracking and stopping.
 6. Grouping/splitting criteria and initial human review.
@@ -275,6 +327,9 @@ without losing the source.
 The book supplies an initial organization. Cross-source connections extend it.
 The carousel brings useful knowledge nearby. “Sleep” keeps the network navigable.
 Distillation builds signposts rather than replacing knowledge.
+
+Granularity can increase without losing orientation: reading A3 means reading
+part of A while retaining the map of A's connections.
 
 This is a coherent architectural hypothesis to test, not proof that every
 reorganization improves recall. The decisive test is preserving contents and
