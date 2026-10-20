@@ -17,6 +17,11 @@ Integrazione Fase 1.11: contenuto misurato in parole (token esatti se semplici d
 ottenere); ogni frammento mantiene l'intera rubrica del nodo suddiviso. La vista
 di navigazione effettiva conta anche gli archi ereditati, non soltanto quelli locali.
 
+Decisioni successive del §14: prossima fase limitata a navigazione e archi;
+soglie configurabili 50/45, rubrica ID/titolo, manutenzione manuale confermata
+oppure automatica in inattività per i soli sforamenti. Distillazione dei contenuti
+e biblioteca reale rinviate, non prerequisiti della fase corrente.
+
 Aggiornamento 2026-10-19: [Fase 1.10 — Verifica delle proposte di Claude](fase-1-sinapsi/10-verifica-claude.md)
 ([English](../review-hardening.md)): impronta seed, migrazione contatori alias
 con ordinamento invariato e riduzione misurata delle copie GPU senza cache host.

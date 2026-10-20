@@ -12,6 +12,12 @@ Addendum dated 2026-10-20: measure information in words, or exact tokens when
 counting is straightforward; retain the original node's complete directory
 while reading any of its fragments (§8 and §10).
 
+Christian's subsequent clarification: the next phase concerns only synaptic
+navigation and edge management, assuming already suitable node contents.
+Content distillation/splitting (§8–9) is a separate, deferred system. The upper
+edge limit is 50 and the lower target 45, both configuration parameters; visible
+directory entries contain only ID and title. Section 14 records the updated decisions.
+
 ## 1. Goal and boundaries
 
 Luca should retain complete, connected and progressively growing knowledge while
@@ -69,7 +75,7 @@ and available alternatives. The Core validates addresses and operations, perform
 recall and enforces resource policies; it must not substitute its own semantic
 preference for the model's navigation decision.
 
-For reorganization, the LLM may propose titles, boundaries and groups. The Core
+For edge reorganization, the LLM may propose titles and groups. The Core
 checks structural integrity and application. Those checks alone do not prove
 that a group is semantically useful; initial human review is also needed.
 
@@ -94,21 +100,29 @@ the knowledge.
 
 ## 6. Soft connection limits
 
-Christian's working example is a threshold of 100 incident connections, incoming
-and outgoing combined. The 101st connection flags the node for local maintenance
-that brings it back to, for example, no more than 90.
-
-These are experimental parameters, not approved production constants. The gap
-between intervention threshold and target avoids repeated reorganization after
-every addition. The threshold is soft: acquisition may temporarily exceed it
+Christian selected an initial limit of 50 incident connections, incoming plus
+outgoing, and a maintenance target of 45. Both belong in the configuration file,
+not hard-coded constants. This replaces the earlier 100/90 hypothesis. The gap
+between intervention and target avoids reorganization after every addition.
+The threshold is soft: acquisition may temporarily exceed it
 while the node awaits a maintenance window.
+
+Automatic maintenance affects only nodes above 50, while the LLM is not in use.
+Manual maintenance requires confirmation and operates on selected nodes down to
+the lower target even if the upper limit has not been exceeded; nodes already
+within target need no compression. Automatic jobs must recheck eligibility at
+execution time.
+
+Exact configuration key names are implementation details. Validation will require
+positive integers and a target below the upper limit. Inert keys are not added
+now to config.yaml while the runtime does not implement this feature yet.
 
 A candidate definition consistent with current counters is in-degree plus
 out-degree. A self-loop would therefore consume two incidences; this convention
 must be explicitly confirmed rather than left implicit.
 
-Grouping twelve direct connections behind one intermediary reduces degree 101
-to 90 in the simple example. The new parent-to-group connection counts against
+Grouping seven direct connections behind one intermediary reduces degree 51
+to 45 in the simple example. The new parent-to-group connection counts against
 the parent's budget; the group's parent connection counts against its own.
 Explicit reverse or cross-connections consume additional capacity. Counting
 only new outgoing branches would be incorrect.
@@ -136,6 +150,9 @@ one level nor create excessively deep chains. Local breadth, depth and clarity
 of choices must be evaluated together, not just the final edge count.
 
 ## 8. Limiting node information as well
+
+Background for a separate phase, not work included in the next navigation
+roadmap. That phase assumes nodes already have suitable contents.
 
 A node with few edges may still contain a huge chapter. Content needs a separate
 threshold and a lower target that leaves room for growth, just as edges do.
@@ -194,6 +211,9 @@ and versioning remain roadmap decisions.
 
 ## 9. Distill the map, not the knowledge away
 
+Content generation/distillation is deferred and distinct from edge grouping
+during “sleep” in the current phase.
+
 The proposed distillation is organizational: identify subtopics and produce titles,
 short descriptions and subindexes that help navigation. It is not a summary left
 behind in place of the source.
@@ -214,12 +234,12 @@ improved without rewriting what the author actually stated.
 
 ## 10. Contents and connections share a context budget
 
-Limits cannot stop at “100 edges” and a word/token threshold. One computation
+Limits cannot stop at “50 edges” and a word/token threshold. One computation
 must accommodate instructions, question, task state, useful history, exposed
 contents, the focus's complete directory and output reserve.
 
-Titles and descriptions have costs: one hundred long descriptors may exceed
-context even for a short node. Exposure therefore needs an overall feasibility
+The chosen directory format is ID and title, without extra generated descriptions.
+Titles still have a cost. Exposure therefore needs an overall feasibility
 check. The edge limit is a structural ceiling, not a target to reach everywhere.
 
 For a fragment, the effective directory includes inherited family edges, local
@@ -231,24 +251,27 @@ then validate the complete prompt. Arbitrarily hiding inherited connections is
 not a valid remedy for exceeding the budget.
 
 Temporary graph overflow does not authorize silent prompt truncation. If a focus
-cannot be fully exposed under the selected contract, it must first be reorganized
-or its opening explicitly deferred. The exact operational policy remains a
-roadmap decision. Unbounded overflow, immediate selection and full visibility
+cannot be fully exposed under the selected contract, that condition must be
+reported. Immediate reorganization, deferred opening and automatic conversation
+compression have not been selected. For now measure the total context rather
+than turning this issue into a blocker for navigation. Unbounded overflow,
+immediate selection and full visibility
 cannot all be guaranteed in a finite prompt.
 
-The two transformations interact: splitting text creates new edges; grouping
-edges creates new indexes and descriptive content. Reorganization must therefore
-validate connections, content and context together, not run two independent
-procedures that repeatedly push each other over their thresholds.
+In the overall system, future text splitting may create new edges, while edge
+grouping creates new indexes. This phase assumes contents are already suitable:
+check connections and exposure cost without introducing text segmentation now.
 
 ## 11. “Sleep”: local maintenance, not a global rebuild
 
-Maintenance collects over-threshold nodes and prepares small, targeted changes.
-It may run on command, in an agreed phase or during actual inactivity. Automatic
-scheduling is not yet an approved implementation decision.
+Current-phase maintenance groups edges into families and creates the associated
+navigation nodes; it does not distill or split node contents. Two modes are
+specified: manual invocation with confirmation on selected nodes, and automatic
+execution while the LLM is not in use only for nodes exceeding the configured
+upper limit. Both aim for the configured lower target.
 
-The logical cycle is detection; deduplicated queueing; proposed grouping or split;
-validation of contents and routes; publication; and rechecking affected nodes.
+The logical cycle is detection; deduplicated queueing; proposed edge grouping;
+validation of families and routes; publication; and rechecking affected nodes.
 
 Work and resource consumption must be bounded, interruptible and resumable,
 without repeated oscillation. If data changes after planning, the proposal must
@@ -261,11 +284,10 @@ and task references require coordinated versioning/invalidation. Errors and
 interruptions must leave the previous organization recoverable, not half of
 an applied transformation.
 
-The organizer itself has finite context: it must not require reading everything
-in one prompt to solve the very size problem under consideration. It can first
-use source indexes and boundaries, then inspect successive portions with explicit
-references. If no reliable split is found, it must leave a pending proposal or
-request review rather than force a boundary solely to meet a numeric threshold.
+The organizer itself has finite context. This phase organizes connections through
+IDs and titles without distilling book contents. If no reliable families are
+identified, leave a proposal pending or request review rather than delete edges
+or invent groups solely to meet a numeric threshold.
 
 ## 12. Acceptance invariants
 
@@ -295,27 +317,48 @@ It does not implement this design yet. Recall still limits edge retrieval to
 tier capacity. Planning remains hybrid, often using rules rather than autonomous
 LLM navigation across the complete alternatives.
 
-Missing components include index-led book ingestion, a complete-directory
-contract, reorganization thresholds, managed navigation nodes, conservative
-content splitting, a maintenance queue and versioned transformation publication.
-Using a real PDF also requires selecting and validating extraction without
-automatically installing dependencies.
+Immediate missing components are a complete-directory contract, LLM-led navigation,
+configurable thresholds, managed navigation nodes, a maintenance queue and
+coherent transformation publication. Book ingestion, PDF extraction and content
+distillation/splitting remain separate developments, not prerequisites for this phase.
 
-## 14. Decisions before an executable roadmap
+## 14. Updated decisions for the navigation roadmap
 
-1. Initial edge/content thresholds and margins in words; exact tokens if straightforward, otherwise calibration and conservative prompt checks.
-2. Directory descriptor format and budget, beyond plain IDs.
-3. Representation of navigation nodes, original routes and the parts' shared directory; effective alternative counts and coherent view updates.
-4. Handling a focus temporarily over its exposure budget.
-5. The operational contract for LLM inspection, opening, backtracking and stopping.
-6. Grouping/splitting criteria and initial human review.
-7. Maintenance triggers, bounds, approval and version management.
-8. A first book/chapter chosen jointly, with verifiable questions and references.
+1. **Agreed:** initial maximum 50 edges, incoming and outgoing combined; compression
+   target 45. Parameters belong in configuration, not code constants. Content-size
+   thresholds concern the separate distillation system and must not delay this phase.
+2. **Agreed:** expose only ID and title of connected nodes, without mandatory
+   additional descriptions.
+3. **Agreed:** children inherit the parent's shared directory without independent
+   copies. Christian specifies that only the edge representing the child changes.
+   Clarify only that edge's precise meaning: the candidate interpretation is the
+   current-part reference within the family, not a change to the whole directory.
+   Internal representation remains an implementation detail.
+4. **Evaluate, not a blocker:** the concern was the total conversational context,
+   not one node alone. With suitable contents and a bounded directory, measure
+   actual behavior. Do not introduce conversation compression or a new opening-
+   suspension policy now.
+5. **Principle already agreed, operational explanation:** the LLM reads the node
+   and directory and requests an ID; the Core validates it and moves focus. The
+   LLM may continue, revisit a node or answer. This is not content distillation or
+   a transfer of semantic choice to the Core. Request formats and loop/error
+   safeguards are implementation details, not new conceptual choices to impose
+   on the user.
+6. **Narrow scope:** assume nodes already contain suitable information. Content
+   generation, distillation and text splitting belong to a separate system not
+   being designed now. Edge-family grouping through secondary nodes during
+   “sleep” remains in scope.
+7. **Agreed:** manual invocation with confirmation and node selection down to the
+   lower target; automatic invocation while the LLM is not in use only for nodes
+   above the upper limit. Idle detection and coherent updates are technical
+   responsibilities to specify in the roadmap.
+8. **Deferred:** the book, chapter and real-library evaluation will be chosen
+   jointly later; they are not prerequisites for completing navigation design.
 
-These are design decisions, not an already authorized development sequence. The
-next roadmap should turn them into experiments and measurable criteria: coverage,
-route correctness, LLM selection, context consumption, depth, latency, maintenance
-cost and recovery after failure.
+These decisions do not start implementation yet. The next roadmap concerns
+navigation, directory continuity and edge management only. With already suitable
+nodes, it will measure alternative completeness, route correctness, LLM choices,
+context, latency and grouping/rollback correctness.
 
 ## 15. Conclusion
 

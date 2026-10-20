@@ -12,6 +12,13 @@ Integrazione del 2026-10-20: dimensione informativa in parole, oppure in token
 quando il conteggio esatto è semplice; continuità dell'intera rubrica del nodo
 originale durante la lettura dei suoi frammenti (§8 e §10).
 
+Precisazione successiva di Christian: la prossima fase riguarda soltanto
+navigazione delle sinapsi e gestione degli archi, assumendo nodi già conformi
+per contenuto. La distillazione e la suddivisione dei testi (§8–9) sono un sistema
+separato e rinviato. Sono fissati limite superiore 50 e obiettivo inferiore 45,
+entrambi nel file di configurazione; rubrica esposta con soli ID e titolo.
+Le risposte ai punti del §14 sono aggiornate di conseguenza.
+
 ## 1. Obiettivo e confini
 
 Luca deve conservare conoscenza completa, collegata e progressivamente crescente,
@@ -70,8 +77,8 @@ della domanda, del focus e delle alternative disponibili. Il Core verifica che
 indirizzo e operazione siano validi, esegue il richiamo e applica le politiche di
 risorse; non deve sostituire la propria preferenza semantica alla scelta dell'LLM.
 
-La stessa distinzione vale per la riorganizzazione: l'LLM può proporre titoli,
-confini e raggruppamenti. Il Core controlla integrità strutturale e applicazione.
+La stessa distinzione vale per la riorganizzazione degli archi: l'LLM può proporre
+titoli e raggruppamenti. Il Core controlla integrità strutturale e applicazione.
 Questi controlli non dimostrano, da soli, che il raggruppamento sia semanticamente
 buono: inizialmente serve anche la revisione umana.
 
@@ -95,21 +102,30 @@ tutti i nodi non garantisce che l'LLM scelga il percorso corretto o li esamini t
 
 ## 6. Limite morbido delle connessioni
 
-L'ipotesi di lavoro di Christian è una soglia di 100 connessioni incidenti, fra
-entranti e uscenti. Al 101° collegamento il nodo viene segnalato per un riordino
-locale che lo riporti, per esempio, a non più di 90.
-
-Sono parametri sperimentali, non valori già approvati per il codice. Il margine
-fra soglia di intervento e obiettivo evita di riorganizzare a ogni nuova aggiunta.
+Christian ha scelto un limite iniziale di 50 connessioni incidenti, sommando
+prefissi e suffissi, e un obiettivo di riordino di 45. Sono parametri modificabili
+nel file di configurazione, non costanti inserite nel codice. La precedente
+ipotesi 100/90 è superata. Il margine fra intervento e obiettivo evita di
+riorganizzare a ogni nuova aggiunta.
 Il limite è morbido: l'acquisizione può superarlo temporaneamente mentre il nodo
 attende una finestra di manutenzione.
+
+Il riordino automatico riguarda solo nodi oltre 50, durante il non utilizzo
+dell'LLM. Il comando manuale richiede conferma e opera sui nodi selezionati,
+portandoli al limite inferiore anche se non hanno superato quello superiore;
+un nodo già entro l'obiettivo non richiede compressione. La selezione automatica
+deve ricontrollare lo sforamento al momento di intervenire.
+
+I nomi tecnici delle chiavi saranno fissati nell'implementazione. La validazione
+richiederà valori interi positivi e obiettivo inferiore al limite. Non si aggiungono
+ora chiavi inerti al config.yaml di un runtime che non implementa ancora il riordino.
 
 Per allinearsi ai contatori attuali, una definizione candidata è grado entrante
 più grado uscente. Un auto-collegamento conterebbe quindi due incidenze: questa
 convenzione va dichiarata e confermata, non lasciata implicita.
 
-Raggruppare dodici archi diretti in una sola connessione a un intermediario
-riduce, nell'esempio semplice, un grado 101 a 90. Anche l'intermediario consuma
+Raggruppare sette archi diretti in una sola connessione a un intermediario
+riduce, nell'esempio semplice, un grado 51 a 45. Anche l'intermediario consuma
 una connessione sul nodo padre; il suo collegamento al padre consuma capacità
 nel proprio budget. Collegamenti inversi espliciti o trasversali consumano altra
 capacità. Non basta contare soltanto le nuove diramazioni.
@@ -138,6 +154,9 @@ Il compromesso da misurare è ampiezza locale, profondità e comprensibilità de
 scelte, non soltanto il numero finale di archi.
 
 ## 8. Limitare anche l'informazione del nodo
+
+Contesto progettuale per una fase separata: non è lavoro incluso nella prossima
+roadmap di navigazione. Per quest'ultima si assumono nodi con contenuti già adeguati.
 
 Un nodo con poche connessioni può comunque contenere un capitolo enorme. Serve
 quindi una soglia separata per il contenuto, con un obiettivo di riduzione che
@@ -201,6 +220,9 @@ Versionamento e rappresentazione concreta sono decisioni per la roadmap.
 
 ## 9. Distillare la mappa, non eliminare la conoscenza
 
+Sistema di generazione/distillazione dei contenuti rinviato, distinto dal
+raggruppamento degli archi durante il “sonno” previsto nella fase corrente.
+
 La distillazione proposta è organizzativa: identifica sottoargomenti e produce
 titoli, brevi descrizioni e sottoindici utili alla navigazione. Non è il riassunto
 che rimane al posto della fonte.
@@ -222,12 +244,12 @@ può essere migliorata senza riscrivere ciò che l'autore ha effettivamente dett
 
 ## 10. Contenuto e connessioni condividono il contesto
 
-I limiti non si esauriscono in “100 archi” e “un certo numero di parole/token”. Una singola
+I limiti non si esauriscono in “50 archi” e “un certo numero di parole/token”. Una singola
 elaborazione deve contenere istruzioni, domanda, stato del compito, storia utile,
 contenuto esposto, rubrica completa del focus e riserva per la risposta.
 
-I titoli e le descrizioni hanno un costo: cento archi con descrizioni lunghe
-possono essere troppi anche quando il testo del nodo è breve. Perciò la fattibilità
+Il formato scelto per la rubrica è ID e titolo, senza descrizioni generate
+aggiuntive. Anche questi titoli hanno un costo. Perciò la fattibilità
 dell'esposizione deve avere un proprio controllo complessivo. Il numero massimo
 di archi è un tetto strutturale, non un obiettivo da raggiungere sempre.
 
@@ -242,24 +264,27 @@ Non si risolve uno sforamento nascondendo arbitrariamente gli archi ereditati.
 
 Lo sforamento temporaneo del grafo non autorizza il taglio silenzioso del prompt.
 Se il focus non è esponibile integralmente secondo il contratto scelto, occorre
-prima riorganizzarlo o sospenderne esplicitamente l'apertura. La politica precisa
-è una decisione da prendere nella roadmap. Non possiamo garantire insieme
+segnalare la condizione: non è stata scelta una politica di riorganizzazione
+immediata, sospensione o compressione automatica della conversazione. Per ora si
+misura il contesto complessivo, senza trasformare questo tema in un requisito
+bloccante per la navigazione. Non possiamo garantire insieme
 sforamento illimitato, scelta immediata e visione integrale in un prompt finito.
 
-Le due trasformazioni si influenzano: suddividere il testo crea nuovi archi;
-raggruppare archi crea nuovi indici e contenuti descrittivi. Il riordino va quindi
-validato congiuntamente su connessioni, contenuto e contesto, non come due
-procedure indipendenti che possono far sforare continuamente l'altra soglia.
+Nel sistema complessivo, la futura suddivisione del testo potrà creare nuovi
+archi, mentre il raggruppamento degli archi crea nuovi indici. Per la fase corrente
+si assume però contenuto già adeguato: si verificano i collegamenti e il costo
+della loro esposizione senza introdurre ora una procedura di suddivisione del testo.
 
 ## 11. Il “sonno”: manutenzione locale, non ricostruzione globale
 
-La manutenzione raccoglie i nodi oltre soglia e prepara interventi piccoli e
-puntuali. Può essere avviata su comando, in una fase concordata o durante
-inattività effettiva. Il funzionamento automatico non è ancora una decisione
-implementativa approvata.
+La manutenzione della fase corrente raggruppa archi in famiglie e genera i relativi
+nodi intermedi: non distilla e non suddivide il contenuto dei nodi. Sono previste
+due modalità: comando manuale con conferma sui nodi selezionati, oppure esecuzione
+automatica durante il non utilizzo dell'LLM soltanto sui nodi oltre il limite
+superiore configurato. Entrambe mirano al limite inferiore configurato.
 
 La sequenza logica è: rilevare lo sforamento; accodare il nodo senza duplicare
-il lavoro; proporre raggruppamento o suddivisione; verificare contenuti e rotte;
+il lavoro; proporre il raggruppamento degli archi; verificare famiglie e rotte;
 pubblicare la nuova organizzazione; ricontrollare i nodi coinvolti.
 
 Il processo deve essere limitato per lavoro e risorse, interrompibile e
@@ -273,11 +298,10 @@ lettori in corso, payload residenti, cache e riferimenti del compito richiedono
 una strategia coordinata di versionamento e invalidazione. Errori o interruzioni
 devono lasciare recuperabile l'assetto precedente, non una struttura a metà.
 
-Anche il riordinatore lavora con contesto finito: non deve richiedere di leggere
-in un solo prompt tutto ciò che il sistema cerca di rendere gestibile. Può usare
-prima indice e confini della fonte, poi esaminare porzioni successive con riferimenti
-espliciti. Se non individua una suddivisione affidabile, deve lasciare una proposta
-in sospeso o chiedere revisione, non forzare un taglio soltanto per rispettare una soglia.
+Anche il riordinatore lavora con contesto finito. In questa fase organizza le
+connessioni tramite ID e titoli, senza dover distillare il contenuto dei libri.
+Se non individua famiglie affidabili, lascia una proposta in sospeso o richiede
+revisione, senza cancellare archi o inventare gruppi soltanto per rispettare una soglia.
 
 ## 12. Invarianti da usare come criteri di accettazione
 
@@ -308,27 +332,50 @@ precaricamento dei vicini alla capacità del livello attivo. Il planner è ancor
 ibrido e spesso sceglie mediante regole, non tramite una navigazione autonoma
 dell'LLM su tutte le alternative.
 
-Mancano importazione del libro guidata dall'indice, contratto di rubrica completa,
-soglie di riorganizzazione, nodi intermedi gestiti, suddivisione conservativa,
-coda di manutenzione e pubblicazione versionata delle trasformazioni. L'uso di
-un PDF concreto richiederà inoltre la scelta e la verifica dell'estrazione,
-senza installare automaticamente dipendenze.
+Nel perimetro immediato mancano contratto di rubrica completa, navigazione guidata
+dall'LLM, soglie configurabili, nodi intermedi gestiti, coda di manutenzione e
+pubblicazione coerente delle trasformazioni. Importazione dei libri, estrazione
+PDF e distillazione/suddivisione dei contenuti restano sviluppi separati e non
+sono prerequisiti per questa fase.
 
-## 14. Decisioni da chiudere prima della roadmap esecutiva
+## 14. Decisioni aggiornate per la roadmap di navigazione
 
-1. Soglie iniziali e margini per archi e contenuto in parole; token esatti se semplici da ottenere, altrimenti calibrazione e controllo prudente del prompt.
-2. Formato e budget delle descrizioni della rubrica, oltre ai soli ID.
-3. Rappresentazione dei nodi di orientamento, delle rotte originali e della rubrica condivisa dalle parti; conteggio delle alternative effettive e aggiornamento delle viste.
-4. Politica sul focus temporaneamente oltre il budget di esposizione.
-5. Contratto operativo con cui l'LLM consulta, apre, torna indietro e si arresta.
-6. Criteri di raggruppamento e divisione, con revisione umana iniziale.
-7. Trigger, limiti e approvazione della manutenzione; gestione delle versioni.
-8. Un primo libro/capitolo scelto insieme, con domande e riferimenti verificabili.
+1. **Concordato:** massimo iniziale 50 archi, somma di prefissi e suffissi;
+   obiettivo di compressione 45. Parametri nel file di configurazione, non nel
+   codice. Le soglie del contenuto riguardano la distillazione separata e non
+   devono rallentare questa fase.
+2. **Concordato:** nella rubrica si espongono soltanto ID e titolo dei nodi
+   collegati, senza descrizioni aggiuntive obbligatorie.
+3. **Concordato:** i figli ereditano la stessa rubrica del padre, senza copie
+   indipendenti. Christian precisa che cambia soltanto l'arco che rappresenta
+   il figlio. Da chiarire solo il significato puntuale di tale arco: l'interpretazione
+   candidata è il riferimento alla parte corrente nella famiglia, non una modifica
+   dell'intera rubrica. La rappresentazione interna rimane un dettaglio tecnico.
+4. **Da valutare, non bloccante:** la preoccupazione era il contesto totale della
+   conversazione, non il solo nodo. Con nodi già adeguati e rubrica limitata si
+   misura il comportamento; non si introduce ora un compressore della cronologia
+   o una nuova politica di sospensione dell'apertura.
+5. **Principio già concordato, spiegazione operativa:** l'LLM legge nodo e rubrica,
+   chiede di aprire un ID, il Core verifica la scelta e sposta il focus. Può
+   continuare, tornare su un nodo visitato o rispondere. Non si parla di distillare
+   contenuti, né di delegare al Core la scelta semantica. Formato delle richieste
+   e protezioni contro cicli/errori sono dettagli dell'implementazione, non nuove
+   scelte concettuali da imporre all'utente.
+6. **Ambito ristretto:** i nodi si assumono già dotati dei contenuti dovuti.
+   Generazione, distillazione e suddivisione del testo sono un sistema separato
+   che non stiamo progettando ora. Resta in questa fase il raggruppamento degli
+   archi in famiglie tramite nodi secondari durante il “sonno”.
+7. **Concordato:** avvio manuale con conferma e selezione dei nodi, fino al limite
+   inferiore; avvio automatico durante il non utilizzo dell'LLM, esclusivamente
+   per chi supera il limite superiore. Rilevazione dell'inattività e coerenza delle
+   modifiche sono responsabilità tecniche da specificare nella roadmap.
+8. **Rinviato:** libro, capitolo e verifica della biblioteca verranno scelti insieme
+   successivamente; non sono richiesti per chiudere la progettazione della navigazione.
 
-Queste sono decisioni progettuali, non una sequenza di sviluppo già autorizzata.
-La roadmap successiva dovrà trasformarle in esperimenti e criteri misurabili:
-copertura, correttezza delle rotte, scelta dell'LLM, contesto consumato, profondità,
-latenza, costo di manutenzione e ripristino dopo errore.
+Queste decisioni non avviano ancora lo sviluppo. La prossima roadmap riguarda
+solo navigazione, continuità della rubrica e gestione degli archi: misurerà
+completezza delle alternative, correttezza delle rotte, scelta dell'LLM, contesto,
+latenza e correttezza del raggruppamento/ripristino, usando nodi già conformi.
 
 ## 15. Conclusione
 
