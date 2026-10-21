@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Contesto attuale: [70.000 token del modello, configurabili in YAML](docs/it/fase-1-sinapsi/15-contesto-in-token.md).
+Conteggio nativo LM Studio, cronologia limitata dai token senza tetti fissi agli
+scambi; memoria fisica sempre in byte. Nessuna dipendenza aggiuntiva. 182 test
+superati con tokenizer reale e CUDA. Riavviare Luca con `python run_luca.py`.
+
 Fase 1.11 implementata: [famiglie canoniche, indici completi, navigazione LLM e manutenzione atomica](docs/it/fase-1-sinapsi/12-implementazione-memoria-navigabile.md).
 La [specifica confermata](docs/it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md) resta il riferimento concettuale.
 Avvio: `python run_luca.py`; configurati `memory_planner: llm` e limiti esterni 50/45.

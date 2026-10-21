@@ -3,7 +3,7 @@
 from dataclasses import asdict
 import json
 
-from .budget import clip, units
+from .budget import units
 from .node import load_node
 from .synaptic import StaleRevision, serialized
 
@@ -23,7 +23,7 @@ def focus_context(carousel, *, structured=False) -> str | dict:
     header = json.dumps({"focus_id": directory.focus_id, "reading_id": node.id,
                          "title": node.title, "directory": directory.payload()}, ensure_ascii=False)
     budget = carousel.prompt_budget
-    allowance = min(budget.per_node_limit, budget.memory_limit - units(header) - 100)
+    allowance = min(budget.per_node_limit, budget.memory_limit - budget.count(header) - 100)
     if allowance < 0:
         raise ValueError("Complete directory exceeds memory_limit; increase the configured budget or reorganize the node. No routes were truncated.")
     body = node.content
@@ -31,14 +31,14 @@ def focus_context(carousel, *, structured=False) -> str | dict:
         section = next((s for s in node.sections if s.key == carousel.section_focus[1]), None)
         if section:
             body = section.content
-    excerpt = clip(body, allowance)
+    excerpt = budget.truncate(body, allowance)
     prefix = header + "\nContenuto:\n"
     text = prefix + excerpt + ("\n[estratto parziale]" if excerpt != body else "")
     carousel.context_report = {"node_ids": [node.id], "directory_revision": directory.revision,
         "focus_id": directory.focus_id, "reading_id": node.id, "directory_complete": True,
         "external_degree": directory.external_degree, "internal_parts": len(directory.parts),
-        "truncated_ids": [node.id] if excerpt != body else [], "input_units": units(text),
-        "limit": budget.memory_limit, "accounting": "utf8_bytes_conservative",
+        "truncated_ids": [node.id] if excerpt != body else [], "input_units": budget.count(text),
+        "limit": budget.memory_limit, "accounting": budget.accounting, "span_unit": "utf8_bytes",
         "node_spans": [{"node_id": node.id, "start": units(prefix), "end": units(prefix + excerpt)}]}
     if structured:
         return {**json.loads(header), "content": excerpt, "partial_content": excerpt != body}
@@ -53,7 +53,7 @@ def answer_context(carousel):
     prefix = payload["title"] + ":\n"
     body = payload["content"]
     text = prefix + body + ("\n[estratto parziale]" if payload["partial_content"] else "")
-    carousel.context_report.update({"input_units": units(text), "directory_in_answer": False,
+    carousel.context_report.update({"input_units": carousel.prompt_budget.count(text), "directory_in_answer": False,
         "directory_in_navigation": True, "node_spans": [{"node_id": payload["reading_id"],
             "start": units(prefix), "end": units(prefix + body)}]})
     return text

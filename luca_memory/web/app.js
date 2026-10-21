@@ -386,12 +386,16 @@ function renderMemoryControls(state) {
   const ram = state.tiers?.ram || {};
   const plan = state.recall_plan;
   const physical = state.physical_memory || {};
+  const contextUnit = request.accounting === "model_tokens" ? "token" : "unità UTF-8 conservative";
   $("physical-memory-status").textContent = physical.physical_vram
     ? `Memoria GPU reale · GPU ${physical.device_index} · ${physical.device_name} · ${physical.allocated_bytes} byte allocati · ${physical.allocations} buffer`
     : "Modalità HOST di riferimento: entrambi i livelli sono in RAM, nessuna VRAM GPU utilizzata.";
   $("context-status").textContent = (plan ? `Piano: ${plan.operation} (${plan.source}). ${plan.reason} ` : "") +
-    `Politica: ${state.memory_policy || "grounded"}. Richiesta: ${request.input_units ?? "—"}/${request.input_limit ?? "—"} unità UTF-8 conservative; ` +
+    `Politica: ${state.memory_policy || "grounded"}. Richiesta: ${request.input_units ?? "—"}/${request.input_limit ?? "—"} ${contextUnit}; ` +
     `riserva risposta ${request.output_reserve ?? "—"}. Memoria esposta: ${context.input_units ?? 0}/${context.limit ?? "—"}. ` +
+    (request.context_window ? `Finestra totale: ${request.context_window} token. ` : "") +
+    (request.server_prompt_tokens != null ? `Consumo prompt confermato dal server: ${request.server_prompt_tokens} token. ` : "") +
+    `Cronologia nel prompt: ${request.history_messages ?? 0} messaggi, ${request.history_tokens ?? "—"} token. ` +
     (physical.physical_vram
       ? `VRAM fisica: GPU ${physical.device_index} (${physical.device_name}), ${physical.allocated_bytes} byte in ${physical.allocations} allocazioni; trasferiti RAM→GPU ${physical.upload_bytes} byte, GPU→RAM ${physical.download_bytes} byte; caricamenti SQLite ${physical.disk_loads} (${physical.disk_payload_bytes} byte di payload). `
       : "Modalità HOST: primo livello in RAM, nessuna allocazione VRAM fisica. ") +
@@ -403,7 +407,7 @@ function renderMemoryControls(state) {
   )).join("");
   const task = state.task || {};
   $("task-status").textContent = task.active
-    ? `${task.goal || "Compito attivo"} · ${task.suspended ? "Sospeso durante la consultazione di un altro argomento" : "In corso"} · Punto di ripresa: #${task.focus_id ?? "—"} · ${task.input_units}/${task.limit} unità`
+    ? `${task.goal || "Compito attivo"} · ${task.suspended ? "Sospeso durante la consultazione di un altro argomento" : "In corso"} · Punto di ripresa: #${task.focus_id ?? "—"} · ${task.input_units}/${task.limit} ${contextUnit}`
     : "Nessun compito attivo. Puoi anche scrivere Obiettivo:, Vincolo: o Decisione: nella chat.";
   const fields = {"task-goal": task.goal || "", "task-constraints": (task.constraints || []).join("\n"), "task-decisions": (task.decisions || []).join("\n")};
   for (const [id, value] of Object.entries(fields)) {

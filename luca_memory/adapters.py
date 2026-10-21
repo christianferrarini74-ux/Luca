@@ -135,8 +135,15 @@ class LMStudioAdapter:
             connector=connector,
             assignment=assignment,
         )
-        LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds).ensure_loaded(adapter.model)
         adapter.prompt_budget = PromptBudget.from_config(config.get("runtime", {}))
+        manager = LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds)
+        manager.ensure_loaded(adapter.model, context_length=adapter.prompt_budget.context_window if adapter.prompt_budget.unit == "tokens" else None)
+        if adapter.prompt_budget.unit == "tokens":
+            from dataclasses import replace
+            from .llm.tokenization import LMStudioTokenCounter
+            counter = LMStudioTokenCounter(manager, adapter.model)
+            counter.count("Luca")  # Validate tokenization at startup, not halfway through a turn.
+            adapter.prompt_budget = replace(adapter.prompt_budget, counter=counter)
         adapter.memory_policy = str(config.get("runtime", {}).get("memory_policy", "grounded"))
         adapter.synaptic_settings = SynapticSettings.from_config(config.get("runtime", {}))
         return adapter
@@ -254,10 +261,12 @@ class LMStudioAdapter:
         )
         messages, self.last_prompt_report = self.prompt_budget.messages(
             instruction + "\n\n" + memory_context, "", history, text, required_context=task_context)
-        self.last_prompt_report["memory_units"] = len(memory_context.encode("utf-8"))
+        self.last_prompt_report["memory_units"] = self.prompt_budget.count(memory_context)
+        self.last_prompt_report["memory_bytes"] = len(memory_context.encode("utf-8"))
         try:
-            raw = self.connector.create_chat_model(self.assignment).complete(
-                messages, max_tokens=self.prompt_budget.output_reserve).strip()
+            model = self.connector.create_chat_model(self.assignment)
+            raw = model.complete(messages, max_tokens=self.prompt_budget.output_reserve).strip()
+            self._record_usage(model)
             return self._sanitize_response(raw)
         except LLMConfigurationError as error:
             raise LanguageAdapterUnavailable("The model did not return a conversational response.") from error
@@ -315,10 +324,19 @@ class LMStudioAdapter:
             required_context=task_context,
         )
         try:
-            raw = self.connector.create_chat_model(self.assignment).complete(messages, max_tokens=self.prompt_budget.output_reserve).strip()
+            model = self.connector.create_chat_model(self.assignment)
+            raw = model.complete(messages, max_tokens=self.prompt_budget.output_reserve).strip()
+            self._record_usage(model)
             return self._sanitize_response(raw)
         except LLMConfigurationError as error:
             raise LanguageAdapterUnavailable("LM Studio non ha restituito una risposta conversazionale valida.") from error
+
+    def _record_usage(self, model):
+        usage = getattr(model, "last_usage", {})
+        if isinstance(usage, dict):
+            self.last_prompt_report.update({"server_" + key: value for key, value in usage.items()})
+            if self.prompt_budget.unit == "tokens" and "prompt_tokens" in usage:
+                self.last_prompt_report["template_token_delta"] = usage["prompt_tokens"] - self.last_prompt_report["input_tokens"]
 
     _META_LEAK_PATTERNS = (
         "la bibbia",

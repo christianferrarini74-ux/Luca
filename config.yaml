@@ -31,13 +31,15 @@ runtime:
   vram_bytes: 8000000
   ram_bytes: 32000000
   context_budget:
-    context_window: 8192
-    output_reserve: 512
-    framing_reserve: 256
-    memory_limit: 4096
-    per_node_limit: 1536
-    history_limit: 1024
-    task_limit: 512
+    # All limits below are model tokens, not bytes or words.
+    unit: tokens
+    context_window: 70000
+    output_reserve: 4096
+    framing_reserve: 512
+    memory_limit: 20000
+    per_node_limit: 16000
+    history_limit: 40000
+    task_limit: 2048
   api:
     host: 127.0.0.1
     port: 8765
@@ -56,7 +58,8 @@ llm:
           provider: lm_studio
           model: google/gemma-4-e2b
           temperature: 0.0
-          timeout_seconds: 30
+          # Long prompts need time for prefill as well as generation.
+          timeout_seconds: 180
 
 frontend:
   enabled: true

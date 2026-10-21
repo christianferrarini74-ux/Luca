@@ -79,13 +79,13 @@ def build_vram_context(carousel: SynapticCarousel) -> str:
                     summaries.remove(node.id)
                 section_title = " / " + section.title
         prefix = f"- {label} {clip(source.title + section_title, 256)}: "
-        remaining = budget.memory_limit - units("\n".join(lines)) - 1
-        if remaining <= units(prefix) + 40:
+        remaining = budget.memory_limit - budget.count("\n".join(lines)) - 1
+        if remaining <= budget.count(prefix) + 40:
             truncated.append(node.id)
             return
-        allowance = min(budget.per_node_limit, remaining - units(prefix) - 40)
-        excerpt = clip(body, allowance)
-        if units(excerpt) < units(body):
+        allowance = min(budget.per_node_limit, remaining - budget.count(prefix) - 40)
+        excerpt = budget.truncate(body, allowance)
+        if excerpt != body:
             excerpt += " [estratto parziale]"
             truncated.append(node.id)
         start = units("\n".join(lines)) + 1 + units(prefix)
@@ -104,10 +104,10 @@ def build_vram_context(carousel: SynapticCarousel) -> str:
             partial_node = load_node(carousel.store, match.node_id)
             if partial_node is not None:
                 append_node(partial_node, "So soltanto questo, che riguarda solo una parte della domanda:", opened=False)
-    text = clip("\n".join(lines), budget.memory_limit)
+    text = budget.truncate("\n".join(lines), budget.memory_limit)
     carousel.context_report = {"node_ids": exposed, "node_spans": spans, "summary_ids": summaries, "truncated_ids": truncated,
-                               "input_units": units(text), "limit": budget.memory_limit,
-                               "accounting": "utf8_bytes_conservative", "section": carousel.section_focus}
+                               "input_units": budget.count(text), "limit": budget.memory_limit,
+                               "accounting": budget.accounting, "span_unit": "utf8_bytes", "section": carousel.section_focus}
     return text
 
 

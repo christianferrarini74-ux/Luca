@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Current context: [70,000 model tokens, configurable in YAML](docs/token-context.md).
+Native LM Studio token counting, token-bounded history without fixed turn caps,
+and unchanged physical byte accounting. No additional dependencies. 182 tests passed
+with native tokenizer and real CUDA enabled. Restart Luca with `python run_luca.py`.
+
 Phase 1.11 implemented: [canonical families, complete indexes, LLM navigation and atomic maintenance](docs/phase-1-11-implementation.md).
 The [confirmed design](docs/bounded-synaptic-memory-design.md) remains the conceptual reference.
 Start with `python run_luca.py`; configuration selects `memory_planner: llm` and 50/45 external-edge limits.

@@ -7,6 +7,11 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Contesto 2026-10-21: [70.000 token e budget configurabili](fase-1-sinapsi/15-contesto-in-token.md)
+([English](../token-context.md)). Conteggio nativo del modello senza nuove
+dipendenze; cronologia misurata in token, memoria fisica in byte. 182 test con
+tokenizer e CUDA reali; prova di costruzione prompt da 63.760 token.
+
 Correzione del dialogo 2026-10-21: [ingresso nella memoria e continuità](fase-1-sinapsi/14-ingresso-memoria-e-dialogo.md)
 ([English](../memory-entry-cues.md)). Indice globale anticipato di soli metadati,
 stato “non usato” distinto da “inesistente”, estratti espliciti della cronologia.

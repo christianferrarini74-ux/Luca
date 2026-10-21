@@ -33,7 +33,7 @@ class LMStudioModelManager:
             api_key = os.getenv(api_key_env, "")
         return cls(management_url, timeout_seconds, api_key)
 
-    def ensure_loaded(self, model_key: str) -> None:
+    def ensure_loaded(self, model_key: str, *, context_length: int | None = None, _allow_load: bool = True) -> None:
         """Load the configured model when it is installed but not resident."""
 
         try:
@@ -59,11 +59,22 @@ class LMStudioModelManager:
                 f"Il modello LM Studio '{model_key}' non è installato. Modelli disponibili: {choices or 'nessuno'}."
             )
         loaded_instances = selected.get("loaded_instances") or []
+        if context_length and int(selected.get("max_context_length") or 0) < context_length:
+            raise LLMConfigurationError(f"Il modello '{model_key}' non supporta il contesto richiesto di {context_length} token.")
         if isinstance(loaded_instances, list) and loaded_instances:
+            if context_length and not any(int(item.get("config", {}).get("context_length") or 0) >= context_length for item in loaded_instances):
+                raise LLMConfigurationError(f"Ricarica '{model_key}' in LM Studio con almeno {context_length} token di contesto. Luca non scarica automaticamente modelli già in uso.")
             return
-        response = self._request("POST", "/api/v1/models/load", {"model": model_key})
+        if not _allow_load:
+            raise LLMConfigurationError(f"LM Studio non ha confermato il caricamento di '{model_key}' con {context_length} token.")
+        payload = {"model": model_key}
+        if context_length:
+            payload["context_length"] = context_length
+        response = self._request("POST", "/api/v1/models/load", payload)
         if response.get("status") not in {None, "loaded"}:
             raise LLMConfigurationError(f"LM Studio non ha caricato il modello '{model_key}'.")
+        if context_length:
+            self.ensure_loaded(model_key, context_length=context_length, _allow_load=False)
 
     def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         headers = {"Content-Type": "application/json"}

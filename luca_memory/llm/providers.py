@@ -26,6 +26,7 @@ class _HTTPChatModel:
         self.profile = profile
         self.endpoint = endpoint.rstrip("/")
         self.api_key = api_key
+        self.last_usage: dict[str, int] = {}
 
     def complete(
         self,
@@ -57,6 +58,11 @@ class _HTTPChatModel:
         try:
             with urlopen(request, timeout=self.profile.timeout_seconds) as response:  # noqa: S310
                 decoded = json.loads(response.read().decode("utf-8"))
+            if not isinstance(decoded, dict):
+                raise LLMConfigurationError("The provider returned an invalid response object.")
+            usage = decoded.get("usage")
+            self.last_usage = {key: value for key, value in (usage if isinstance(usage, dict) else {}).items()
+                               if key in {"prompt_tokens", "completion_tokens", "total_tokens"} and type(value) is int}
             choice = decoded["choices"][0]
             if response_format is not None and choice.get("finish_reason") == "length":
                 raise LLMConfigurationError(

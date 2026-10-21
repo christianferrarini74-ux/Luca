@@ -14,7 +14,7 @@ from .memory import MemoryEditor
 from .node import load_node
 from .protocol import EvidenceBundle, LanguageIntent
 from .planning import RecallPlanner, RecallPlan
-from .budget import PromptBudget, clip, units
+from .budget import PromptBudget
 from .task_state import TaskMemory
 from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
@@ -76,7 +76,8 @@ class LucaSession:
             store, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy,
             recent_window=int(settings.get("recent_window", 8)),
             vram_bytes=int(settings.get("vram_bytes", 8_000_000)), ram_bytes=int(settings.get("ram_bytes", 32_000_000)),
-            prompt_budget=PromptBudget.from_config(settings),
+            prompt_budget=(adapter.prompt_budget if getattr(getattr(adapter, "prompt_budget", None), "counter", None) is not None
+                           else PromptBudget.from_config(settings)),
             memory_backend=str(settings.get("memory_backend", "host")),
             gpu_device=int(settings.get("gpu_device", 0)),
         )
@@ -94,7 +95,7 @@ class LucaSession:
                 search_limit=self.synaptic_settings.global_candidates,
                 directory_bytes=self.synaptic_settings.fast_index_bytes)
             self.last_plan: RecallPlan | None = None
-            self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit)
+            self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit, counter=self.carousel.prompt_budget.count)
         except BaseException:
             self.carousel.close()
             raise
@@ -195,7 +196,7 @@ class LucaSession:
     def handle(self, text: str) -> SessionReply:
         self.carousel.synchronize()
         budget = self.carousel.prompt_budget
-        if units(text) > budget.context_window - budget.output_reserve - budget.framing_reserve:
+        if budget.count(text) > budget.context_window - budget.output_reserve - budget.framing_reserve:
             raise ValueError("Il messaggio supera il budget configurato.")
         self.carousel.begin_turn()
         previous_focus = self.current_subject_id
@@ -242,9 +243,9 @@ class LucaSession:
                 response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
             exposed = self.carousel.context_report.get("node_ids", ())
             report = getattr(self.adapter, "last_prompt_report", {})
-            if "memory_units" in report:
+            if "memory_bytes" in report or "memory_units" in report:
                 exposed = [span["node_id"] for span in self.carousel.context_report.get("node_spans", ())
-                           if span["start"] < report["memory_units"]]
+                            if span["start"] < report.get("memory_bytes", report.get("memory_units", 0))]
             self.carousel.mark_exposed(exposed)
             trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
             if not self.is_v1:
@@ -257,7 +258,7 @@ class LucaSession:
                     if consolidated:
                         trace = consolidated
             self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
-            self.history = self.history[-16:]
+            self.history = budget.trim_history(self.history)
             return SessionReply(response, trace)
 
         if task_changed:
@@ -288,7 +289,7 @@ class LucaSession:
                     "Non conosco nulla che riguardi insieme tutto quello che mi chiedi. "
                     + ("So soltanto qualcosa su una parte: " + " | ".join(partials) if partials else "")
                 ).strip()
-                return SessionReply(clip(text_reply, self.carousel.prompt_budget.memory_limit), tuple(self.carousel.vram.node_ids()))
+                return SessionReply(budget.truncate(text_reply, budget.memory_limit), tuple(self.carousel.vram.node_ids()))
             top_node = self.carousel.vram.get(self.carousel.vram.node_ids()[0])
             body = top_node.content
             if self.carousel.section_focus and self.carousel.section_focus[0] == top_node.id:
@@ -296,7 +297,7 @@ class LucaSession:
                 section = next((s for s in source.sections if s.key == self.carousel.section_focus[1]), None) if source else None
                 if section:
                     body = section.content
-            return SessionReply(clip(f"{top_node.title}: {body}", self.carousel.prompt_budget.per_node_limit), tuple(self.carousel.vram.node_ids()))
+            return SessionReply(budget.truncate(f"{top_node.title}: {body}", budget.per_node_limit), tuple(self.carousel.vram.node_ids()))
 
         if intent.kind == "describe" and intent.subject:
             subject = self.store.cell_by_alias(intent.subject)

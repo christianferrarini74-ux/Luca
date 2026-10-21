@@ -32,16 +32,17 @@ class TaskState:
 
 
 class TaskMemory:
-    def __init__(self, store, limit: int = 512) -> None:
+    def __init__(self, store, limit: int = 512, *, counter=units) -> None:
         self.store = store
         self.limit = limit
+        self.count = counter
         row = store.connection.execute("SELECT payload FROM task_state WHERE name = 'current'").fetchone()
         self.state = TaskState(**json.loads(row[0])) if row else TaskState()
-        if units(self.state.render()) > limit:
+        if self.count(self.state.render()) > limit:
             raise ValueError("Il compito salvato supera task_limit; aumenta il budget prima di riprenderlo.")
 
     def _save(self, state: TaskState) -> None:
-        if units(state.render()) > self.limit:
+        if self.count(state.render()) > self.limit:
             raise ValueError("Obiettivo, vincoli e decisioni superano task_limit; abbreviali o aumenta il budget.")
         payload = json.dumps(asdict(state), ensure_ascii=False)
         with self.store.transaction():
@@ -113,4 +114,4 @@ class TaskMemory:
         self._save(state)
 
     def snapshot(self) -> dict:
-        return {**asdict(self.state), "active": self.state.active, "input_units": units(self.state.render()), "limit": self.limit}
+        return {**asdict(self.state), "active": self.state.active, "input_units": self.count(self.state.render()), "limit": self.limit}
