@@ -7,6 +7,11 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Bibbia 2026-10-22: [conoscenza acquisita e conoscenza generale](fase-1-sinapsi/17-bibbia-conoscenza-integrata.md)
+([English](../integrated-knowledge-bible.md)). 210 test con CUDA/tokenizer reali,
+8/8 controlli nel nuovo dialogo di integrazione; restano premesse sulle fonti
+e dettagli aggiunti. Nessuna modifica al Core o alla memoria personale.
+
 Ragionamento 2026-10-21: [bibbia unica, letture multiple e libertà del modello](fase-1-sinapsi/16-ragionamento-libero.md)
 ([English](../reasoning-contract.md)). Separazione istruzioni/dati, eliminazione
 dei filtri semantici, opzioni di generazione esplicite e risposte dirette dalla

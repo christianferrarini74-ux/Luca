@@ -2,6 +2,12 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Latest bible revision: [acquired memory plus general knowledge](docs/integrated-knowledge-bible.md).
+210 automated tests passed with native tokenization and real CUDA; the new
+integration dialogue passed 8/8 reading/lexical checks. Style and unsupported
+extra details remain imperfect: see the report. Start a fresh conversation;
+the bible itself reloads on each request, without restarting Luca.
+
 Current reasoning contract: [one bible, no semantic output filters, multi-node readings](docs/reasoning-contract.md).
 Instructions come only from `runtime.bible`; model reasoning is no longer forcibly
 disabled. Generation options and operation budgets are explicit in YAML.

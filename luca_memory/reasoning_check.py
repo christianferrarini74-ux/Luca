@@ -1,14 +1,16 @@
-"""Replay Christian's weather dialogue against disposable, real-model memory."""
+"""Replay memory/general-knowledge dialogues against disposable real-model memory."""
 
 import argparse
 from datetime import datetime, timezone
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 
 from .config import load_config
 from .live_memory_check import ObservedAdapter
 from .session import LucaSession
+from .bible import read_bible
 
 
 CASES = (
@@ -24,12 +26,26 @@ CASES = (
     ("exploration", "quindi riassumendo, in aria succedono diverse cose straordinarie: pioggia di zucchero filato, gli asini volano e costruiscono nidi di paglia sui campanili, c'è dell'altro?", "exploration"),
 )
 
+INTEGRATION_CASES = (
+    ("diet_before", "Cosa mangiano gli asini?", "diet"),
+    ("flying", "Parlami degli asini che volano", "donkeys"),
+    ("diet_after", "cosa mangiano gli asini?", "diet"),
+    ("general_rain", "Come si forma la pioggia?", "general"),
+    ("special_rain", "Hai sentito parlare della pioggia di zucchero filato?", "rain"),
+    ("details", "approfondisci e spiegami meglio", "rain"),
+    ("connection", "quale è il collegamento tra Asini che volano e pioggia di zucchero filato?", "connection"),
+    ("diet_return", "E cosa mangiano gli asini, in generale?", "diet"),
+)
+
 
 def assess(kind, text, readings):
     """Lexical evidence checks are not a substitute for reviewing the answers."""
     text = text.lower()
     if kind is None:
         return None
+    if kind == "diet":
+        return any(word in text for word in ("erbivor", "erba", "fieno")) and not any(
+            phrase in text for phrase in ("non specificano", "non specifica", "non posso sapere"))
     if kind == "general":
         return "evapor" in text and "condens" in text and "zucchero" not in text
     if kind == "rain":
@@ -48,14 +64,19 @@ def assess(kind, text, readings):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.yaml")
+    parser.add_argument("--scenario", choices=("weather", "integration"), default="weather")
     args = parser.parse_args()
     config = load_config(args.config)
+    cases = CASES if args.scenario == "weather" else INTEGRATION_CASES
+    bible = read_bible(config["runtime"]["bible"])
     adapter = ObservedAdapter.from_config(config)
     adapter.observations = []
     root = Path(config["storage"]["database"]).parent
     root.mkdir(parents=True, exist_ok=True)
     path = root / ("reasoning-live-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
     report = {"started_utc": datetime.now(timezone.utc).isoformat(), "model": adapter.model,
+              "scenario": args.scenario, "bible_snapshot": bible,
+              "bible_sha256": hashlib.sha256(bible.encode("utf-8")).hexdigest(),
               "note": "Synthetic seed; lexical and actual-reading checks, not factual certification.", "turns": []}
     try:
         with tempfile.TemporaryDirectory(prefix="reasoning-check-", dir=root) as directory:
@@ -64,7 +85,7 @@ def main():
                 vram_capacity=int(config["runtime"].get("vram_capacity", 5)),
                 ram_capacity=int(config["runtime"].get("ram_capacity", 12)))
             try:
-                for name, question, kind in CASES:
+                for name, question, kind in cases:
                     try:
                         reply = session.handle(question)
                         readings = list(session.navigator.workspace.nodes)
@@ -83,7 +104,8 @@ def main():
                 report["resources_released"] = True
     finally:
         checked = [turn for turn in report["turns"] if turn["passed"] is not None]
-        report["passed"] = len(checked) == 8 and all(turn["passed"] for turn in checked) and report.get("resources_released", False)
+        report["passed"] = len(checked) == sum(kind is not None for _, _, kind in cases) and all(
+            turn["passed"] for turn in checked) and report.get("resources_released", False)
         path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps({"report": str(path), "passed": report["passed"]}), flush=True)
     return 0 if report["passed"] else 1

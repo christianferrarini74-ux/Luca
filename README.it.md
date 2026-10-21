@@ -2,6 +2,12 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Ultima revisione della Bibbia: [memoria acquisita e conoscenza generale](docs/it/fase-1-sinapsi/17-bibbia-conoscenza-integrata.md).
+210 test automatici superati con tokenizer nativo e CUDA reale; nuovo dialogo
+di integrazione 8/8 nei controlli lessicali/letture. Stile e dettagli aggiunti
+restano imperfetti: vedere il resoconto. Iniziare una nuova conversazione;
+la Bibbia viene riletta a ogni richiesta senza riavviare Luca.
+
 Contratto attuale: [bibbia unica, nessun filtro semantico e letture multiple](docs/it/fase-1-sinapsi/16-ragionamento-libero.md).
 Istruzioni solo da `runtime.bible`; il ragionamento del modello non viene più
 disabilitato forzatamente. Opzioni di generazione e budget operativi nel file YAML.
