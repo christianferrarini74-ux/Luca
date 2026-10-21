@@ -4,6 +4,8 @@ storage:
   seed: seed/knowledge_base_v1.json
 
 runtime:
+  bible: bible.md
+  user_identity: Christian
   language_adapter: gemma
   adapter_role: orchestrator
   vram_capacity: 5
@@ -23,8 +25,11 @@ runtime:
     idle_seconds: 60
     sleep_poll_seconds: 5
     sleep_retry_seconds: 300
-    navigation_output_tokens: 2048
-    maintenance_output_tokens: 2048
+    navigation_output_tokens: 8192
+    maintenance_output_tokens: 8192
+    interpretation_output_tokens: 1024
+    recall_output_tokens: 1024
+    search_query_characters: 2000
   # The current seed contains deliberate counterfactual experiments.
   memory_policy: experimental
   recent_window: 8
@@ -58,6 +63,8 @@ llm:
           provider: lm_studio
           model: google/gemma-4-e2b
           temperature: 0.0
+          # Empty means provider defaults: Luca does not force thinking off.
+          generation: {}
           # Long prompts need time for prefill as well as generation.
           timeout_seconds: 180
 

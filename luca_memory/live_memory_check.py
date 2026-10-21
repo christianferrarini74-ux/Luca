@@ -37,6 +37,13 @@ class ObservedAdapter(LMStudioAdapter):
         return choice
 
 
+def family_index_read(session, root_id):
+    """A family part may be the cursor when the family's index was actually read."""
+    return (session.carousel.focus_id == root_id and root_id in session.navigator.workspace.nodes
+            and session.carousel.reading_id is not None
+            and session.carousel.synaptic.root(session.carousel.reading_id) == root_id)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.yaml")
@@ -81,12 +88,14 @@ def main():
                     try:
                         reply = session.handle(question)
                         choices = adapter.observations[first:]
-                        passed = (expected is None or expected in reply.text) and (focus is None or
-                            (session.carousel.focus_id, session.carousel.reading_id) == (focus, reading))
+                        position_ok = (family_index_read(session, focus) if name == "global_entry" else
+                            focus is None or (session.carousel.focus_id, session.carousel.reading_id) == (focus, reading))
+                        passed = (expected is None or expected in reply.text) and position_ok
                         passed = passed and not any(step["action"] == "step_limit" for step in session.navigator.trace)
                         passed = passed and bool(choices) and choices[-1]["choice"].get("action") == "answer"
                         if name == "global_entry":
                             passed = passed and any(item["choice"].get("source") == "global" for item in choices)
+                            passed = passed and all(word in reply.text.lower() for word in ("apertura", "chiusura"))
                         if name == "external_route":
                             passed = passed and any(item["choice"].get("action") == "open" and
                                 item["choice"].get("source") == "local" and item["choice"].get("target_id") == 4 for item in choices)
@@ -94,6 +103,7 @@ def main():
                             passed = passed and not session.navigator.expose_memory
                         turn = {"name": name, "question": question, "reply": reply.text, "passed": passed,
                                 "focus": session.carousel.focus_id, "reading_id": session.carousel.reading_id,
+                                "read_ids": list(session.navigator.workspace.nodes),
                                 "trace": session.navigator.trace, "choices": choices,
                                 "seconds": round(time.perf_counter() - started, 3)}
                     except Exception as error:

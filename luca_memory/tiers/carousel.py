@@ -220,11 +220,13 @@ class SynapticCarousel:
                 self.activity.record("traverse", node_id, previous)
         return event
 
-    def mark_exposed(self, node_ids: Iterable[int]) -> None:
+    def mark_exposed(self, node_ids: Iterable[int], *, read_ids: Iterable[int] = ()) -> None:
         """Record successful prompt exposure, distinct from verified answer correctness."""
-        valid = set(self.vram.node_ids()) & self.expanded_in_vram
+        valid = (set(self.vram.node_ids()) & self.expanded_in_vram) | set(read_ids)
         with self.store.transaction():
             for node_id in set(node_ids) & valid:
+                if self.store.connection.execute("SELECT 1 FROM cells WHERE id=?", (node_id,)).fetchone() is None:
+                    continue
                 self.store.record_node_usage(node_id, self._next_tick(), exposed=True)
                 self.activity.record("expose", node_id)
         self.opened_in_session = set(self.activity.recent)

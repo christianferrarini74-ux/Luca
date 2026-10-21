@@ -40,9 +40,8 @@ class _HTTPChatModel:
             "messages": messages,
             "temperature": self.profile.temperature,
             "stream": False,
-            "reasoning_effort": "none",
-            "chat_template_kwargs": {"enable_thinking": False},
         }
+        payload.update(self.profile.generation)
         if response_format is not None:
             payload["response_format"] = response_format
         payload.update(options)
@@ -133,6 +132,7 @@ class _OllamaChatModel:
         **options: Any,
     ) -> str:
         payload: dict[str, Any] = {"model": self.profile.model, "messages": messages, "stream": False}
+        payload.update(self.profile.generation)
         if response_format and response_format.get("type") == "json_object":
             payload["format"] = "json"
         payload.update(options)

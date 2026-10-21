@@ -62,7 +62,7 @@ class Phase1KnowledgeSeedTests(unittest.TestCase):
         finally:
             runtime.close()
 
-    def test_meta_sentences_do_not_corrupt_vram_and_bible_sanitizes_output(self) -> None:
+    def test_meta_sentences_do_not_corrupt_vram_and_runtime_data_is_separate(self) -> None:
         from luca_memory.adapters import LMStudioAdapter
 
         session = LucaSession.open(self.database, self.seed, vram_capacity=5, ram_capacity=8)
@@ -89,35 +89,12 @@ class Phase1KnowledgeSeedTests(unittest.TestCase):
             self.assertNotIn("Nidi di Paglia Dorata", context_sub)
             self.assertNotIn("Formaggio Blu", context_sub)
 
-            instruction = LMStudioAdapter._conversation_instruction(context_sub)
-            self.assertIn("Fatti noti:", instruction)
-            self.assertIn("discorsivo, articolato", instruction)
-            for forbidden in (
-                "Bibbia",
-                "LUCA",
-                "sinapt",
-                "evidenze primarie",
-                "CONOSCENZA ATTIVA",
-                "NEL MONDO DI LUCA",
-                "Legami diretti:",
-                "Questo fenomeno",
-                "conciso",
-                "una sola frase",
-            ):
-                self.assertNotIn(forbidden, instruction)
-
-            dirty = (
-                "Sono LUCA.\n\n"
-                "(Sospirando leggermente)\n"
-                "Non ho evidenze che indichino se i cani possono essere guidati dai sottomarini gialli di cartone. "
-                "La Bibbia non menziona questo aspetto. "
-                "La mia conoscenza si concentra esclusivamente sulle evidenze primarie verificate nel momento corrente.\n"
-                "Legami diretti: Pioggia -> Asini"
-            )
-            self.assertEqual(
-                LMStudioAdapter._sanitize_response(dirty),
-                "Non ho evidenze che indichino se i cani possono essere guidati dai sottomarini gialli di cartone.",
-            )
+            import json
+            from luca_memory.bible import read_bible
+            adapter = LMStudioAdapter()
+            messages, _ = adapter._request("respond", "Domanda", {"memory": context_sub})
+            self.assertEqual(messages[0]["content"], read_bible())
+            self.assertEqual(json.loads(messages[-1]["content"])["memory"], context_sub)
         finally:
             session.close()
 

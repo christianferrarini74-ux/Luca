@@ -2,6 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Current reasoning contract: [one bible, no semantic output filters, multi-node readings](docs/reasoning-contract.md).
+Instructions come only from `runtime.bible`; model reasoning is no longer forcibly
+disabled. Generation options and operation budgets are explicit in YAML.
+206 automated tests passed with native tokenization and real CUDA enabled.
+Final synthetic live checks: 8/8. Weather-dialogue checks: 7/8; spontaneous
+further exploration remains unreliable. See the report before claiming acceptance.
+
 Current context: [70,000 model tokens, configurable in YAML](docs/token-context.md).
 Native LM Studio token counting, token-bounded history without fixed turn caps,
 and unchanged physical byte accounting. No additional dependencies. 182 tests passed
@@ -26,7 +33,9 @@ Current Phase 1 runtime: [synaptic memory, search policies and dashboard](docs/s
 Start with `python run_luca.py`; the current cockpit is served by Python on port 8765.
 The original experiments below are retained as historical background.
 
-Luca is an experimental project exploring an explicit, persistent memory rather than a pre-trained language model. Every major claim must earn its place through a small, reproducible experiment.
+Luca is an experimental project developing explicit, persistent memory for a language model.
+The LLM contributes reasoning and general knowledge; Luca manages navigable memory.
+Every major claim must earn its place through a small, reproducible experiment.
 
 ## The working model
 

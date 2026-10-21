@@ -7,6 +7,12 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Ragionamento 2026-10-21: [bibbia unica, letture multiple e libertà del modello](fase-1-sinapsi/16-ragionamento-libero.md)
+([English](../reasoning-contract.md)). Separazione istruzioni/dati, eliminazione
+dei filtri semantici, opzioni di generazione esplicite e risposte dirette dalla
+navigazione. 206 test automatici con CUDA/tokenizer reali, 8/8 sintetici live;
+dialogo 7/8 per esplorazione ulteriore ancora inaffidabile. Limiti nel resoconto.
+
 Contesto 2026-10-21: [70.000 token e budget configurabili](fase-1-sinapsi/15-contesto-in-token.md)
 ([English](../token-context.md)). Conteggio nativo del modello senza nuove
 dipendenze; cronologia misurata in token, memoria fisica in byte. 182 test con

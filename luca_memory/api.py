@@ -118,8 +118,9 @@ class LucaRuntime:
             memory = self.session.carousel.synaptic
             if operation == "search":
                 query = payload.get("query")
-                if not isinstance(query, str) or not query.strip() or len(query) > 2000:
-                    raise ValueError("A nonempty query of at most 2000 characters is required.")
+                limit = self.session.synaptic_settings.search_query_characters
+                if not isinstance(query, str) or not query.strip() or len(query) > limit:
+                    raise ValueError(f"A nonempty query of at most {limit} characters is required.")
                 return {"revision": self.session.store.revision, "candidates": [
                     {"id": entry.id, "title": entry.title} for entry in memory.global_lookup(
                         query, self.session.synaptic_settings.global_candidates)]}
@@ -225,6 +226,9 @@ class LucaRuntime:
                         if carousel.focus_id is not None and self.session.store.cell(carousel.focus_id) else None,
                     "planner": self.session.planner_mode,
                     "navigation": self.session.navigator.trace,
+                    "navigation_status": self.session.navigator.status,
+                    "read_node_ids": list(self.session.navigator.workspace.nodes),
+                    "omitted_read_node_ids": self.session.navigator.workspace.omitted_ids,
                     "entry_candidate_ids": self.session.navigator.entry_ids,
                     "explicit_search_performed": self.session.navigator.search_performed,
                     "edge_upper": self.session.synaptic_settings.edge_upper,

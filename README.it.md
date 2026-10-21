@@ -2,6 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Contratto attuale: [bibbia unica, nessun filtro semantico e letture multiple](docs/it/fase-1-sinapsi/16-ragionamento-libero.md).
+Istruzioni solo da `runtime.bible`; il ragionamento del modello non viene più
+disabilitato forzatamente. Opzioni di generazione e budget operativi nel file YAML.
+206 test automatici superati con tokenizer nativo e CUDA reale.
+Prova sintetica live finale: 8/8. Dialogo sulla pioggia: 7/8; resta inaffidabile
+l'esplorazione spontanea ulteriore. Dettagli e limiti nel resoconto.
+
 Contesto attuale: [70.000 token del modello, configurabili in YAML](docs/it/fase-1-sinapsi/15-contesto-in-token.md).
 Conteggio nativo LM Studio, cronologia limitata dai token senza tetti fissi agli
 scambi; memoria fisica sempre in byte. Nessuna dipendenza aggiuntiva. 182 test
@@ -27,7 +34,8 @@ Avvio: `python run_luca.py`; il cockpit attuale è servito da Python sulla porta
 Gli esperimenti originari riportati sotto restano come contesto storico.
 
 Luca è un progetto sperimentale che esplora una memoria esplicita e persistente
-invece di un modello linguistico pre-addestrato. Ogni tesi importante deve
+al servizio di un modello linguistico. L'LLM contribuisce con ragionamento e
+conoscenza generale; Luca gestisce la memoria navigabile. Ogni tesi importante deve
 essere sostenuta da un esperimento piccolo e riproducibile.
 
 ## Modello di lavoro

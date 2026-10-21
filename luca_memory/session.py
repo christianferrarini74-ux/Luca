@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import json
 import re
 
 from .adapters import LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
@@ -93,7 +94,8 @@ class LucaSession:
             self.navigator = MemoryNavigator(self.carousel,
                 max_steps=self.synaptic_settings.navigation_steps,
                 search_limit=self.synaptic_settings.global_candidates,
-                directory_bytes=self.synaptic_settings.fast_index_bytes)
+                directory_bytes=self.synaptic_settings.fast_index_bytes,
+                search_query_characters=self.synaptic_settings.search_query_characters)
             self.last_plan: RecallPlan | None = None
             self.task = TaskMemory(store, self.carousel.prompt_budget.task_limit, counter=self.carousel.prompt_budget.count)
         except BaseException:
@@ -187,14 +189,12 @@ class LucaSession:
         self.carousel = replacement
         self.navigator.carousel = replacement
         self.navigator.memory = replacement.synaptic
-        self.navigator.trace = []
-        self.navigator.expose_memory = False
-        self.navigator.entry_ids = ()
-        self.navigator.search_performed = False
+        self.navigator.begin_turn()
 
     @serialized
     def handle(self, text: str) -> SessionReply:
         self.carousel.synchronize()
+        self.navigator.begin_turn()
         budget = self.carousel.prompt_budget
         if budget.count(text) > budget.context_window - budget.output_reserve - budget.framing_reserve:
             raise ValueError("Il messaggio supera il budget configurato.")
@@ -235,7 +235,13 @@ class LucaSession:
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
             context = self._memory_context(text)
-            if self.planner_mode == "llm" and hasattr(self.adapter, "respond_with_navigation"):
+            if self.planner_mode == "llm" and self.navigator.response is not None:
+                response = self.navigator.response
+                report = getattr(self.adapter, "last_prompt_report", None)
+                if isinstance(report, dict):
+                    report["memory_units"] = budget.count(context)
+                    report["memory_bytes"] = len(context.encode("utf-8"))
+            elif self.planner_mode == "llm" and hasattr(self.adapter, "respond_with_navigation"):
                 response = self.adapter.respond_with_navigation(text, context, self.history, self.task.state.render())
             elif hasattr(self.adapter, "respond_with_task"):
                 response = self.adapter.respond_with_task(text, context, self.history, self.task.state.render())
@@ -243,10 +249,10 @@ class LucaSession:
                 response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
             exposed = self.carousel.context_report.get("node_ids", ())
             report = getattr(self.adapter, "last_prompt_report", {})
-            if "memory_bytes" in report or "memory_units" in report:
+            if self.planner_mode != "llm" and ("memory_bytes" in report or "memory_units" in report):
                 exposed = [span["node_id"] for span in self.carousel.context_report.get("node_spans", ())
                             if span["start"] < report.get("memory_bytes", report.get("memory_units", 0))]
-            self.carousel.mark_exposed(exposed)
+            self.carousel.mark_exposed(exposed, read_ids=self.navigator.workspace.nodes if self.planner_mode == "llm" else ())
             trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
             if not self.is_v1:
                 try:
@@ -322,7 +328,7 @@ class LucaSession:
     def _activate_carousel_from_text(self, text: str) -> list[int]:
         """Execute a Core-validated plan rather than guessing from edge order."""
         if self.planner_mode == "llm":
-            self.navigator.run(text, self.adapter, self.history)
+            self.navigator.run(text, self.adapter, self.history, self.task.state.render())
             self.current_subject_id = self.carousel.focus_id
             self.last_plan = RecallPlan("llm_navigation", self.current_subject_id,
                                         expose_memory=self.navigator.expose_memory, source="llm")
@@ -354,13 +360,15 @@ class LucaSession:
 
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
         self.carousel.context_report = {}
+        if self.planner_mode == "llm" and self.navigator.response is not None and self.navigator.workspace.nodes:
+            context = self.navigator.workspace.render(self.carousel, self.navigator.status)
+            self.carousel.context_report["memory_used"] = self.navigator.expose_memory
+            return context
         if self.is_v1 and self.last_plan is not None and not self.last_plan.expose_memory:
-            if self.planner_mode == "llm":
-                return ("Memoria non utilizzata per questa risposta. Questo non prova che il ricordo non esista: "
-                        "non dichiarare di aver verificato l'assenza di ricordi. Puoi usare liberamente la "
-                        "conoscenza generale, senza inventare fatti locali o attribuirli a un ricordo letto.")
-            return "Nessun ricordo locale pertinente alla domanda; usa la tua conoscenza generale senza attribuirla a ricordi locali."
+            return json.dumps({"memory_used": False, "navigation_status": self.navigator.status})
         if self.planner_mode == "llm":
+            if self.navigator.workspace.nodes:
+                return self.navigator.workspace.render(self.carousel, self.navigator.status)
             return answer_context(self.carousel)
         sections: list[str] = []
         if len(self.carousel.vram) > 0:

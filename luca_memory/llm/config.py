@@ -46,6 +46,11 @@ def resolve_llm_profile(config: dict[str, Any], assignment: str | None = None) -
         raise LLMConfigurationError(f"Parametri numerici non validi per il ruolo '{role}'.") from error
 
     capabilities = _mapping(agent.get("capabilities"))
+    generation = agent.get("generation", {})
+    if not isinstance(generation, dict):
+        raise LLMConfigurationError("agent.generation must be a mapping.")
+    if {"model", "messages", "stream", "max_tokens", "response_format", "temperature"}.intersection(generation):
+        raise LLMConfigurationError("generation cannot override routing, messages, formats or token budgets.")
     return LLMProfile(
         name=role,
         provider_name=provider_name,
@@ -58,4 +63,5 @@ def resolve_llm_profile(config: dict[str, Any], assignment: str | None = None) -
             streaming=bool(capabilities.get("streaming", False)),
         ),
         provider_config=provider,
+        generation=dict(generation),
     )

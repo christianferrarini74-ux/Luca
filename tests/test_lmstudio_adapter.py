@@ -58,18 +58,21 @@ class LMStudioAdapterTests(unittest.TestCase):
         self.assertEqual(answer, "Maranello si trova in Emilia-Romagna.")
         payload = json.loads(request.call_args.args[0].data)
         self.assertNotIn("response_format", payload)
-        self.assertIn("Maranello e una citta italiana.", payload["messages"][0]["content"])
+        self.assertIn("Maranello e una citta italiana.", json.loads(payload["messages"][-1]["content"])["memory"])
 
-    def test_task_is_reserved_and_technical_focus_markers_are_not_sent(self) -> None:
+    def test_task_is_data_and_never_an_extra_system_instruction(self) -> None:
         response = {"choices": [{"message": {"content": "Eseguo i test mantenendo il vincolo."}}]}
         adapter = LMStudioAdapter()
         with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)) as request:
             adapter.respond_with_task("Continuiamo", "[FOCUS CORRENTE] Test del modulo", [], "Vincolo: non cambiare l'interfaccia")
         payload = json.loads(request.call_args.args[0].data)
         system = payload["messages"][0]["content"]
-        self.assertIn("Vincolo: non cambiare l'interfaccia", system)
+        self.assertEqual("Vincolo: non cambiare l'interfaccia", json.loads(payload["messages"][-1]["content"])["task"])
         self.assertNotIn("[FOCUS CORRENTE]", system)
         self.assertLessEqual(adapter.last_prompt_report["input_units"], adapter.last_prompt_report["input_limit"])
 
-    def test_meta_only_response_is_not_returned_as_fallback(self):
-        self.assertNotIn("focus corrente", LMStudioAdapter._sanitize_response("Il focus corrente è un dettaglio interno.").lower())
+    def test_response_is_not_semantically_censored(self):
+        text = "La memoria locale collega pioggia e asini.\nLegami diretti: pioggia → asini."
+        response = {"choices": [{"message": {"content": text}}]}
+        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)):
+            self.assertEqual(LMStudioAdapter().respond("Quali legami?", "", []), text)

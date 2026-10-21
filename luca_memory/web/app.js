@@ -396,6 +396,8 @@ function renderMemoryControls(state) {
     (request.context_window ? `Finestra totale: ${request.context_window} token. ` : "") +
     (request.server_prompt_tokens != null ? `Consumo prompt confermato dal server: ${request.server_prompt_tokens} token. ` : "") +
     `Cronologia nel prompt: ${request.history_messages ?? 0} messaggi, ${request.history_tokens ?? "—"} token. ` +
+    `Nodi letti nell'ultimo turno: ${(state.synaptic?.read_node_ids || []).join(", ") || "nessuno"}; navigazione ${state.synaptic?.navigation_status || "—"}. ` +
+    (request.instruction_source ? `Istruzioni: ${request.instruction_source}; operazione ${request.operation}. ` : "") +
     (physical.physical_vram
       ? `VRAM fisica: GPU ${physical.device_index} (${physical.device_name}), ${physical.allocated_bytes} byte in ${physical.allocations} allocazioni; trasferiti RAM→GPU ${physical.upload_bytes} byte, GPU→RAM ${physical.download_bytes} byte; caricamenti SQLite ${physical.disk_loads} (${physical.disk_payload_bytes} byte di payload). `
       : "Modalità HOST: primo livello in RAM, nessuna allocazione VRAM fisica. ") +

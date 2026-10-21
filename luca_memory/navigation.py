@@ -6,6 +6,7 @@ import json
 from .budget import units
 from .node import load_node
 from .synaptic import StaleRevision, serialized
+from .reading_workspace import ReadingWorkspace
 
 
 def focus_context(carousel, *, structured=False) -> str | dict:
@@ -60,22 +61,35 @@ def answer_context(carousel):
 
 
 class MemoryNavigator:
-    def __init__(self, carousel, *, max_steps=8, search_limit=20, directory_bytes=65536):
+    def __init__(self, carousel, *, max_steps=8, search_limit=20, directory_bytes=65536, search_query_characters=2000):
         self.carousel = carousel
         self.memory = carousel.synaptic
         self.store = carousel.store
         self.max_steps, self.search_limit = max_steps, search_limit
         self.directory_bytes = directory_bytes
+        self.search_query_characters = search_query_characters
         self.trace = []
         self.expose_memory = False
         self.entry_ids = ()
         self.search_performed = False
+        self.response = None
+        self.status = "not_started"
+        self.workspace = ReadingWorkspace(carousel.prompt_budget)
+
+    def begin_turn(self):
+        self.trace = []
+        self.response = None
+        self.expose_memory = False
+        self.status = "not_started"
+        self.entry_ids = ()
+        self.search_performed = False
+        self.workspace = ReadingWorkspace(self.carousel.prompt_budget)
 
     @serialized
-    def run(self, text, adapter, history):
+    def run(self, text, adapter, history, task_context=""):
         """The model alone decides search terms, entry IDs, local steps and stopping."""
-        self.trace = []
-        self.expose_memory = False
+        self.begin_turn()
+        self.status = "running"
         candidates = self.memory.entry_candidates(text, self.search_limit)
         self.entry_ids = tuple(entry.id for entry in candidates)
         self.search_performed = False
@@ -87,15 +101,23 @@ class MemoryNavigator:
             reading = self.carousel.reading_id
             directory = self.memory.directory(reading) if reading is not None else None
             context = focus_context(self.carousel, structured=True) if directory else {}
+            self.workspace.remember(context)
             if directory and units(directory.render()) > self.directory_bytes:
                 raise ValueError("Complete fast directory exceeds fast_index_bytes; increase its reserved budget.")
             state = {"focus": directory.focus_id if directory else None, "reading_id": reading,
                      "context": context, "global_candidates": [asdict(entry) for entry in candidates],
+                     "read_nodes": self.workspace.payload(), "omitted_ids": self.workspace.omitted_ids,
+                     "task": task_context,
                      "visited_ids": sorted(visited),
                      "local_target_ids": sorted(({directory.focus_id, *(entry.id for entry in (
                          *directory.incoming, *directory.outgoing, *directory.parts))} - {reading}) if directory else set()),
                      "index_checked": True, "feedback": feedback}
-            proposal = adapter.navigate_memory(text, state, history)
+            try:
+                proposal = adapter.navigate_memory(text, state, history)
+            except Exception as error:
+                self.status = "error"
+                self.trace.append({"action": "provider_error", "error_type": type(error).__name__})
+                raise
             if not isinstance(proposal, dict):
                 proposal = {}
             action = proposal.get("action")
@@ -103,45 +125,49 @@ class MemoryNavigator:
             feedback = ""
             if action == "answer":
                 self.expose_memory = proposal.get("use_memory") is True and directory is not None
+                answer = proposal.get("response")
+                self.response = answer if isinstance(answer, str) and answer.strip() else None
+                self.status = "answered"
                 return
             if action == "search":
                 query = proposal.get("query")
-                if not isinstance(query, str) or not query.strip() or len(query) > 2000:
-                    feedback = "Provide a nonempty search query of at most 2000 characters."
+                if not isinstance(query, str) or not query.strip() or len(query) > self.search_query_characters:
+                    feedback = {"error": "invalid_search_query"}
                     continue
                 candidates = self.memory.global_lookup(query, self.search_limit)
                 self.search_performed = True
                 search_revision = self.memory.store.revision
-                feedback = f"At most {self.search_limit} global candidates are shown; refine the query if necessary."
+                feedback = {"search_result_limit": self.search_limit}
                 continue
             if action == "open":
                 target = proposal.get("target_id")
                 if type(target) is not int:
-                    feedback = "target_id must be an integer from the current directory or search results."
+                    feedback = {"error": "invalid_target_id"}
                     continue
                 try:
                     if proposal.get("source") == "global":
                         if search_revision != self.memory.store.revision:
-                            raise StaleRevision("Search results changed; search again.")
+                            raise StaleRevision("global_index_revision_mismatch")
                         if target not in {entry.id for entry in candidates}:
-                            raise ValueError("The ID is not in the latest global results.")
-                    elif directory is not None:
+                            raise ValueError("target_not_in_global_candidates")
+                    elif proposal.get("source", "local") == "local" and directory is not None:
                         self.memory.validate_step(reading, target, directory.revision)
                     else:
-                        raise ValueError("Search for a global entry first.")
+                        raise ValueError("no_current_directory")
                     if target == reading:
-                        raise ValueError("Questo nodo è già aperto: leggi context e rispondi, oppure apri un nodo diverso.")
+                        raise ValueError("target_already_open")
                     self.carousel.step_to(target)
                     visited.add(target)
                     self.expose_memory = True
-                    feedback = f"Nodo {target} aperto. Il suo contenuto è ora in context. Se basta, scegli answer; non riaprirlo."
-                    candidates = ()
-                    search_revision = None
+                    feedback = {"opened_id": target}
                     self.trace[-1]["target_id"] = target
                     self.trace[-1]["source"] = proposal.get("source", "local")
                 except (ValueError, KeyError) as error:
-                    feedback = str(error)
+                    feedback = {"error": str(error)}
                 continue
-            feedback = "Use action search, open or answer; do not invent an ID."
+            feedback = {"error": "invalid_action"}
         # Bounded work is visible, not a semantic fallback to a Core-selected node.
         self.trace.append({"action": "step_limit", "limit": self.max_steps})
+        self.status = "step_limit"
+        if self.carousel.reading_id is not None:
+            self.workspace.remember(focus_context(self.carousel, structured=True))

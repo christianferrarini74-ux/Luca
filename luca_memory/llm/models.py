@@ -26,6 +26,7 @@ class LLMProfile:
     timeout_seconds: float = 30.0
     capabilities: LLMCapabilities = field(default_factory=LLMCapabilities)
     provider_config: dict[str, Any] = field(default_factory=dict)
+    generation: dict[str, Any] = field(default_factory=dict)
 
 
 class LLMConfigurationError(ValueError):

@@ -70,7 +70,7 @@ class NavigationTests(unittest.TestCase):
             {"action": "answer", "use_memory": True}])
         self.nav.run("Test", adapter, [])
         self.assertEqual(self.carousel.reading_id, 3)
-        self.assertIn("già aperto", adapter.states[5]["feedback"])
+        self.assertEqual("target_already_open", adapter.states[5]["feedback"]["error"])
         self.assertEqual(sum("target_id" in step for step in self.nav.trace), 1)
 
     def test_general_knowledge_does_not_force_a_local_memory(self):

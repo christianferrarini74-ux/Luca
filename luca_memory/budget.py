@@ -168,7 +168,7 @@ class PromptBudget:
         if fixed > available:
             raise ValueError("Il messaggio e le istruzioni superano il budget configurato; riduci il messaggio o aumenta context_window.")
         memory_text = clip(memory, min(self.memory_limit + self.task_limit, available - fixed))
-        system = instruction + "\n\n" + memory_text
+        system = instruction + ("\n\n" + memory_text if memory_text else "")
         remaining = max(0, available - units(system) - units(question))
         chosen = []
         history_size = 0

@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 from .budget import PromptBudget
 from .synaptic_settings import SynapticSettings
+from .bible import DEFAULT_BIBLE, read_bible
 
 
 class ConfigurationError(ValueError):
@@ -41,6 +42,12 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
 
     runtime = _mapping(config.setdefault("runtime", {}))
     config["runtime"] = runtime
+    bible = _resolve_path(runtime["bible"], config_path.parent) if "bible" in runtime else DEFAULT_BIBLE
+    runtime["bible"] = str(bible)
+    try:
+        read_bible(bible)
+    except ValueError as error:
+        raise ConfigurationError(str(error)) from error
     runtime.setdefault("language_adapter", "rules")
     runtime.setdefault("adapter_role", "orchestrator")
     runtime.setdefault("memory_search_policy", "fast")
@@ -57,7 +64,8 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     try:
         budget = PromptBudget.from_config(runtime)
         synaptic = SynapticSettings.from_config(runtime)
-        for reserve in (synaptic.navigation_output_tokens, synaptic.maintenance_output_tokens):
+        for reserve in (synaptic.navigation_output_tokens, synaptic.maintenance_output_tokens,
+                        synaptic.interpretation_output_tokens, synaptic.recall_output_tokens):
             replace(budget, output_reserve=reserve)
         for key, minimum, default in (("vram_bytes", 2048, 8_000_000), ("ram_bytes", 2048, 32_000_000), ("recent_window", 1, 8)):
             runtime[key] = int(runtime.get(key, default))
