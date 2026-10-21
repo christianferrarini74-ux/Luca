@@ -1,0 +1,22 @@
+.graph-toolbar, .graph-legend { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:12px 0; }
+.graph-toolbar label { display:flex; gap:8px; align-items:center; }
+.graph-toolbar input { max-width:240px; }
+.graph-layout { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:16px; }
+#synaptic-graph-svg { width:100%; height:600px; background:var(--background, #f4f6f9); border:1px solid var(--ui-border, #d2dbe8); border-radius:12px; touch-action:none; cursor:grab; }
+#synaptic-graph-svg:active { cursor:grabbing; }
+.graph-inspector { padding:12px; border-left:1px solid var(--ui-border, #d2dbe8); overflow-wrap:anywhere; }
+.graph-inspector button { display:block; width:100%; margin:12px 0; }
+.graph-legend .dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:-8px; }
+.graph-legend .vram { background:#059669; } .graph-legend .ram { background:#d97706; }
+.graph-legend .ssd { background:#64748b; } .graph-legend .focus { border:3px solid #2563eb; }
+.graph-legend .read { background:#a855f7; }
+.memory-graph-node { cursor:pointer; outline:none; }
+.memory-graph-node text { fill:var(--ui-text, #1e293b); font:12px system-ui,sans-serif; paint-order:stroke; stroke:var(--background, #f4f6f9); stroke-width:3px; stroke-linejoin:round; }
+.memory-graph-node:focus circle, .memory-graph-node.selected circle { stroke:#2563eb; stroke-width:4px; }
+.memory-graph-node.dim { opacity:.18; }
+.memory-graph-edge { stroke:#94a3b8; opacity:.5; fill:none; stroke-width:1.5; }
+.memory-graph-edge.family { stroke-dasharray:5 4; }
+.memory-graph-edge.traversed { stroke:#a855f7; opacity:1; stroke-width:3; }
+.memory-graph-node .focus-ring { fill:none; stroke:#2563eb; stroke-width:3; }
+.memory-graph-node .read-ring { fill:none; stroke:#a855f7; stroke-width:2; stroke-dasharray:3 3; }
+@media(max-width:1000px) { .graph-layout { grid-template-columns:1fr; } .graph-inspector { border-left:0; } #synaptic-graph-svg { height:470px; } }

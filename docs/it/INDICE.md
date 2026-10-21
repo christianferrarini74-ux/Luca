@@ -7,6 +7,11 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Mappa 2026-10-22: [visualizzazione interattiva della memoria](fase-1-sinapsi/18-mappa-grafica-memoria.md)
+([English](../memory-graph.md)). Globale/focus, famiglie, livelli e percorso del
+navigatore; ispezione senza richiamo. Nessuna nuova dipendenza; 219 test Python
+con CUDA/tokenizer reali e 5 test JavaScript. Limiti grafici configurabili.
+
 Bibbia 2026-10-22: [conoscenza acquisita e conoscenza generale](fase-1-sinapsi/17-bibbia-conoscenza-integrata.md)
 ([English](../integrated-knowledge-bible.md)). 210 test con CUDA/tokenizer reali,
 8/8 controlli nel nuovo dialogo di integrazione; restano premesse sulle fonti

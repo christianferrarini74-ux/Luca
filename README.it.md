@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Novità: [mappa interattiva della memoria](docs/it/fase-1-sinapsi/18-mappa-grafica-memoria.md),
+viste globale/focus, famiglie espandibili, colori dei livelli e richiamo separato
+dall'esplorazione. Nessuna nuova dipendenza. 219 test Python con CUDA/tokenizer
+reali e 5 test JavaScript superati. Riavviare Luca ordinatamente per le nuove API.
+
 Ultima revisione della Bibbia: [memoria acquisita e conoscenza generale](docs/it/fase-1-sinapsi/17-bibbia-conoscenza-integrata.md).
 210 test automatici superati con tokenizer nativo e CUDA reale; nuovo dialogo
 di integrazione 8/8 nei controlli lessicali/letture. Stile e dettagli aggiunti

@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+New: [interactive memory graph](docs/memory-graph.md), global/focus views,
+expandable families, real-tier colors and explicit recall separate from inspection.
+No new dependencies. 219 Python tests with real CUDA/tokenizer and 5 JavaScript
+tests passed. Restart Luca cleanly to load the new graph API.
+
 Latest bible revision: [acquired memory plus general knowledge](docs/integrated-knowledge-bible.md).
 210 automated tests passed with native tokenization and real CUDA; the new
 integration dialogue passed 8/8 reading/lexical checks. Style and unsupported

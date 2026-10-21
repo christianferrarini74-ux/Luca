@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f4f6f9" />
   <title>LUCA · Cockpit Sinaptico</title>
   <link rel="stylesheet" href="/cesare.css" />
+  <link rel="stylesheet" href="/graph.css" />
 </head>
 <body>
   <div id="shell" class="shell">
@@ -46,7 +47,7 @@
               <span class="nav-icon">M</span>Livelli VRAM · RAM · SSD
             </button>
             <button type="button" class="nav-item" data-page="graphs">
-              <span class="nav-icon">G</span>Grafo Domino (A:B)
+              <span class="nav-icon">G</span>Mappa della memoria
             </button>
           </div>
         </nav>
@@ -281,14 +282,35 @@
         <div id="view-graphs" style="display:none;">
           <div class="card" style="margin-bottom:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-              <h2 style="margin:0;">Mappa Sinaptica e Catene Domino (Clicca un nodo per catapultarlo in VRAM)</h2>
-              <span class="muted">Blu = Centro Espanso in VRAM · Verde = 1° Grado in VRAM · Ambra = RAM · Grigio = SSD</span>
+              <h2 style="margin:0;">Mappa della memoria</h2>
+              <span class="muted">Esplorare la mappa non richiama i contenuti nella giostra.</span>
             </div>
-            <svg id="synaptic-graph-svg" class="graph-canvas" viewBox="0 0 1100 440"></svg>
+            <div class="graph-toolbar">
+              <label>Vista <select id="graph-mode"><option value="global">Globale</option><option value="focus">Focus · primo grado</option></select></label>
+              <label>Cerca nella vista <input id="graph-search" type="search" placeholder="Titolo o ID" /></label>
+              <button id="graph-refresh" type="button" class="secondary">Aggiorna</button>
+              <button id="graph-fit" type="button" class="secondary">Centra mappa</button>
+              <button id="graph-zoom-in" type="button" class="secondary" aria-label="Ingrandisci mappa">+</button>
+              <button id="graph-zoom-out" type="button" class="secondary" aria-label="Riduci mappa">−</button>
+            </div>
+            <p id="graph-status" class="muted" role="status" aria-live="polite"></p>
+            <div class="graph-legend"><span class="dot vram"></span>VRAM <span class="dot ram"></span>RAM <span class="dot ssd"></span>SSD <span class="dot focus"></span>Focus · anello <span class="dot read"></span>Letto nel turno · viola</div>
+            <div class="graph-layout">
+              <svg id="synaptic-graph-svg" class="graph-canvas" viewBox="-550 -300 1100 600" role="group" aria-label="Grafo navigabile della memoria: seleziona un nodo per i metadati"></svg>
+              <aside id="graph-inspector" class="graph-inspector" aria-label="Nodo selezionato">
+                <h3 id="graph-node-title">Seleziona un nodo</h3>
+                <p id="graph-node-info">Clic o Invio: metadati. Trascina: sposta nodo o mappa. Rotella: zoom.</p>
+                <button id="graph-family" type="button" class="secondary" disabled>Espandi famiglia</button>
+                <button id="graph-neighborhood" type="button" class="secondary" disabled>Esplora vicinato</button>
+                <button id="graph-recall" type="button" disabled>Richiama nella giostra</button>
+                <p class="muted">Solo «Richiama nella giostra» cambia il focus di Luca. SSD conserva anche i nodi presenti nei livelli superiori.</p>
+              </aside>
+            </div>
           </div>
           <div class="card">
-            <h2>Catene Auto-Ordinate Attualmente in VRAM</h2>
-            <div id="graph-chains-detail" class="tier-list"></div>
+            <h2>Navigazione dell'ultimo turno</h2>
+            <p class="muted">Le frecce indicano archi reali. Le rotte locali percorse sono viola; gli ingressi globali sono elencati senza inventare archi.</p>
+            <ol id="graph-navigation"></ol>
           </div>
         </div>
 
@@ -307,6 +329,7 @@
       </section>
     </main>
   </div>
+  <script src="/graph.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

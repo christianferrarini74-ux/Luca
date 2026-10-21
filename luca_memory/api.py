@@ -12,6 +12,7 @@ import secrets
 from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 from .adapters import LanguageAdapter, LMStudioAdapter, RuleAdapter
 from .config import load_config
@@ -23,6 +24,7 @@ from .search import MemorySearch
 from .session import LucaSession, SessionReply
 from .store import MemoryStore
 from .maintenance import IdleMaintenance, MemoryMaintenance
+from .graph_view import graph_settings, graph_snapshot
 
 
 class LucaRuntime:
@@ -33,6 +35,7 @@ class LucaRuntime:
         self.data_directory = Path(storage["database"]).parent
         self.data_directory.mkdir(parents=True, exist_ok=True)
         runtime_config = config["runtime"]
+        self.graph_settings = graph_settings(config.get("frontend", {}))
         adapter_name = str(runtime_config["language_adapter"])
         assignment = str(runtime_config.get("adapter_role", "orchestrator"))
         adapter: LanguageAdapter = (
@@ -188,6 +191,10 @@ class LucaRuntime:
                 self.maintenance.restore(operation_id, confirmed=payload.get("confirmed") is True)
                 return {"state": self.state()}
             raise ValueError("Unknown maintenance operation.")
+
+    def graph(self, *, mode="global", node_id=None) -> dict[str, Any]:
+        """Inspect topology without recalling a node or touching idle timers."""
+        return graph_snapshot(self.session, self.graph_settings, mode=mode, node_id=node_id)
 
     def state(self) -> dict[str, Any]:
         """Return a bounded dashboard view of the authoritative Core state."""
@@ -403,6 +410,8 @@ _STATIC_ROUTES: dict[str, tuple[str, str]] = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/cesare.css": ("cesare.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+    "/graph.js": ("graph.js", "application/javascript; charset=utf-8"),
+    "/graph.css": ("graph.css", "text/css; charset=utf-8"),
 }
 
 
@@ -417,6 +426,18 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         clean_path = self.path.split("?", 1)[0]
+        if clean_path == "/api/graph":
+            try:
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                if set(query) - {"mode", "node_id"} or any(len(values) != 1 for values in query.values()):
+                    raise ValueError("Invalid graph query parameters.")
+                node_id = int(query["node_id"][0]) if "node_id" in query else None
+                self._json(self.runtime.graph(mode=query.get("mode", ["global"])[0], node_id=node_id))
+            except (ValueError, TypeError) as error:
+                self._json({"error": str(error)}, status=400)
+            except KeyError as error:
+                self._json({"error": str(error)}, status=404)
+            return
         if clean_path in _STATIC_ROUTES:
             filename, content_type = _STATIC_ROUTES[clean_path]
             file_path = _WEB_DIR / filename

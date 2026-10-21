@@ -6,7 +6,7 @@ const NAV_COLLAPSED_KEY = "cesare-gui-nav-collapsed";
 const PAGE_META = {
   chat: { eyebrow: "LAVORO", title: "Chat & Attivazione Sinaptica" },
   memory: { eyebrow: "MEMORIA & SINAPSI", title: "Livelli VRAM · RAM · SSD" },
-  graphs: { eyebrow: "MEMORIA & SINAPSI", title: "Grafo Domino (prefisso:suffisso)" },
+  graphs: { eyebrow: "MEMORIA & SINAPSI", title: "Mappa della memoria" },
   operational: { eyebrow: "SISTEMA", title: "Stato Operativo & Diagnostica" },
 };
 
@@ -36,6 +36,7 @@ function applyTheme(theme) {
 
 function setBusy(isBusy) {
   busy = isBusy;
+  if (memoryGraph) memoryGraph.el("recall").disabled = isBusy || stopped || memoryGraph.selected === null;
   if (appState) renderConvergence(appState);
   const hamster = $("hamster-indicator");
   if (hamster) hamster.style.display = isBusy ? "inline-flex" : "none";
@@ -260,87 +261,15 @@ function renderMemoryTables(state) {
     .join("");
 }
 
+let memoryGraph = null;
+
 function renderSynapticGraph(state) {
-  const svg = $("synaptic-graph-svg");
-  if (!svg) return;
-  const memory = state.memory || [];
-  const vramNodes = state.tiers?.vram?.nodes || [];
-  const ramNodes = state.tiers?.ram?.nodes || [];
-  const chains = state.tiers?.vram?.chains || [];
-  const vramMap = new Map(vramNodes.map((n) => [n.id, n]));
-  const ramSet = new Set(ramNodes.map((n) => n.id));
-
-  // Layout nodes in structured rows (identity #1 at top, then chains of 4)
-  const positions = new Map();
-  memory.forEach((node, idx) => {
-    if (node.id === 1) {
-      positions.set(node.id, { x: 110, y: 220 });
-    } else {
-      const rel = idx - 1;
-      const row = Math.floor(rel / 4);
-      const col = rel % 4;
-      positions.set(node.id, {
-        x: 310 + col * 225,
-        y: 95 + row * 125,
-      });
-    }
+  if (!memoryGraph) memoryGraph = new MemoryGraph({
+    fetchGraph: apiFetch,
+    recall: id => recallNode(id),
+    isBusy: () => busy || stopped,
   });
-
-  // Build edges from facts
-  const labelToId = new Map(memory.map((m) => [m.label, m.id]));
-  const edges = [];
-  memory.forEach((m) => {
-    (m.facts || []).forEach((f) => {
-      if (f.predicate.endsWith(":*")) {
-        const targetId = labelToId.get(f.object);
-        if (targetId) edges.push({ source: m.id, target: targetId });
-      }
-    });
-  });
-
-  const edgesHtml = edges
-    .map((e) => {
-      const p1 = positions.get(e.source);
-      const p2 = positions.get(e.target);
-      if (!p1 || !p2) return "";
-      const active = vramMap.has(e.source) && vramMap.has(e.target);
-      const stroke = active ? "#60a5fa" : "#64748b";
-      const width = active ? 3 : 1.5;
-      const opacity = active ? 0.95 : 0.45;
-      return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${stroke}" stroke-width="${width}" stroke-opacity="${opacity}" />`;
-    })
-    .join("");
-
-  const nodesHtml = memory
-    .map((m) => {
-      const pos = positions.get(m.id);
-      if (!pos) return "";
-      const vNode = vramMap.get(m.id);
-      const inRam = ramSet.has(m.id);
-      let fill = "#475569";
-      let stroke = "#94a3b8";
-      if (vNode) {
-        fill = vNode.expanded ? "#2563eb" : "#10b981";
-        stroke = "#ffffff";
-      } else if (inRam) {
-        fill = "#d97706";
-        stroke = "#fde68a";
-      }
-      const shortLabel = m.label.length > 22 ? m.label.slice(0, 20) + "…" : m.label;
-      return `
-        <g class="graph-node" data-recall-id="${m.id}" style="cursor:pointer;">
-          <circle cx="${pos.x}" cy="${pos.y}" r="${vNode?.expanded ? 22 : 18}" fill="${fill}" stroke="${stroke}" stroke-width="2.2" />
-          <text x="${pos.x}" y="${pos.y + 4}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">#${m.id}</text>
-          <text x="${pos.x}" y="${pos.y + 36}" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">${escapeHtml(shortLabel)}</text>
-        </g>`;
-    })
-    .join("");
-
-  svg.innerHTML = edgesHtml + nodesHtml;
-
-  $("graph-chains-detail").innerHTML = chains.length
-    ? chains.map((c) => `<div class="chain-box">${escapeHtml(c.join("  →  "))}</div>`).join("")
-    : `<div class="muted">Nessuna catena attiva in VRAM. Clicca un nodo sul grafo sopra per attivare il richiamo di 1° grado.</div>`;
+  memoryGraph.update(state);
 }
 
 function renderConvergence(state) {

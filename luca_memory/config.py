@@ -10,6 +10,7 @@ import yaml
 from .budget import PromptBudget
 from .synaptic_settings import SynapticSettings
 from .bible import DEFAULT_BIBLE, read_bible
+from .graph_view import graph_settings
 
 
 class ConfigurationError(ValueError):
@@ -92,6 +93,10 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     frontend = _mapping(config.setdefault("frontend", {}))
     config["frontend"] = frontend
     frontend.setdefault("enabled", True)
+    try:
+        frontend["graph"] = graph_settings(frontend)
+    except ValueError as error:
+        raise ConfigurationError(str(error)) from error
     # The cockpit is bundled and served by the same Python HTTP server.
     for obsolete in ("directory", "url", "api_url"):
         frontend.pop(obsolete, None)

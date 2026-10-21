@@ -70,3 +70,7 @@ llm:
 
 frontend:
   enabled: true
+  # Display-only limits; these never restrict Luca's memory or navigation.
+  graph:
+    node_limit: 500
+    edge_limit: 2000
