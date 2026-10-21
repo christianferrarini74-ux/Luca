@@ -14,6 +14,8 @@ class SynapticSettings:
     idle_seconds: int = 60
     sleep_poll_seconds: int = 5
     sleep_retry_seconds: int = 300
+    navigation_output_tokens: int = 2048
+    maintenance_output_tokens: int = 2048
 
     @classmethod
     def from_config(cls, runtime):
@@ -22,7 +24,8 @@ class SynapticSettings:
             raise ValueError("runtime.synaptic must be a mapping.")
         settings = cls(**values)
         for name in ("edge_upper", "edge_target", "navigation_steps", "global_candidates",
-                     "fast_index_bytes", "idle_seconds", "sleep_poll_seconds", "sleep_retry_seconds"):
+                     "fast_index_bytes", "idle_seconds", "sleep_poll_seconds", "sleep_retry_seconds",
+                     "navigation_output_tokens", "maintenance_output_tokens"):
             value = getattr(settings, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"synaptic.{name} must be a positive integer.")

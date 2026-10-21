@@ -2,6 +2,10 @@
 
 [Italiano](it/fase-1-sinapsi/12-implementazione-memoria-navigabile.md)
 
+Follow-up: [real LM Studio validation](phase-1-11-live-validation.md) records
+subsequent fixes and the remaining recall/group-title limitations. The checkpoints
+below retain the implementation-time evidence.
+
 Scope: implement the confirmed [specification](bounded-synaptic-memory-design.md),
 not book ingestion, content distillation or Cesare integration. Existing personal
 databases are not used by automated tests or rewritten by development scripts.

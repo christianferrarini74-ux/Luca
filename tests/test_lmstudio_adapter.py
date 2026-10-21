@@ -20,6 +20,15 @@ class FakeResponse:
 
 
 class LMStudioAdapterTests(unittest.TestCase):
+    def test_structured_generation_exhaustion_is_not_treated_as_valid_json(self):
+        from luca_memory import LLMConfigurationError
+        response = {"choices": [{"finish_reason": "length", "message": {
+            "content": "", "reasoning_content": "Unfinished reasoning"}}]}
+        adapter = LMStudioAdapter()
+        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)):
+            with self.assertRaisesRegex(LLMConfigurationError, "max_tokens"):
+                adapter.connector.create_chat_model().complete([], response_format={"type": "json_schema"}, max_tokens=160)
+
     def test_uses_local_endpoint_and_validates_a_lesson(self) -> None:
         response = {
             "choices": [{"message": {"content": json.dumps({

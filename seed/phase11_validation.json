@@ -1,0 +1,12 @@
+{
+  "version": "phase11-validation-1",
+  "language": "it",
+  "nodes": [
+    {"slug": "aurora", "title": "Osservatorio Aurora - indice", "content": "Indice dell'Osservatorio Aurora. Le parti interne contengono apertura e chiusura. Il Laboratorio Cobalto e l'Inventario delle lenti sono ricordi collegati."},
+    {"slug": "aurora_apertura", "title": "Osservatorio Aurora - apertura", "content": "Il codice di apertura dell'Osservatorio Aurora è ZEFIRO-482."},
+    {"slug": "aurora_chiusura", "title": "Osservatorio Aurora - chiusura", "content": "Il codice di chiusura dell'Osservatorio Aurora è RAME-731."},
+    {"slug": "cobalto", "title": "Laboratorio Cobalto", "content": "Il protocollo di accesso del Laboratorio Cobalto è IONIO-268."},
+    {"slug": "lenti", "title": "Inventario delle lenti", "content": "La lente principale si chiama LANTERNA-594."}
+  ],
+  "edges": [["aurora", "cobalto"], ["lenti", "aurora"]]
+}

@@ -23,6 +23,8 @@ runtime:
     idle_seconds: 60
     sleep_poll_seconds: 5
     sleep_retry_seconds: 300
+    navigation_output_tokens: 2048
+    maintenance_output_tokens: 2048
   # The current seed contains deliberate counterfactual experiments.
   memory_policy: experimental
   recent_window: 8

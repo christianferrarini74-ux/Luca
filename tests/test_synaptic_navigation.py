@@ -1,6 +1,7 @@
 """Model choices, complete directories and family focus through the real session."""
 
 from pathlib import Path
+import json
 import tempfile
 import unittest
 
@@ -54,8 +55,8 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(self.carousel.focus_id, 3)
         self.assertEqual([step["target_id"] for step in self.nav.trace if "target_id" in step], [1, 2, 3])
         self.assertEqual(adapter.states[3]["focus"], 1)
-        self.assertIn('"Libraries"', adapter.states[3]["context"])
-        self.assertNotIn("Full content of Libraries", adapter.states[3]["context"])
+        self.assertIn('"Libraries"', json.dumps(adapter.states[3]["context"]))
+        self.assertNotIn("Full content of Libraries", json.dumps(adapter.states[3]["context"]))
         self.assertTrue(self.nav.expose_memory)
 
     def test_invented_id_bool_non_neighbor_and_cycles_are_rejected(self):
@@ -69,7 +70,7 @@ class NavigationTests(unittest.TestCase):
             {"action": "answer", "use_memory": True}])
         self.nav.run("Test", adapter, [])
         self.assertEqual(self.carousel.reading_id, 3)
-        self.assertIn("already opened", adapter.states[5]["feedback"])
+        self.assertIn("già aperto", adapter.states[5]["feedback"])
         self.assertEqual(sum("target_id" in step for step in self.nav.trace), 1)
 
     def test_general_knowledge_does_not_force_a_local_memory(self):
@@ -87,6 +88,17 @@ class NavigationTests(unittest.TestCase):
         nav = MemoryNavigator(self.carousel, max_steps=2)
         nav.run("Test", ScriptedAdapter([{}, {}]), [])
         self.assertEqual(nav.trace[-1]["action"], "step_limit")
+
+    def test_returning_to_a_previously_read_node_is_allowed(self):
+        self.carousel.recall(1)
+        adapter = ScriptedAdapter([
+            {"action": "open", "source": "local", "target_id": 3},
+            {"action": "open", "source": "local", "target_id": 1},
+            {"action": "open", "source": "local", "target_id": 3},
+            {"action": "answer", "use_memory": True}])
+        self.nav.run("Compare both nodes", adapter, [])
+        self.assertEqual([step["target_id"] for step in self.nav.trace if "target_id" in step], [3, 1, 3])
+        self.assertEqual(self.nav.trace[-1]["action"], "answer")
 
     def test_actual_session_uses_llm_protocol_not_legacy_semantic_rules(self):
         seed = Path(__file__).resolve().parents[1] / "seed/knowledge_base_v1.json"

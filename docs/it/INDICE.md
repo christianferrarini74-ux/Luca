@@ -7,6 +7,12 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Verifica live 2026-10-21: [LM Studio e Gemma E2B](fase-1-sinapsi/13-verifica-live-lmstudio.md)
+([English](../phase-1-11-live-validation.md)). Ultima esecuzione 7/8: meccanismi
+strutturali verificati, richiamo spontaneo non ancora affidabile e nomi dei gruppi
+da validare semanticamente. Corretto il formato JSON del provider; introdotti
+budget operativi configurabili. Suite aggiornata: 151 test, anche CUDA reale.
+
 Implementazione 2026-10-21: [Fase 1.11 — Esecuzione, contratti e verifiche](fase-1-sinapsi/12-implementazione-memoria-navigabile.md)
 ([English](../phase-1-11-implementation.md)). Realizzati famiglie canoniche,
 aggiornamenti atomici, indici globale/rapido, navigazione LLM e manutenzione con

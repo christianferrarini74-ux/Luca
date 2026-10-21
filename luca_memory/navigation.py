@@ -8,7 +8,7 @@ from .node import load_node
 from .synaptic import StaleRevision, serialized
 
 
-def focus_context(carousel) -> str:
+def focus_context(carousel, *, structured=False) -> str | dict:
     """Reserve the full directory first; only the reading payload may be excerpted."""
     if carousel.reading_id is None:
         return ""
@@ -40,6 +40,8 @@ def focus_context(carousel) -> str:
         "truncated_ids": [node.id] if excerpt != body else [], "input_units": units(text),
         "limit": budget.memory_limit, "accounting": "utf8_bytes_conservative",
         "node_spans": [{"node_id": node.id, "start": units(prefix), "end": units(prefix + excerpt)}]}
+    if structured:
+        return {**json.loads(header), "content": excerpt, "partial_content": excerpt != body}
     return text
 
 
@@ -65,11 +67,14 @@ class MemoryNavigator:
         for _ in range(self.max_steps):
             reading = self.carousel.reading_id
             directory = self.memory.directory(reading) if reading is not None else None
-            context = focus_context(self.carousel) if directory else ""
+            context = focus_context(self.carousel, structured=True) if directory else {}
             if directory and units(directory.render()) > self.directory_bytes:
                 raise ValueError("Complete fast directory exceeds fast_index_bytes; increase its reserved budget.")
             state = {"focus": directory.focus_id if directory else None, "reading_id": reading,
                      "context": context, "global_candidates": [asdict(entry) for entry in candidates],
+                     "visited_ids": sorted(visited),
+                     "local_target_ids": sorted(({directory.focus_id, *(entry.id for entry in (
+                         *directory.incoming, *directory.outgoing, *directory.parts))} - {reading}) if directory else set()),
                      "feedback": feedback}
             proposal = adapter.navigate_memory(text, state, history)
             if not isinstance(proposal, dict):
@@ -104,11 +109,12 @@ class MemoryNavigator:
                         self.memory.validate_step(reading, target, directory.revision)
                     else:
                         raise ValueError("Search for a global entry first.")
-                    if target in visited:
-                        raise ValueError("This node was already opened in this navigation; answer or choose another route.")
+                    if target == reading:
+                        raise ValueError("Questo nodo è già aperto: leggi context e rispondi, oppure apri un nodo diverso.")
                     self.carousel.step_to(target)
                     visited.add(target)
                     self.expose_memory = True
+                    feedback = f"Nodo {target} aperto. Il suo contenuto è ora in context. Se basta, scegli answer; non riaprirlo."
                     candidates = ()
                     search_revision = None
                     self.trace[-1]["target_id"] = target

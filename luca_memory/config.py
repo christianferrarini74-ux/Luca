@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
 from typing import Any
 
 import yaml
@@ -54,8 +55,10 @@ def load_config(path: str | Path = "config.yaml") -> dict[str, Any]:
     if runtime["memory_policy"] not in {"grounded", "experimental"}:
         raise ConfigurationError("runtime.memory_policy must be 'grounded' or 'experimental'.")
     try:
-        PromptBudget.from_config(runtime)
-        SynapticSettings.from_config(runtime)
+        budget = PromptBudget.from_config(runtime)
+        synaptic = SynapticSettings.from_config(runtime)
+        for reserve in (synaptic.navigation_output_tokens, synaptic.maintenance_output_tokens):
+            replace(budget, output_reserve=reserve)
         for key, minimum, default in (("vram_bytes", 2048, 8_000_000), ("ram_bytes", 2048, 32_000_000), ("recent_window", 1, 8)):
             runtime[key] = int(runtime.get(key, default))
             if runtime[key] < minimum:

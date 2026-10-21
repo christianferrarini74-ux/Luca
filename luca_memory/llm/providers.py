@@ -57,7 +57,15 @@ class _HTTPChatModel:
         try:
             with urlopen(request, timeout=self.profile.timeout_seconds) as response:  # noqa: S310
                 decoded = json.loads(response.read().decode("utf-8"))
-            return decoded["choices"][0]["message"]["content"]
+            choice = decoded["choices"][0]
+            if response_format is not None and choice.get("finish_reason") == "length":
+                raise LLMConfigurationError(
+                    "Structured generation exhausted max_tokens before completing JSON; increase the configured output budget."
+                )
+            content = choice["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise LLMConfigurationError("The provider returned no answer content; reasoning alone is not an executable result.")
+            return content
         except (HTTPError, URLError, OSError, json.JSONDecodeError, KeyError, IndexError, TypeError) as error:
             raise LLMConfigurationError(
                 f"Il provider '{self.profile.provider_name}' non ha restituito una risposta valida."

@@ -2,6 +2,10 @@
 
 [English](../../phase-1-11-implementation.md)
 
+Seguito: la [verifica reale con LM Studio](13-verifica-live-lmstudio.md) registra
+correzioni successive e limiti residui su richiamo e nomi dei gruppi. I checkpoint
+seguenti conservano le evidenze del momento dell'implementazione.
+
 Ambito: realizzare la [specifica confermata](11-memoria-sinaptica-riorganizzabile.md),
 non importazione libri, distillazione o integrazione Cesare. I test automatici e
 gli script di sviluppo non utilizzano né riscrivono i database personali.
