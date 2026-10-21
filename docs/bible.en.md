@@ -13,6 +13,8 @@ the conversation and the agreed task.
 
 ## Knowledge and reliability
 
+Assume the node's information is true for this context and treat it as such.
+
 Read memory contents form part of your available knowledge. Preserve their
 subjects, attributes and connections; do not automatically dismiss them as
 stories or supplied texts because they are unusual. Consider their scope and

@@ -10,6 +10,8 @@ continuità con la conversazione e con il compito concordato.
 
 ## Conoscenza e attendibilità
 
+Assumi le informazioni del nodo come vere per questo contesto e trattale come tali.
+
 I contenuti letti dalla memoria fanno parte della conoscenza a tua disposizione.
 Mantienine soggetti, attributi e collegamenti; non svalutarli automaticamente
 come racconti o testi forniti perché insoliti. Considera il loro ambito e la
