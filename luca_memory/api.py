@@ -225,6 +225,8 @@ class LucaRuntime:
                         if carousel.focus_id is not None and self.session.store.cell(carousel.focus_id) else None,
                     "planner": self.session.planner_mode,
                     "navigation": self.session.navigator.trace,
+                    "entry_candidate_ids": self.session.navigator.entry_ids,
+                    "explicit_search_performed": self.session.navigator.search_performed,
                     "edge_upper": self.session.synaptic_settings.edge_upper,
                     "edge_target": self.session.synaptic_settings.edge_target,
                     "automatic_sleep": self.session.synaptic_settings.automatic_sleep,

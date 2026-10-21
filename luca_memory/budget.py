@@ -72,12 +72,27 @@ class PromptBudget:
         remaining = max(0, available - units(system) - units(question))
         chosen = []
         history_size = 0
-        # Keep complete user/assistant pairs, newest first, without orphaned replies.
+        history_excerpted = False
+        # Preserve paired roles; excerpt the newest oversized pair without changing stored history.
         history = history[-8:]
         for end in range(len(history), 1, -2):
             pair = history[end - 2:end]
             size = sum(units(item["content"]) + 16 for item in pair)
             if history_size + size > min(self.history_limit, remaining):
+                capacity = min(self.history_limit, remaining) - history_size
+                if not chosen and capacity >= 64:
+                    marker = " [estratto cronologia]"
+                    user_allowance = min(units(pair[0]["content"]), capacity // 2 - 16)
+                    allowances = (user_allowance, capacity - 32 - user_allowance)
+                    excerpt_pair = []
+                    for item, allowance in zip(pair, allowances):
+                        content = item["content"]
+                        if units(content) > allowance:
+                            content = clip(content, max(0, allowance - units(marker))) + clip(marker, allowance)
+                        excerpt_pair.append({"role": item["role"], "content": content})
+                    chosen = excerpt_pair
+                    history_size = sum(units(item["content"]) + 16 for item in chosen)
+                    history_excerpted = True
                 break
             chosen = pair + chosen
             history_size += size
@@ -90,4 +105,5 @@ class PromptBudget:
         return messages, {"accounting": "utf8_bytes_conservative", "input_units": estimated,
                           "input_limit": available, "output_reserve": self.output_reserve,
                           "history_messages": len(chosen), "memory_units": units(memory_text),
+                          "history_excerpted": history_excerpted,
                           "memory_truncated": units(memory_text) < units(memory)}

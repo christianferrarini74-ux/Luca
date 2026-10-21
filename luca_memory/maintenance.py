@@ -161,6 +161,7 @@ class MemoryMaintenance:
             for node_id in record["created_ids"]:
                 self.store.connection.execute("DELETE FROM cell_aliases WHERE cell_id=?", (node_id,))
                 self.store.connection.execute("DELETE FROM cell_search WHERE rowid=?", (node_id,))
+                self.store.connection.execute("DELETE FROM entry_search WHERE rowid=?", (node_id,))
                 self.store.connection.execute("DELETE FROM cells WHERE id=?", (node_id,))
             self.store.connection.execute("UPDATE maintenance_operations SET active=0 WHERE id=?", (operation_id,))
             self.memory._event("restore", {"operation_id": operation_id})

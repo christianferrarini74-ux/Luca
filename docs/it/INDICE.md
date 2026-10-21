@@ -7,6 +7,12 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Correzione del dialogo 2026-10-21: [ingresso nella memoria e continuità](fase-1-sinapsi/14-ingresso-memoria-e-dialogo.md)
+([English](../memory-entry-cues.md)). Indice globale anticipato di soli metadati,
+stato “non usato” distinto da “inesistente”, estratti espliciti della cronologia.
+158 test con CUDA reale e 8/8 sintetici; dialogo completo non ancora accettato per
+cause inventate e svalutazione del ricordo come “testo fornito”.
+
 Verifica live 2026-10-21: [LM Studio e Gemma E2B](fase-1-sinapsi/13-verifica-live-lmstudio.md)
 ([English](../phase-1-11-live-validation.md)). Ultima esecuzione 7/8: meccanismi
 strutturali verificati, richiamo spontaneo non ancora affidabile e nomi dei gruppi

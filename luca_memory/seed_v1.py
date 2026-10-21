@@ -67,6 +67,7 @@ def load_knowledge_seed(store: MemoryStore, path: str | Path) -> KnowledgeSeed:
         store.connection.execute("DELETE FROM maintenance_operations")
         store.connection.execute("DELETE FROM cell_aliases")
         store.connection.execute("DELETE FROM cell_search")
+        store.connection.execute("DELETE FROM entry_search")
         store.connection.execute("DELETE FROM cells")
         for item in raw_nodes:
             slug = str(item["slug"])

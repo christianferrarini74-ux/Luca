@@ -20,7 +20,7 @@ from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
 from .tiers import SynapticCarousel
-from .navigation import MemoryNavigator, focus_context
+from .navigation import MemoryNavigator, answer_context
 from .synaptic_settings import SynapticSettings
 from .synaptic import serialized
 
@@ -188,6 +188,8 @@ class LucaSession:
         self.navigator.memory = replacement.synaptic
         self.navigator.trace = []
         self.navigator.expose_memory = False
+        self.navigator.entry_ids = ()
+        self.navigator.search_performed = False
 
     @serialized
     def handle(self, text: str) -> SessionReply:
@@ -352,9 +354,13 @@ class LucaSession:
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
         self.carousel.context_report = {}
         if self.is_v1 and self.last_plan is not None and not self.last_plan.expose_memory:
+            if self.planner_mode == "llm":
+                return ("Memoria non utilizzata per questa risposta. Questo non prova che il ricordo non esista: "
+                        "non dichiarare di aver verificato l'assenza di ricordi. Puoi usare liberamente la "
+                        "conoscenza generale, senza inventare fatti locali o attribuirli a un ricordo letto.")
             return "Nessun ricordo locale pertinente alla domanda; usa la tua conoscenza generale senza attribuirla a ricordi locali."
         if self.planner_mode == "llm":
-            return focus_context(self.carousel)
+            return answer_context(self.carousel)
         sections: list[str] = []
         if len(self.carousel.vram) > 0:
             sections.append(build_vram_context(self.carousel))

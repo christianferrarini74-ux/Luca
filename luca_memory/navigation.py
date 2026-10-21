@@ -45,6 +45,20 @@ def focus_context(carousel, *, structured=False) -> str | dict:
     return text
 
 
+def answer_context(carousel):
+    """Expose selected knowledge, not routing JSON, to the conversational renderer."""
+    payload = focus_context(carousel, structured=True)
+    if not payload:
+        return ""
+    prefix = payload["title"] + ":\n"
+    body = payload["content"]
+    text = prefix + body + ("\n[estratto parziale]" if payload["partial_content"] else "")
+    carousel.context_report.update({"input_units": units(text), "directory_in_answer": False,
+        "directory_in_navigation": True, "node_spans": [{"node_id": payload["reading_id"],
+            "start": units(prefix), "end": units(prefix + body)}]})
+    return text
+
+
 class MemoryNavigator:
     def __init__(self, carousel, *, max_steps=8, search_limit=20, directory_bytes=65536):
         self.carousel = carousel
@@ -54,14 +68,19 @@ class MemoryNavigator:
         self.directory_bytes = directory_bytes
         self.trace = []
         self.expose_memory = False
+        self.entry_ids = ()
+        self.search_performed = False
 
     @serialized
     def run(self, text, adapter, history):
         """The model alone decides search terms, entry IDs, local steps and stopping."""
         self.trace = []
         self.expose_memory = False
-        candidates = ()
-        search_revision = None
+        candidates = self.memory.entry_candidates(text, self.search_limit)
+        self.entry_ids = tuple(entry.id for entry in candidates)
+        self.search_performed = False
+        search_revision = self.memory.store.revision if candidates else None
+        self.trace.append({"action": "entry_index", "candidate_ids": self.entry_ids})
         visited = set()
         feedback = ""
         for _ in range(self.max_steps):
@@ -75,7 +94,7 @@ class MemoryNavigator:
                      "visited_ids": sorted(visited),
                      "local_target_ids": sorted(({directory.focus_id, *(entry.id for entry in (
                          *directory.incoming, *directory.outgoing, *directory.parts))} - {reading}) if directory else set()),
-                     "feedback": feedback}
+                     "index_checked": True, "feedback": feedback}
             proposal = adapter.navigate_memory(text, state, history)
             if not isinstance(proposal, dict):
                 proposal = {}
@@ -91,6 +110,7 @@ class MemoryNavigator:
                     feedback = "Provide a nonempty search query of at most 2000 characters."
                     continue
                 candidates = self.memory.global_lookup(query, self.search_limit)
+                self.search_performed = True
                 search_revision = self.memory.store.revision
                 feedback = f"At most {self.search_limit} global candidates are shown; refine the query if necessary."
                 continue

@@ -5,7 +5,7 @@
 Phase 1.11 implemented: [canonical families, complete indexes, LLM navigation and atomic maintenance](docs/phase-1-11-implementation.md).
 The [confirmed design](docs/bounded-synaptic-memory-design.md) remains the conceptual reference.
 Start with `python run_luca.py`; configuration selects `memory_planner: llm` and 50/45 external-edge limits.
-Tests cover the Core, HTTP and real CUDA. [Live Gemma validation](docs/phase-1-11-live-validation.md): 7/8 checks passed; spontaneous recall and semantic grouping quality still need work. Automated suite: 151 tests passed including real CUDA.
+Latest: [memory-entry and dialogue fixes](docs/memory-entry-cues.md). Automated suite: 158 tests passed including real CUDA; synthetic live checks: 8/8. The full dialogue still exposes unsupported explanations and provenance/style problems; acceptance is not complete. Earlier [live evidence](docs/phase-1-11-live-validation.md) is preserved.
 
 Latest review: [seed safety, exact alias summaries and measured GPU transfers](docs/review-hardening.md).
 

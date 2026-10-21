@@ -913,8 +913,11 @@ class MemoryStore:
 
     def _index_cell_for_search(self, cell: Cell) -> None:
         from .node import KnowledgeNode
-        title = KnowledgeNode.from_cell(cell).title
+        from .entry_index import index_entry
+        node = KnowledgeNode.from_cell(cell)
+        title = node.title
         self.connection.execute("INSERT INTO node_catalog VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET title=excluded.title", (cell.id, title))
+        index_entry(self, node)
         try:
             payload = json.loads(cell.content)
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError):

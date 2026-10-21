@@ -5,7 +5,7 @@
 Fase 1.11 implementata: [famiglie canoniche, indici completi, navigazione LLM e manutenzione atomica](docs/it/fase-1-sinapsi/12-implementazione-memoria-navigabile.md).
 La [specifica confermata](docs/it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md) resta il riferimento concettuale.
 Avvio: `python run_luca.py`; configurati `memory_planner: llm` e limiti esterni 50/45.
-Test su Core, HTTP e CUDA reale. [Verifica Gemma live](docs/it/fase-1-sinapsi/13-verifica-live-lmstudio.md): 7/8 controlli superati; richiamo spontaneo e qualità semantica dei gruppi restano da migliorare. Suite automatica: 151 test superati, anche con CUDA reale.
+Ultimo intervento: [ingresso nella memoria e dialogo](docs/it/fase-1-sinapsi/14-ingresso-memoria-e-dialogo.md). Suite automatica: 158 test superati, anche CUDA reale; prova sintetica live: 8/8. Nel dialogo completo restano spiegazioni inventate e problemi di provenienza/stile: accettazione non conclusa. Conservate le [evidenze precedenti](docs/it/fase-1-sinapsi/13-verifica-live-lmstudio.md).
 
 Ultima verifica: [sicurezza seed, contatori alias e trasferimenti GPU misurati](docs/it/fase-1-sinapsi/10-verifica-claude.md).
 

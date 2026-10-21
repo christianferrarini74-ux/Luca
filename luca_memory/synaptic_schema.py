@@ -83,6 +83,8 @@ def ensure_synaptic_schema(store):
     # Populate only missing metadata, once per legacy node; no durable content is rewritten.
     from .node import KnowledgeNode, normalise_key
     from .store import Cell
+    from .entry_index import ensure_entry_index, index_entry
+    ensure_entry_index(store)
     rows = db.execute("""SELECT c.* FROM cells c LEFT JOIN node_catalog n ON n.node_id=c.id
                          WHERE n.node_id IS NULL""")
     for row in rows:
@@ -93,4 +95,7 @@ def ensure_synaptic_schema(store):
                 db.execute("""INSERT OR IGNORE INTO managed_aliases SELECT ?, ?
                     WHERE EXISTS(SELECT 1 FROM cell_aliases WHERE cell_id=? AND alias=?)""",
                            (node.id, alias, node.id, alias))
+    for row in db.execute("""SELECT c.* FROM cells c LEFT JOIN entry_search e ON e.rowid=c.id
+                             WHERE e.rowid IS NULL"""):
+        index_entry(store, KnowledgeNode.from_cell(Cell(row["id"], row["content"], row["created_at"])))
     db.commit()

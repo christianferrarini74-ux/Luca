@@ -99,6 +99,11 @@ class SynapticMemory:
             return tuple(DirectoryEntry(cell.id, KnowledgeNode.from_cell(cell).title)
                          for cell in list(found.values())[:limit])
 
+    def entry_candidates(self, text, limit=20):
+        from .entry_index import entry_candidates
+        with self.store.lock:
+            return entry_candidates(self.store, text, limit)
+
     def _check(self, expected_revision):
         if expected_revision is not None and expected_revision != self.store.revision:
             raise StaleRevision("Memory changed; refresh the operation before retrying.")
