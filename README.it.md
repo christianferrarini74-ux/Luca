@@ -2,6 +2,8 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Esperimento controllato: [manuale IRIS-17, domande isolate e tracce di lettura](docs/it/fase-1-sinapsi/23-esperimento-documento-controllato.md).
+
 Biblioteca reale: [memoria iniziale vuota, esempi sintetici separati](docs/it/fase-1-sinapsi/22-avvio-biblioteca-reale.md).
 Chiudere e riavviare Luca per usare il nuovo database; quello precedente è conservato.
 

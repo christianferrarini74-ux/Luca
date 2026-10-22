@@ -2,6 +2,8 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Controlled experiment: [IRIS-17 manual, isolated paired questions and reading traces](docs/controlled-document-experiment.md).
+
 Real-library workspace: [empty initial memory, synthetic examples isolated](docs/real-library-start.md).
 Exit and restart Luca to use the new database; the previous database is preserved.
 

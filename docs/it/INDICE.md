@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Esperimento 2026-10-22: [documento controllato IRIS-17](fase-1-sinapsi/23-esperimento-documento-controllato.md)
+([English](../controlled-document-experiment.md)). Indice e sei capitoli, griglia
+separata e confronto senza/con documento su sessioni nuove e database temporanei.
+
 Biblioteca 2026-10-22: [avvio con memoria vuota e separazione degli esperimenti](fase-1-sinapsi/22-avvio-biblioteca-reale.md)
 ([English](../real-library-start.md)). Nuovo database configurato, vecchia memoria
 intatta e seed sintetici conservati per i test. Richiesto riavvio ordinato.

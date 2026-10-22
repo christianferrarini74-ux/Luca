@@ -1,0 +1,143 @@
+[
+  {
+    "id": "direct",
+    "question": "Ogni quanto viene misurata l'umidità nella IRIS-17?",
+    "required_slugs": [
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "30",
+        "trenta"
+      ],
+      [
+        "second"
+      ]
+    ],
+    "rubric": "30 seconds, not the maintenance interval."
+  },
+  {
+    "id": "paraphrase",
+    "question": "Sulla IRIS-17 il terreno è asciutto ma l'acqua non parte: quali condizioni consentono l'apertura?",
+    "required_slugs": [
+      "iris_modes",
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "irriga"
+      ],
+      [
+        "28",
+        "ventotto"
+      ],
+      [
+        "tre",
+        "3"
+      ]
+    ],
+    "rubric": "IRRIGA, no alarm, three consecutive valid readings strictly below 28%; OSSERVA never opens."
+  },
+  {
+    "id": "chain",
+    "question": "La IRIS-17 mostra E42. Il segnale ora è tornato normale: come faccio a riprendere a irrigare?",
+    "required_slugs": [
+      "iris_alarm",
+      "iris_recovery",
+      "iris_modes",
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "quattro",
+        "4"
+      ],
+      [
+        "conferma"
+      ],
+      [
+        "avvia"
+      ]
+    ],
+    "rubric": "Follow E42 to recovery: check U7 safely, four valid samples then CONFERMA; still OSSERVA, then AVVIA and opening conditions. Signal recovery alone is insufficient."
+  },
+  {
+    "id": "boundary",
+    "question": "IRIS-17 è in IRRIGA, senza allarmi e a valvola chiusa. Le letture valide sono 27%, 28%, 27%. Si apre?",
+    "required_slugs": [
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "non",
+        "no"
+      ],
+      [
+        "28",
+        "ventotto"
+      ]
+    ],
+    "rubric": "No. The reading at exactly 28% resets the consecutive-low counter; the final 27% is only the first low sample."
+  },
+  {
+    "id": "false_premise",
+    "question": "Sulla IRIS-17 basta spegnere e riaccendere per cancellare E42, giusto?",
+    "required_slugs": [
+      "iris_recovery"
+    ],
+    "terms": [
+      [
+        "non",
+        "no"
+      ],
+      [
+        "conferma"
+      ],
+      [
+        "quattro",
+        "4"
+      ]
+    ],
+    "rubric": "Reject premise: power cycling does not clear E42; four valid samples then CONFERMA required."
+  },
+  {
+    "id": "missing",
+    "question": "Qual è la tensione di alimentazione della IRIS-17?",
+    "required_slugs": [
+      "iris_limits"
+    ],
+    "terms": [
+      [
+        "non",
+        "manca"
+      ],
+      [
+        "specific",
+        "indicat",
+        "disponib",
+        "document"
+      ]
+    ],
+    "rubric": "Voltage is not specified; do not invent 12 V or 24 V."
+  },
+  {
+    "id": "maintenance",
+    "question": "Quale manutenzione periodica richiede la IRIS-17 e con quale frequenza?",
+    "required_slugs": [
+      "iris_maintenance"
+    ],
+    "terms": [
+      [
+        "14",
+        "quattordici"
+      ],
+      [
+        "asciutt"
+      ],
+      [
+        "alimentazione"
+      ]
+    ],
+    "rubric": "Every 14 days, dry-cloth U7 cleaning and connection check, power removed."
+  }
+]
