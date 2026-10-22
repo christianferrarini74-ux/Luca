@@ -1,0 +1,152 @@
+{
+  "version": "iris17-address-labels-1.0.0",
+  "language": "it",
+  "nodes": [
+    {
+      "slug": "iris_index",
+      "title": "IRIS-17 — centralina di irrigazione: indice",
+      "keywords": [
+        "IRIS-17",
+        "irrigazione",
+        "centralina",
+        "manuale"
+      ],
+      "content": "Documento di prova controllato IRIS-17, revisione 1.0. Dispositivo immaginario: le specifiche valgono soltanto per questo manuale, non per apparecchi reali.\nIndice: 1. Modalità e avvio; 2. Sensore e soglie; 3. Allarme E42; 4. Ripristino; 5. Manutenzione; 6. Limiti delle informazioni. Ogni capitolo è raggiungibile dal nodo indice."
+    },
+    {
+      "slug": "iris_modes",
+      "title": "IRIS-17 — Capitolo 1 — modalità e avvio",
+      "keywords": [
+        "IRIS-17",
+        "modalità",
+        "avvio",
+        "irrigare",
+        "automatico"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 1.\nLa centralina ha due modalità: OSSERVA e IRRIGA. All'accensione entra sempre in OSSERVA: misura l'umidità ma mantiene chiusa la valvola. Il comando AVVIA passa a IRRIGA soltanto se non vi sono allarmi attivi. Per il comando di apertura in IRRIGA si applicano le condizioni del capitolo 2. Se è attivo E42, consultare il capitolo 3 e la procedura del capitolo 4."
+    },
+    {
+      "slug": "iris_sensor",
+      "title": "IRIS-17 — Capitolo 2 — sensore e soglie",
+      "keywords": [
+        "IRIS-17",
+        "sensore",
+        "umidità",
+        "soglie",
+        "valvola",
+        "letture"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 2.\nIl sensore U7 misura l'umidità del terreno ogni 30 secondi. In modalità IRRIGA, con valvola chiusa e nessun allarme attivo, tre letture consecutive strettamente inferiori al 28% aprono la valvola. Una lettura pari o superiore al 28% azzera il conteggio. Con valvola aperta, una lettura pari o superiore al 41% la chiude. In OSSERVA la valvola resta chiusa. I segnali non validi sono gestiti secondo il capitolo 3."
+    },
+    {
+      "slug": "iris_alarm",
+      "title": "IRIS-17 — Capitolo 3 — allarme E42",
+      "keywords": [
+        "IRIS-17",
+        "E42",
+        "errore",
+        "allarme",
+        "segnale",
+        "interruzione"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 3.\nDue campioni consecutivi non validi del sensore U7 attivano E42. Un campione valido prima del secondo non valido azzera il conteggio degli errori. E42 chiude immediatamente la valvola e imposta OSSERVA. Un valore di umidità basso ma valido non è un campione non valido. Il ritorno del segnale valido non cancella E42. Seguire il capitolo 4 per il ripristino e il capitolo 5 per la manutenzione."
+    },
+    {
+      "slug": "iris_recovery",
+      "title": "IRIS-17 — Capitolo 4 — procedura di ripristino",
+      "keywords": [
+        "IRIS-17",
+        "ripristino",
+        "riavvio",
+        "ripartire",
+        "riprendere",
+        "conferma"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 4.\nDopo E42, controllare il collegamento del sensore U7; prima di intervenire sui collegamenti togliere alimentazione. Dopo il controllo e la riaccensione servono quattro campioni consecutivi validi e poi il comando CONFERMA per cancellare E42. Un campione non valido interrompe la sequenza dei quattro. La sola riaccensione non cancella l'allarme memorizzato. CONFERMA senza i quattro campioni validi non lo cancella. Dopo la cancellazione la modalità resta OSSERVA: per tornare a IRRIGA occorre AVVIA. L'apertura richiede poi le condizioni del capitolo 2."
+    },
+    {
+      "slug": "iris_maintenance",
+      "title": "IRIS-17 — Capitolo 5 — manutenzione",
+      "keywords": [
+        "IRIS-17",
+        "manutenzione",
+        "pulizia",
+        "controllo",
+        "alimentazione"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 5.\nOgni 14 giorni pulire la sonda U7 con un panno asciutto e controllare il suo collegamento. Togliere alimentazione prima della manutenzione. Non immergere la centralina. Se E42 persiste dopo il controllo e la procedura del capitolo 4, rivolgersi al servizio tecnico; il manuale non prescrive altre riparazioni."
+    },
+    {
+      "slug": "iris_limits",
+      "title": "IRIS-17 — Capitolo 6 — limiti delle informazioni",
+      "keywords": [
+        "IRIS-17",
+        "limiti",
+        "specifiche",
+        "alimentazione",
+        "tensione",
+        "durata",
+        "Wi-Fi"
+      ],
+      "content": "Fonte: manuale IRIS-17, revisione 1.0, capitolo 6.\nQuesto manuale non specifica tensione di alimentazione, portata della valvola, supporto Wi-Fi o durata massima di irrigazione. Nessun valore può essere ricavato con certezza dalle soglie di umidità. Le procedure riguardano soltanto il dispositivo immaginario IRIS-17 revisione 1.0."
+    }
+  ],
+  "edges": [
+    [
+      "iris_index",
+      "iris_modes"
+    ],
+    [
+      "iris_index",
+      "iris_sensor"
+    ],
+    [
+      "iris_index",
+      "iris_alarm"
+    ],
+    [
+      "iris_index",
+      "iris_recovery"
+    ],
+    [
+      "iris_index",
+      "iris_maintenance"
+    ],
+    [
+      "iris_index",
+      "iris_limits"
+    ],
+    [
+      "iris_modes",
+      "iris_sensor"
+    ],
+    [
+      "iris_modes",
+      "iris_alarm"
+    ],
+    [
+      "iris_alarm",
+      "iris_sensor"
+    ],
+    [
+      "iris_alarm",
+      "iris_recovery"
+    ],
+    [
+      "iris_alarm",
+      "iris_maintenance"
+    ],
+    [
+      "iris_recovery",
+      "iris_modes"
+    ],
+    [
+      "iris_recovery",
+      "iris_sensor"
+    ],
+    [
+      "iris_maintenance",
+      "iris_recovery"
+    ]
+  ]
+}

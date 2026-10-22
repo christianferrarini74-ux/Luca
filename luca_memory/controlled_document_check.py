@@ -30,9 +30,10 @@ def indicators(case, text, readings, ids):
     }
 
 
-def run_case(config, case, seed, database):
+def run_case(config, case, seed, database, *, history=(), adapter_type=None):
     """Give the model only the question and normal runtime memory, never the rubric."""
-    adapter = ObservedAdapter.from_config(config)
+    factory = ObservedAdapter if adapter_type is None else adapter_type
+    adapter = factory.from_config(config)
     adapter.observations = []
     settings = config["runtime"]
     session = LucaSession.open(database, seed, adapter, planner_mode="llm", memory_settings=settings,
@@ -40,6 +41,8 @@ def run_case(config, case, seed, database):
                                ram_capacity=int(settings.get("ram_capacity", 12)))
     started = perf_counter()
     try:
+        # Explicit experimental history is data, never a replacement system prompt.
+        session.history.extend(dict(message) for message in history)
         reply = session.handle(case["question"])
         return {"model": adapter.model, "reply": reply.text, "read_ids": list(session.navigator.workspace.nodes),
                 "trace": list(session.navigator.trace), "choices": list(adapter.observations),

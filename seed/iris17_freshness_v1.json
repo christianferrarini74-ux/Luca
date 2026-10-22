@@ -1,0 +1,112 @@
+{
+  "version": "iris17-freshness-1.0.0",
+  "language": "it",
+  "nodes": [
+    {
+      "slug": "primula_index",
+      "title": "IRIS-17 — laboratorio Primula: registro delle revisioni Modbus",
+      "keywords": [
+        "IRIS-17",
+        "Primula",
+        "Modbus",
+        "porta",
+        "connessione",
+        "TCP",
+        "aggiornamento"
+      ],
+      "content": "Registro controllato del laboratorio immaginario Primula. Data di riferimento: 22 ottobre 2026. Il registro collega specifiche storiche, configurazione attiva e proposte non approvate. I titoli sono indirizzi: leggere le schede per conoscere valori e validità."
+    },
+    {
+      "slug": "primula_archived",
+      "title": "IRIS-17 Primula — Modbus revisione 1.0 archiviata",
+      "keywords": [
+        "IRIS-17",
+        "Primula",
+        "Modbus",
+        "porta",
+        "precedente",
+        "storico"
+      ],
+      "content": "Fonte: scheda tecnica interna controllata Primula S-17, revisione 1.0. Ambito: collegamento TCP Modbus della centralina IRIS-17 nel laboratorio Primula. Approvata il 1 settembre 2026, valida fino al 19 ottobre 2026 incluso, poi archiviata e sostituita dalla revisione 1.1. In questo periodo la porta era 502."
+    },
+    {
+      "slug": "primula_current",
+      "title": "IRIS-17 Primula — Modbus revisione 1.1 attiva e approvata",
+      "keywords": [
+        "IRIS-17",
+        "Primula",
+        "Modbus",
+        "porta",
+        "attuale",
+        "configurazione",
+        "connessione",
+        "TCP"
+      ],
+      "content": "Fonte: scheda tecnica interna controllata Primula S-17, revisione 1.1. Ambito: collegamento TCP Modbus della centralina IRIS-17 nel laboratorio Primula. Approvata e valida dal 20 ottobre 2026; attiva alla data di riferimento del 22 ottobre 2026. Sostituisce la revisione 1.0. Il client deve collegarsi alla porta 1502. Questa è un'impostazione locale del laboratorio Primula, non una modifica della porta convenzionale Modbus TCP per tutti i dispositivi."
+    },
+    {
+      "slug": "primula_draft",
+      "title": "IRIS-17 Primula — Modbus revisione 1.2 bozza non approvata",
+      "keywords": [
+        "IRIS-17",
+        "Primula",
+        "Modbus",
+        "porta",
+        "nuovo",
+        "bozza",
+        "revisione"
+      ],
+      "content": "Fonte: proposta interna controllata Primula S-17, revisione 1.2. Scritta il 22 ottobre 2026 e importata dopo le altre schede. Stato: bozza non approvata, senza data di entrata in vigore. Propone la porta 1902 per IRIS-17 nel laboratorio Primula. Non sostituisce la revisione 1.1 attiva e non autorizza a usare la porta proposta."
+    },
+    {
+      "slug": "conflict_a",
+      "title": "IRIS-17 laboratorio Quercia — scheda A approvata",
+      "keywords": [
+        "IRIS-17",
+        "Quercia",
+        "porta",
+        "Modbus",
+        "approvata"
+      ],
+      "content": "Dato controllato per prova di conflitto. Fonte: registro Quercia A; approvato e dichiarato attivo al 22 ottobre 2026. Ambito: stessa centralina IRIS-17, stesso collegamento TCP Modbus nel laboratorio Quercia. Porta indicata: 2502. Nessuna gerarchia o sostituzione rispetto al registro Quercia B è documentata."
+    },
+    {
+      "slug": "conflict_b",
+      "title": "IRIS-17 laboratorio Quercia — scheda B approvata",
+      "keywords": [
+        "IRIS-17",
+        "Quercia",
+        "porta",
+        "Modbus",
+        "approvata"
+      ],
+      "content": "Dato controllato per prova di conflitto. Fonte: registro Quercia B; approvato e dichiarato attivo al 22 ottobre 2026. Ambito: stessa centralina IRIS-17, stesso collegamento TCP Modbus nel laboratorio Quercia. Porta indicata: 3502. Nessuna gerarchia o sostituzione rispetto al registro Quercia A è documentata."
+    }
+  ],
+  "edges": [
+    [
+      "primula_index",
+      "primula_archived"
+    ],
+    [
+      "primula_index",
+      "primula_current"
+    ],
+    [
+      "primula_index",
+      "primula_draft"
+    ],
+    [
+      "primula_archived",
+      "primula_current"
+    ],
+    [
+      "primula_current",
+      "primula_draft"
+    ],
+    [
+      "conflict_a",
+      "conflict_b"
+    ]
+  ]
+}

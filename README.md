@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Investigation: [autonomous reading and knowledge freshness](docs/memory-autonomy-investigation.md).
+Experimental profiles remain isolated; autonomous completion is not yet reliable.
+
 Controlled experiment: [IRIS-17 manual, isolated paired questions and reading traces](docs/controlled-document-experiment.md).
 
 Real-library workspace: [empty initial memory, synthetic examples isolated](docs/real-library-start.md).

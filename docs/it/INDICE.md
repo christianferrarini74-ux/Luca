@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Indagine 2026-10-22: [autonomia di lettura e aggiornamenti](fase-1-sinapsi/24-autonomia-e-attualita-memoria.md)
+([English](../memory-autonomy-investigation.md)). Confronto di istruzioni e
+revisione della bozza, versioni/bozze e conflitti. Nessuna promozione nel runtime.
+
 Esperimento 2026-10-22: [documento controllato IRIS-17](fase-1-sinapsi/23-esperimento-documento-controllato.md)
 ([English](../controlled-document-experiment.md)). Indice e sei capitoli, griglia
 separata e confronto senza/con documento su sessioni nuove e database temporanei.

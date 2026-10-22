@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Indagine: [lettura autonoma e attualità della conoscenza](docs/it/fase-1-sinapsi/24-autonomia-e-attualita-memoria.md).
+Profili sperimentali separati; completamento autonomo non ancora affidabile.
+
 Esperimento controllato: [manuale IRIS-17, domande isolate e tracce di lettura](docs/it/fase-1-sinapsi/23-esperimento-documento-controllato.md).
 
 Biblioteca reale: [memoria iniziale vuota, esempi sintetici separati](docs/it/fase-1-sinapsi/22-avvio-biblioteca-reale.md).

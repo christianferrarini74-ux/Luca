@@ -1,0 +1,126 @@
+[
+  {
+    "id": "incomplete",
+    "seed": "iris17_controlled_v1.json",
+    "question": "La IRIS-17 mostra E42. Il segnale ora è tornato normale: come faccio a riprendere a irrigare?",
+    "required_slugs": [
+      "iris_recovery",
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "quattro",
+        "4"
+      ],
+      [
+        "conferma"
+      ],
+      [
+        "avvia"
+      ],
+      [
+        "28"
+      ]
+    ],
+    "rubric": "Four valid samples then CONFERMA, still OSSERVA, AVVIA, then three below 28%; no mere chapter referral."
+  },
+  {
+    "id": "paraphrase",
+    "seed": "iris17_controlled_v1.json",
+    "question": "Sulla IRIS-17 il terreno è asciutto ma l'acqua non parte: quali condizioni consentono l'apertura?",
+    "required_slugs": [
+      "iris_modes",
+      "iris_sensor"
+    ],
+    "terms": [
+      [
+        "irriga"
+      ],
+      [
+        "28"
+      ],
+      [
+        "tre",
+        "3"
+      ]
+    ],
+    "rubric": "IRRIGA, no active alarm, three consecutive readings strictly below 28%."
+  },
+  {
+    "id": "updated",
+    "seed": "iris17_freshness_v1.json",
+    "question": "Al 22 ottobre 2026, su quale porta TCP devo collegare il client Modbus alla IRIS-17 del laboratorio Primula?",
+    "required_slugs": [
+      "primula_current"
+    ],
+    "terms": [
+      [
+        "1502"
+      ]
+    ],
+    "rubric": "1502, not archived 502 and not unapproved draft 1902; same scope, active approved revision."
+  },
+  {
+    "id": "stale_history",
+    "seed": "iris17_freshness_v1.json",
+    "question": "Oggi è il 22 ottobre 2026: per la IRIS-17 di Primula uso ancora quella porta?",
+    "history": [
+      {
+        "role": "user",
+        "content": "Quale porta avevamo configurato per IRIS-17 a Primula a settembre 2026?"
+      },
+      {
+        "role": "assistant",
+        "content": "A settembre 2026 usavamo la porta 502, come indicato nella scheda Primula S-17 revisione 1.0."
+      }
+    ],
+    "required_slugs": [
+      "primula_current"
+    ],
+    "terms": [
+      [
+        "1502"
+      ]
+    ],
+    "rubric": "Do not inherit obsolete 502 from history; read active revision and state 1502."
+  },
+  {
+    "id": "conflict",
+    "seed": "iris17_freshness_v1.json",
+    "question": "Al 22 ottobre 2026, quale porta Modbus devo usare per IRIS-17 nel laboratorio Quercia?",
+    "required_slugs": [
+      "conflict_a",
+      "conflict_b"
+    ],
+    "terms": [
+      [
+        "2502"
+      ],
+      [
+        "3502"
+      ],
+      [
+        "conflitt",
+        "contraddi",
+        "chiar",
+        "discord",
+        "incongr",
+        "discrepan"
+      ]
+    ],
+    "rubric": "Read both equally applicable sources, disclose unresolved 2502/3502 conflict; ask clarification rather than choose arbitrarily."
+  },
+  {
+    "id": "general",
+    "seed": "iris17_controlled_v1.json",
+    "question": "Quanto fa 17 più 25?",
+    "required_slugs": [],
+    "terms": [
+      [
+        "42",
+        "quarantadue"
+      ]
+    ],
+    "rubric": "42; memory reading is not required."
+  }
+]
