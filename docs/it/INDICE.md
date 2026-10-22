@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Correzione 2026-10-22: [arresto della riorganizzazione all'obiettivo](fase-1-sinapsi/30-arresto-riorganizzazione-obiettivo.md)
+([English](../maintenance-target-stop.md)). Soglie 50/45, selezione dei soli gruppi
+necessari, minimo scarto indivisibile, ripetizione con Gemma e limiti residui.
+
 Contratto 2026-10-22: [utilizzo e integrazione della memoria](fase-1-sinapsi/28-contratto-utilizzo-memoria.md)
 ([English](../memory-integration-contract.md)). Regole per produttori/consumer,
 limiti reali, famiglie, scritture atomiche, API ed esempio eseguibile.

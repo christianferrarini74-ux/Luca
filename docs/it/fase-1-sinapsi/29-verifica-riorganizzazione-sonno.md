@@ -3,6 +3,10 @@
 2026-10-22. [English](../../sleep-reorganization-verification.md).
 Accompagna il [contratto della memoria](28-contratto-utilizzo-memoria.md).
 
+Checkpoint storico: la [successiva correzione dell'arresto all'obiettivo](30-arresto-riorganizzazione-obiettivo.md)
+supera l'applicazione indiscriminata di tutti i gruppi validi qui registrata.
+Le osservazioni originali, compreso il risultato tematicamente misto, restano intatte.
+
 ## Ambito e metodo
 
 Simuliamo conoscenza e topologia, non l'implementazione della manutenzione.

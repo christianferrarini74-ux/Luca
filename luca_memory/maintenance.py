@@ -5,6 +5,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass
 
+from .maintenance_selection import select_groups
 from .node import KnowledgeNode, save_node
 from .store import Edge
 from .synaptic import StaleRevision
@@ -57,7 +58,6 @@ class MemoryMaintenance:
                        "outgoing": {entry.id for entry in directory.outgoing}}
             seen = set()
             groups = []
-            reduction = 0
             for raw in proposed_groups:
                 if not isinstance(raw, dict):
                     # Preserve the existing ValueError contract used by validation callers.
@@ -73,11 +73,10 @@ class MemoryMaintenance:
                         raise ValueError("Group members must be distinct existing directional alternatives.")
                     seen.add(key)
                 groups.append(EdgeGroup(title.strip(), direction, tuple(members)))
-                reduction += len(members) - 1
-            after = degree - reduction
-            if after > self.settings.edge_target:
-                raise ValueError("The proposed grouping does not reach edge_target.")
-            return MaintenancePlan(directory.focus_id, directory.revision, degree, after, tuple(groups))
+            # Preserve each proposed group intact, but never apply unnecessary regrouping.
+            selected = select_groups(groups, degree - self.settings.edge_target)
+            after = degree - sum(len(group.members) - 1 for group in selected)
+            return MaintenancePlan(directory.focus_id, directory.revision, degree, after, selected)
 
     def apply(self, plan: MaintenancePlan, *, confirmed=False, automatic=False):
         """Replace local routes and persist their undo record in the same transaction."""

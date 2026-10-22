@@ -11,7 +11,12 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from luca_memory.maintenance import IdleMaintenance, MemoryMaintenance
+from luca_memory.maintenance import (
+    EdgeGroup,
+    IdleMaintenance,
+    MaintenancePlan,
+    MemoryMaintenance,
+)
 from luca_memory.node import load_node
 from luca_memory.sleep_check import run_worker
 from luca_memory.sleep_fixture import (
@@ -62,15 +67,42 @@ class SleepSimulationTests(unittest.TestCase):
             fixture = populate(memory, settings)
             maintenance = MemoryMaintenance(memory, settings)
             self.assertEqual(maintenance.candidates(), (fixture["root"],))
+            raw = oracle_groups(fixture)
+            excessive = MaintenancePlan(fixture["root"], memory.directory(fixture["root"]).revision, 52, 4,
+                tuple(EdgeGroup(group["title"], group["direction"], tuple(group["members"])) for group in raw))
+            with self.assertRaisesRegex(ValueError, "Invalid maintenance plan"):
+                maintenance.apply(excessive, confirmed=True)
+            self.assertEqual(graph_snapshot(memory), fixture["before"])
             operation = maintenance.apply(maintenance.plan(fixture["root"], oracle_groups(fixture)), automatic=True)
             result = verify_regrouping(memory, settings, fixture, operation)
             self.assertTrue(all(result["checks"].values()), result)
             self.assertTrue(result["thematically_pure"])
-            self.assertEqual((result["degree_before"], result["degree_after"]), (52, 4))
+            # The supplied groups have 13 indivisible members each: select one, not all four.
+            self.assertEqual((result["degree_before"], result["degree_after"]), (52, 40))
+            self.assertEqual(len(result["groups"]), 1)
         with MemoryStore(Path(self.temporary.name) / "default.sqlite") as store:
             memory = SynapticMemory(store)
             self.assertTrue(all(verify_regrouping(memory, settings, fixture, operation)["checks"].values()))
             MemoryMaintenance(memory, settings).restore(operation, confirmed=True)
+            self.assertEqual(graph_snapshot(memory), fixture["before"])
+
+    def test_exact_target_is_preferred_to_an_earlier_oversized_group(self):
+        with MemoryStore(Path(self.temporary.name) / "exact.sqlite") as store:
+            memory = SynapticMemory(store)
+            settings = SynapticSettings()
+            fixture = populate(memory, settings)
+            proposals = oracle_groups(fixture)
+            proposals[1]["members"] = proposals[1]["members"][:8]
+            maintenance = MemoryMaintenance(memory, settings)
+            plan = maintenance.plan(fixture["root"], proposals)
+            self.assertEqual((plan.degree_before, plan.degree_after), (52, 45))
+            self.assertEqual(len(plan.groups), 1)
+            self.assertEqual(list(plan.groups[0].members), proposals[1]["members"])
+            operation = maintenance.apply(plan, automatic=True)
+            self.assertTrue(all(verify_regrouping(memory, settings, fixture, operation)["checks"].values()))
+            self.assertEqual(maintenance.candidates(), ())
+            self.assertEqual(maintenance.plan(fixture["root"], proposals).groups, ())
+            maintenance.restore(operation, confirmed=True)
             self.assertEqual(graph_snapshot(memory), fixture["before"])
 
     def test_real_polling_worker_uses_inactivity_and_stops_without_orphan_threads(self):

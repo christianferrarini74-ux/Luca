@@ -63,3 +63,11 @@ class NavigationAdapterTests(unittest.TestCase):
         self.adapter.navigate_memory("Next", {"reading_id": None, "global_candidates": [], "local_target_ids": []}, [])
         schema = self.model.complete.call_args.kwargs["response_format"]["json_schema"]["schema"]
         self.assertEqual([v["properties"]["action"]["const"] for v in schema["anyOf"]], ["search", "answer"])
+
+    def test_group_request_sizes_proposals_to_the_configured_target_gap(self):
+        self.model.complete.return_value = '{"assignments":{"incoming":{},"outgoing":{}}}'
+        directory = Directory(1, 1, (), tuple(DirectoryEntry(index, f"Node {index}") for index in range(2, 54)), ())
+        self.adapter.propose_groups(directory, SynapticSettings())
+        constraints = json.loads(self.model.complete.call_args.args[0][-1]["content"])["constraints"]
+        self.assertEqual(constraints["required_reduction"], 7)
+        self.assertEqual(constraints["max_members"], 8)

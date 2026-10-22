@@ -2,7 +2,9 @@
 
 2026-10-22. [English](../../memory-integration-contract.md).
 
-Questa è la guida attuale per produttori e utilizzatori esterni. I documenti
+Questa è la guida attuale per produttori e utilizzatori esterni.
+Politica d'arresto aggiornata: [raggruppamento limitato all'obiettivo](30-arresto-riorganizzazione-obiettivo.md).
+I documenti
 precedenti rimangono testimonianze storiche. Il pacchetto applicativo è alla
 versione 0.1.0: questa guida non introduce una versione indipendente del
 protocollo né promette una retrocompatibilità non ancora stabilita dal progetto.
@@ -105,7 +107,7 @@ aggiornare rubriche e risultati di ricerca.
 
 | Configurazione (`config.yaml`) | Valore distribuito attuale | Effetto |
 | --- | ---: | --- |
-| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | Somma entranti + uscenti esterni. Sonno automatico solo oltre il superiore; grado finale **al massimo** pari all'obiettivo, non necessariamente 45 esatti. Sforamento temporaneo ammesso. |
+| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | Somma entranti + uscenti esterni. Sonno automatico solo oltre il superiore; arresto all'obiettivo o appena sotto secondo i gruppi indivisibili proposti. Sforamento temporaneo ammesso. |
 | `navigation_steps` / `global_candidates` | 8 / 20 | Massimo azioni del modello per turno / risultati globali. Non sono dimensioni massime del grafo. |
 | `fast_index_bytes` | 65536 | Spazio serializzato della rubrica completa in byte UTF-8. Nessun taglio silenzioso degli archi. |
 | `automatic_sleep` / `idle_seconds` | true / 60 | Abilitazione sonno / soglia d'inattività. |
@@ -220,8 +222,17 @@ Il proponente riceve la rubrica completa (ID/titoli), non i contenuti. Il produt
 deve assegnare titoli informativi e distinguibili. Per ciascuna direzione, un gruppo
 richiede titolo non vuoto lungo al massimo 256 caratteri e da 2 a `edge_upper-1`
 membri distinti esistenti. Ogni membro può comparire una volta per direzione;
-gruppi entranti/uscenti separati. Riduzione `sum(numero_membri-1)`; grado finale
-necessariamente <= obiettivo. Validità strutturale non significa qualità semantica.
+gruppi entranti/uscenti separati. Riduzione `sum(numero_membri-1)`. Il Core
+convalida l'intera proposta, poi seleziona solo i gruppi interi necessari:
+minimo eccesso di riduzione, quindi meno gruppi, quindi ordine stabile della
+proposta. Non taglia arbitrariamente i membri per ottenere un numero esatto.
+I gruppi non selezionati non vengono creati e i relativi archi restano diretti.
+Se nessuna combinazione raggiunge l'obiettivo, non viene applicato nulla.
+Anteprima e ripristino descrivono solo i gruppi selezionati. Al modello vengono
+richiesti gruppi più piccoli, commisurati alla riduzione necessaria, ma la
+convalida strutturale del Core mantiene il limite `edge_upper-1`: una proposta
+LLM troppo grande può ancora produrre uno scarto indivisibile sotto l'obiettivo,
+visibile nel piano. Validità strutturale non significa qualità semantica.
 
 Un controllo del worker tenta al massimo un candidato. Gli errori restano visibili;
 i tentativi falliti hanno un'attesa basata sulla revisione della rubrica. Nessuna

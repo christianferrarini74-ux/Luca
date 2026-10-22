@@ -3,6 +3,7 @@
 2026-10-22. [Italiano](it/fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
 
 This is the current integration guide for external producers and consumers.
+Updated target-stop policy: [bounded regrouping](maintenance-target-stop.md).
 Earlier design documents remain historical records. The application package
 version is currently 0.1.0; this guide does not invent a separate versioned wire
 protocol or promise backward compatibility that the project has not established.
@@ -101,7 +102,7 @@ of the current contract. After a mutation, refresh directories and search result
 
 | Configuration (`config.yaml`) | Current distributed value | Effect |
 | --- | ---: | --- |
-| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | External incoming + outgoing degree. Automatic sleep only above upper; successful grouping reaches **at most** target, not necessarily exactly 45. Temporary overflow is allowed. |
+| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | External incoming + outgoing degree. Automatic sleep only above upper; stop at target, or closest below using indivisible proposed groups. Temporary overflow is allowed. |
 | `navigation_steps` / `global_candidates` | 8 / 20 | Maximum model actions per turn / bounded global results. Not maximum graph size. |
 | `fast_index_bytes` | 65536 | Serialized complete directory allowance, measured in UTF-8 bytes. Never silently drops arcs. |
 | `automatic_sleep` / `idle_seconds` | true / 60 | Automatic reorganization and idle threshold. |
@@ -213,7 +214,15 @@ External producers must give distinguishable, informative titles. In each
 direction a group needs a nonempty title of at most 256 characters and
 2..`edge_upper-1` distinct existing members. A member may be used once per
 direction; incoming/outgoing groups are separate. The reduction is
-`sum(member_count-1)`, and the proposed final degree must be <= target.
+`sum(member_count-1)`. The Core validates the complete proposal, then selects
+only the whole groups necessary to reach target: minimum excess reduction,
+then fewest groups, then stable proposal order. Members are not arbitrarily
+clipped to hit an exact number. Unselected groups stay direct and are not
+created. If no combination reaches target, nothing is applied. Preview and
+undo describe only selected groups. The model is asked for smaller groups
+bounded by the reduction gap, but Core structural membership validation retains
+the `edge_upper-1` ceiling: an oversized model proposal can still yield an
+indivisible undershoot, which remains visible in the plan.
 Structural validity does not prove semantic grouping quality.
 
 One worker tick attempts at most one candidate. It records errors and backs off

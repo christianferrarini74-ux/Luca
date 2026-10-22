@@ -225,7 +225,8 @@ class LMStudioAdapter:
         messages, _ = self._request("group", "", {"directory": directory.payload(),
             "constraints": {"edge_upper": settings.edge_upper, "edge_target": settings.edge_target,
                 "degree_before": directory.external_degree, "min_members": 2,
-                "max_members": settings.edge_upper - 1, "unique_members_per_direction": True,
+                "max_members": min(settings.edge_upper - 1, max(2, directory.external_degree - settings.edge_target + 1)),
+                "unique_members_per_direction": True,
                 "required_reduction": max(0, directory.external_degree - settings.edge_target)}},
             output_tokens=settings.maintenance_output_tokens)
         try:

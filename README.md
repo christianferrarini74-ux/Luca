@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Maintenance correction: [stop at the configured target](docs/maintenance-target-stop.md).
+Apply only necessary whole groups; retain original routes for unselected groups.
+
 Integration: [memory producer/consumer contract](docs/memory-integration-contract.md).
 Nodes, arcs, families, budgets, atomic mutations, APIs and an executable producer example.
 

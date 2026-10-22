@@ -3,6 +3,10 @@
 2026-10-22. [Italiano](it/fase-1-sinapsi/29-verifica-riorganizzazione-sonno.md).
 Companion to the [memory integration contract](memory-integration-contract.md).
 
+Historical checkpoint: the [subsequent target-stop correction](maintenance-target-stop.md)
+supersedes the unbounded application of all valid groups recorded here. These
+original observations, including the mixed-theme result, remain unchanged.
+
 ## Scope and method
 
 Simulate knowledge and graph topology, not the maintenance implementation.

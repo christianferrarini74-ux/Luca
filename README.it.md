@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Correzione manutenzione: [arresto all'obiettivo configurato](docs/it/fase-1-sinapsi/30-arresto-riorganizzazione-obiettivo.md).
+Applicati solo i gruppi interi necessari; gli archi dei gruppi scartati restano diretti.
+
 Integrazione: [contratto per produttori e utilizzatori della memoria](docs/it/fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
 Nodi, archi, famiglie, budget, modifiche atomiche, API ed esempio eseguibile.
 
