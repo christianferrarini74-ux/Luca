@@ -2,7 +2,7 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph} = require("../luca_memory/web/graph.js");
+const {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph, matchingRepresentatives} = require("../luca_memory/web/graph.js");
 const snapshot = {
   nodes:[{id:1,root_id:1,title:"Same",part_count:1}, {id:2,root_id:1,title:"Part"},
          {id:3,root_id:3,title:"Same"}, {id:4,root_id:4,title:"Isolated"}],
@@ -77,4 +77,13 @@ test("fit recovers a corrupted map and ignores positions outside the current sco
   assert.equal(graph.positions.size,1);
   const point = graph.positions.get(1);
   assert.equal(graph.camera.x + graph.camera.w/2,point.x);
+});
+test("search indexes collapsed child titles once and respects family expansion", () => {
+  let model = projectGraph(snapshot);
+  assert.deepEqual([...matchingRepresentatives(snapshot, model.representative, "part")], [1]);
+  assert.deepEqual([...matchingRepresentatives(snapshot, model.representative, "same")], [1,3]);
+  assert.equal(matchingRepresentatives(snapshot, model.representative, ""), null);
+  model = projectGraph(snapshot, new Set([1]));
+  assert.deepEqual([...matchingRepresentatives(snapshot, model.representative, "part")], [2]);
+  assert.deepEqual([...matchingRepresentatives(snapshot, model.representative, "unknown")], []);
 });

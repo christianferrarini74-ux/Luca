@@ -10,6 +10,7 @@ const PAGE_META = {
   operational: { eyebrow: "SISTEMA", title: "Stato Operativo & Diagnostica" },
 };
 
+// Server snapshots describe memory/model state; transcript and UI lifecycle stay local.
 let appState = null;
 let messages = [];
 let busy = false;
@@ -35,6 +36,7 @@ function applyTheme(theme) {
 }
 
 function setBusy(isBusy) {
+  // Re-render alternatives as well as static controls because their buttons are replaced.
   busy = isBusy;
   if (memoryGraph) memoryGraph.el("recall").disabled = isBusy || stopped || memoryGraph.selected === null;
   if (appState) renderConvergence(appState);
@@ -62,7 +64,7 @@ function switchPage(pageId) {
   currentPage = pageId;
   $("page-eyebrow").textContent = PAGE_META[pageId].eyebrow;
   $("page-title").textContent = PAGE_META[pageId].title;
-  ["chat", "memory", "graphs", "operational"].forEach((id) => {
+  Object.keys(PAGE_META).forEach((id) => {
     const el = $("view-" + id);
     if (el) el.style.display = id === pageId ? (id === "chat" ? "grid" : "block") : "none";
   });
@@ -101,6 +103,7 @@ function renderTranscript() {
 }
 
 function renderChatSidebar(state) {
+  // Tier membership comes from the snapshot; displaying a node does not recall it.
   const vramNodes = state.tiers?.vram?.nodes || [];
   const ramNodes = state.tiers?.ram?.nodes || [];
   const chains = state.tiers?.vram?.chains || [];
@@ -264,6 +267,7 @@ function renderMemoryTables(state) {
 let memoryGraph = null;
 
 function renderSynapticGraph(state) {
+  // Keep the graph instance across snapshots so its local camera/selection can persist.
   if (!memoryGraph) memoryGraph = new MemoryGraph({
     fetchGraph: apiFetch,
     recall: id => recallNode(id),
@@ -342,11 +346,13 @@ function renderMemoryControls(state) {
     : "Nessun compito attivo. Puoi anche scrivere Obiettivo:, Vincolo: o Decisione: nella chat.";
   const fields = {"task-goal": task.goal || "", "task-constraints": (task.constraints || []).join("\n"), "task-decisions": (task.decisions || []).join("\n")};
   for (const [id, value] of Object.entries(fields)) {
+    // Background snapshots must not overwrite the field the user is currently editing.
     if (document.activeElement !== $(id)) $(id).value = value;
   }
 }
 
 function renderAll(state) {
+  // Refresh every view from the same snapshot, including views hidden by navigation.
   appState = state;
   const badge = $("status-badge");
   const statusText = $("status-text");
@@ -378,6 +384,7 @@ function renderAll(state) {
   renderSynapticControls(state);
 }
 
+// A preview supplies the server plan ID that the separate confirmation action applies.
 let pendingMaintenance = null;
 
 function renderSynapticControls(state) {
@@ -402,7 +409,7 @@ async function synapticRequest(path, payload) {
   setBusy(true);
   showError("");
   try {
-    const result = await apiFetch(path, {method: "POST", body: JSON.stringify(payload)});
+    const result = await apiPost(path, payload);
     if (result.state) renderAll(result.state);
     return result;
   } catch (error) {
@@ -425,6 +432,11 @@ async function apiFetch(path, options = {}) {
   return payload;
 }
 
+// Keep JSON transport separate from each action's transcript, errors, and state handling.
+function apiPost(path, payload) {
+  return apiFetch(path, { method: "POST", body: JSON.stringify(payload) });
+}
+
 async function sendChat(text) {
   if (!text || busy || stopped) return;
   setBusy(true);
@@ -432,10 +444,7 @@ async function sendChat(text) {
   messages.push({ role: "Christian", text });
   renderTranscript();
   try {
-    const payload = await apiFetch("/api/chat", {
-      method: "POST",
-      body: JSON.stringify({ text }),
-    });
+    const payload = await apiPost("/api/chat", { text });
     messages.push({
       role: "Luca",
       text: payload.reply.text,
@@ -455,7 +464,7 @@ async function resetSession() {
   setBusy(true);
   showError("");
   try {
-    const payload = await apiFetch("/api/reset", { method: "POST", body: "{}" });
+    const payload = await apiPost("/api/reset", {});
     messages = [{ role: "Luca", text: payload.reply.text, trace: "" }];
     renderTranscript();
     renderAll(payload.state);
@@ -471,10 +480,7 @@ async function recallNode(nodeId, alternative = false) {
   setBusy(true);
   showError("");
   try {
-    const payload = await apiFetch(alternative ? "/api/alternative" : "/api/recall", {
-      method: "POST",
-      body: JSON.stringify({ node_id: Number(nodeId) }),
-    });
+    const payload = await apiPost(alternative ? "/api/alternative" : "/api/recall", { node_id: Number(nodeId) });
     if (payload.state) renderAll(payload.state);
   } catch (err) {
     showError(err.message || "Errore durante il richiamo sinaptico.");
@@ -485,9 +491,10 @@ async function recallNode(nodeId, alternative = false) {
 }
 
 async function shutdownServer() {
+  // Shutdown has its own lifecycle: it remains available while another action is busy.
   if (stopped) return;
   try {
-    await apiFetch("/api/shutdown", { method: "POST", body: "{}" });
+    await apiPost("/api/shutdown", {});
     stopped = true;
     if (appState) renderAll({ ...appState, status: "error" });
     const box = $("alert-box");
@@ -499,11 +506,13 @@ async function shutdownServer() {
   }
 }
 
+// These actions require a returned snapshot and leave any existing alert until an error.
+// Search/maintenance use synapticRequest instead: state is optional and alerts are cleared.
 async function openSection(nodeId, key) {
   if (busy || stopped) return;
   setBusy(true);
   try {
-    const result = await apiFetch("/api/section", {method: "POST", body: JSON.stringify({node_id: Number(nodeId), key})});
+    const result = await apiPost("/api/section", { node_id: Number(nodeId), key });
     renderAll(result.state);
   } catch (error) {
     showError(error.message);
@@ -516,13 +525,22 @@ async function updateTask(values) {
   if (busy || stopped) return;
   setBusy(true);
   try {
-    const result = await apiFetch("/api/task", {method: "POST", body: JSON.stringify(values)});
+    const result = await apiPost("/api/task", values);
     renderAll(result.state);
   } catch (error) {
     showError(error.message);
   } finally {
     setBusy(false);
   }
+}
+
+// Individual toggles and bulk actions update the same accessibility and visual state.
+function setNavGroupExpanded(button, expanded) {
+  button.setAttribute("aria-expanded", String(expanded));
+  const items = button.parentElement.querySelector(".nav-group-items");
+  const icon = button.querySelector("i");
+  if (items) items.style.display = expanded ? "grid" : "none";
+  if (icon) icon.textContent = expanded ? "−" : "+";
 }
 
 function bindEvents() {
@@ -535,6 +553,7 @@ function bindEvents() {
   });
   $("maintenance-form").addEventListener("submit", async event => {
     event.preventDefault();
+    // Invalidate the previous plan before requesting its replacement, even on failure.
     pendingMaintenance = null;
     $("maintenance-apply").disabled = true;
     const result = await synapticRequest("/api/maintenance/preview", {node_id: Number($("maintenance-node").value)});
@@ -582,33 +601,19 @@ function bindEvents() {
 
   document.querySelectorAll(".nav-group-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const expanded = btn.getAttribute("aria-expanded") === "true";
-      const next = !expanded;
-      btn.setAttribute("aria-expanded", String(next));
-      const items = btn.parentElement.querySelector(".nav-group-items");
-      const icon = btn.querySelector("i");
-      if (items) items.style.display = next ? "grid" : "none";
-      if (icon) icon.textContent = next ? "−" : "+";
+      setNavGroupExpanded(btn, btn.getAttribute("aria-expanded") !== "true");
     });
   });
 
   $("expand-all-groups").addEventListener("click", () => {
     document.querySelectorAll(".nav-group-toggle").forEach((btn) => {
-      btn.setAttribute("aria-expanded", "true");
-      const items = btn.parentElement.querySelector(".nav-group-items");
-      const icon = btn.querySelector("i");
-      if (items) items.style.display = "grid";
-      if (icon) icon.textContent = "−";
+      setNavGroupExpanded(btn, true);
     });
   });
 
   $("collapse-all-groups").addEventListener("click", () => {
     document.querySelectorAll(".nav-group-toggle").forEach((btn) => {
-      btn.setAttribute("aria-expanded", "false");
-      const items = btn.parentElement.querySelector(".nav-group-items");
-      const icon = btn.querySelector("i");
-      if (items) items.style.display = "none";
-      if (icon) icon.textContent = "+";
+      setNavGroupExpanded(btn, false);
     });
   });
 
@@ -640,6 +645,7 @@ function bindEvents() {
     if (btn) btn.addEventListener("click", () => void shutdownServer());
   });
 
+  // Delegate actions because snapshot renders replace the buttons inside each view.
   document.body.addEventListener("click", (e) => {
     const route = e.target.closest("[data-route-id]");
     if (route) {
@@ -675,10 +681,7 @@ async function init() {
   try {
     const state = await apiFetch("/api/state");
     renderAll(state);
-    const greet = await apiFetch("/api/chat", {
-      method: "POST",
-      body: JSON.stringify({ text: "Ciao" }),
-    });
+    const greet = await apiPost("/api/chat", { text: "Ciao" });
     messages = [{ role: "Luca", text: greet.reply.text, trace: "" }];
     renderTranscript();
     renderAll(greet.state);
@@ -687,6 +690,7 @@ async function init() {
   } finally {
     setBusy(false);
   }
+  // Poll only when idle/visible, and recheck after awaiting to avoid painting during an action.
   const refresh = setInterval(async () => {
     if (busy || stopped || document.hidden) return;
     try {
@@ -696,6 +700,7 @@ async function init() {
       // The next explicit request reports connection errors without a polling alert loop.
     }
   }, 5000);
+  // The timer belongs to this page and must stop when the page leaves the browser lifecycle.
   window.addEventListener("pagehide", () => clearInterval(refresh), {once: true});
 }
 

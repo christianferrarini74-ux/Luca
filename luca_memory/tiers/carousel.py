@@ -57,6 +57,7 @@ class SynapticCarousel:
         if memory_backend not in {"host", "cuda"}:
             raise ValueError("memory_backend must be 'host' or 'cuda'.")
         self.memory_backend, self.gpu_device = memory_backend, gpu_device
+        # Host mode may cache excerpts; physical CUDA tiers retain complete serialized nodes.
         self.ram = CoherentSlot(TierSlot("RAM", ram_capacity, ram_bytes, compact=memory_backend != "cuda"), store)
         self.prompt_budget = prompt_budget or PromptBudget()
         self.context_report: dict = {}
@@ -140,17 +141,16 @@ class SynapticCarousel:
         incoming = tuple(edge for edge in self.store.incoming(root) if edge.source_id in incoming_ids)
         outgoing = tuple(edge for edge in self.store.outgoing(root) if edge.target_id in outgoing_ids)
 
-        neighbour_ids: list[int] = []
-        for edge in (*outgoing, *incoming):
-            other_id = edge.target_id if edge.source_id == root else edge.source_id
-            if other_id != node_id and other_id not in neighbour_ids:
-                neighbour_ids.append(other_id)
+        # Preserve outgoing-before-incoming order while deduplicating bidirectional neighbors.
+        adjacent = (edge.target_id if edge.source_id == root else edge.source_id for edge in (*outgoing, *incoming))
+        neighbour_ids = list(dict.fromkeys(other_id for other_id in adjacent if other_id != node_id))
 
         with self.store.transaction():
             center = center.with_recall(tick)
             if self._is_knowledge_cell(center.id):
                 self.store.record_node_usage(center.id, tick, initial_count=center.recall_count - 1)
 
+        # The directory is complete; only payload preload is constrained by slot capacity.
         max_neighbours = max(0, self.vram.capacity - 1)
         if len(neighbour_ids) > max_neighbours:
             active_nb = [nid for nid in neighbour_ids if nid in self.opened_in_session]
@@ -180,8 +180,6 @@ class SynapticCarousel:
 
         # Only nodes actually evicted from VRAM slide into RAM; excess unchosen family members stay in SSD.
         to_ram = list(evicted_from_vram)
-        for item in to_ram:
-            self.expanded_in_vram.discard(item.id)
         self.expanded_in_vram.intersection_update(self.vram.node_ids())
 
         removed_vram_edges = self.vram_graph.prune_to_nodes(set(self.vram.node_ids()))
@@ -316,14 +314,10 @@ class SynapticCarousel:
             converging_edges: list[Edge] = []
             with self.store.transaction():
                 for anchor_id in active_anchors:
-                    fwd = self.store.edge(anchor_id, candidate_id)
-                    if fwd is not None:
-                        converging_edges.append(fwd)
-                        self.store.touch_edge(fwd.source_id, fwd.target_id, tick)
-                    rev = self.store.edge(candidate_id, anchor_id)
-                    if rev is not None:
-                        converging_edges.append(rev)
-                        self.store.touch_edge(rev.source_id, rev.target_id, tick)
+                    for edge in (self.store.edge(anchor_id, candidate_id), self.store.edge(candidate_id, anchor_id)):
+                        if edge is not None:
+                            converging_edges.append(edge)
+                            self.store.touch_edge(edge.source_id, edge.target_id, tick)
             events.append(self.step_to(candidate_id, reinforce=False))
             if converging_edges:
                 self.vram_graph.add_edges(converging_edges)
@@ -340,6 +334,7 @@ class SynapticCarousel:
         return tuple(node for node in self.vram.nodes() if node.id in self.expanded_in_vram)
 
     def _fetch_node(self, node_id: int) -> KnowledgeNode | None:
+        """Probe tiers in order and record actual reads, not presumed residency."""
         node = self.vram.get(node_id)
         if node is not None:
             self.activity.record("read_gpu" if self.memory_backend == "cuda" else "read_host", node_id)
@@ -356,6 +351,7 @@ class SynapticCarousel:
         return node
 
     def physical_state(self) -> dict:
+        """Expose device counters explicitly; host reference mode must never claim GPU storage."""
         if self.memory_backend == "cuda":
             return {**self.vram.memory.stats(), "disk_loads": self.disk_loads,
                     "disk_payload_bytes": self.disk_payload_bytes}

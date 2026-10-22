@@ -11,6 +11,7 @@ class ReadingWorkspace:
         self.omitted_ids = []
 
     def remember(self, payload):
+        """Keep the newest reading complete; omit older readings rather than cutting routes."""
         if not payload:
             return
         identity = payload["reading_id"]
@@ -34,13 +35,18 @@ class ReadingWorkspace:
                            "omitted_ids": self.omitted_ids}, ensure_ascii=False)
 
     def render(self, carousel, status):
+        """Serialize once per reading and retain exact UTF-8 spans for exposure accounting."""
         readings = self.payload()
         prefix = '{"navigation_status": ' + json.dumps(status) + ', "read_nodes": ['
         parts, spans = [], []
+        offset = units(prefix)
         for node in readings:
             text = json.dumps(node, ensure_ascii=False)
-            start = units(prefix + ", ".join(parts) + (", " if parts else ""))
-            spans.append({"node_id": node["reading_id"], "start": start, "end": start + units(text)})
+            if parts:
+                offset += 2  # The JSON separator is exactly two ASCII bytes: comma and space.
+            end = offset + units(text)
+            spans.append({"node_id": node["reading_id"], "start": offset, "end": end})
+            offset = end
             parts.append(text)
         text = prefix + ", ".join(parts) + '], "omitted_ids": ' + json.dumps(self.omitted_ids) + '}'
         carousel.context_report = {"node_ids": list(self.nodes), "node_spans": spans,

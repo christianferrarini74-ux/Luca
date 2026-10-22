@@ -34,7 +34,7 @@ class RecallPlan:
 
 
 class RecallPlanner:
-    """Interpret references before using topology to select a knowledge node."""
+    """Plan rules/hybrid recalls; the LLM-led navigator bypasses these heuristics."""
 
     def __init__(self, store: MemoryStore, *, mode: str = "hybrid") -> None:
         if mode not in {"rules", "hybrid"}:
@@ -43,6 +43,7 @@ class RecallPlanner:
         self.mode = mode
 
     def _mentions(self, text: str) -> tuple[list[int], list[int]]:
+        """Resolve bounded aliases and cautious typo matches, retaining explicit exclusions."""
         positive: list[int] = []
         negative: list[int] = []
         # Negation is scoped to clauses rather than deleting its subject from the graph.
@@ -91,6 +92,7 @@ class RecallPlanner:
         return max(families, key=score) if families else None
 
     def plan(self, text: str, focus: int | None, adapter: Any = None) -> RecallPlan:
+        """Prioritize explicit references, then topology; validate any optional model proposal."""
         query = normalise_key(text)
         mentions, excluded = self._mentions(text)
         available = [nid for nid in mentions if nid not in excluded]

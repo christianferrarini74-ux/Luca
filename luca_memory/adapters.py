@@ -124,6 +124,7 @@ class LMStudioAdapter:
     def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> "LMStudioAdapter":
         """Build the adapter from the active LLM runtime in config.yaml."""
 
+        # Resolve one provider/model profile before acquiring a model or tokenizer.
         connector = LLMConnector(config)
         profile = connector.profile_for(assignment)
         if profile.provider_kind != "openai_compatible":
@@ -147,7 +148,6 @@ class LMStudioAdapter:
         manager = LMStudioModelManager.from_provider_config(profile.provider_config, profile.timeout_seconds)
         manager.ensure_loaded(adapter.model, context_length=adapter.prompt_budget.context_window if adapter.prompt_budget.unit == "tokens" else None)
         if adapter.prompt_budget.unit == "tokens":
-            from dataclasses import replace
             from .llm.tokenization import LMStudioTokenCounter
             counter = LMStudioTokenCounter(manager, adapter.model)
             counter.count("Luca")  # Validate tokenization at startup, not halfway through a turn.
@@ -158,6 +158,7 @@ class LMStudioAdapter:
 
     def _request(self, operation, question, data, history=(), *, output_tokens=None):
         """Keep all instructions in the bible and all runtime facts in user data."""
+        # Reload the sole instruction source; operation-specific reserves do not mutate defaults.
         budget = replace(self.prompt_budget, output_reserve=output_tokens) if output_tokens else self.prompt_budget
         payload = {"operation": operation, "question": question, "user_identity": self.user_identity, **data}
         messages, report = budget.messages(read_bible(self.bible_path), "", list(history),
@@ -166,8 +167,9 @@ class LMStudioAdapter:
         return messages, report
 
     def interpret(self, text, current_subject=None):
+        """Validate proposed legacy lessons before the session can consolidate them."""
         messages, _ = self._request("interpret", text,
-            {"current_subject": current_subject, "user_identity": self.user_identity},
+            {"current_subject": current_subject},
             output_tokens=self.synaptic_settings.interpretation_output_tokens)
         try:
             raw = self.connector.create_chat_model(self.assignment).complete(messages,
@@ -178,6 +180,7 @@ class LMStudioAdapter:
             raise LanguageAdapterUnavailable("LM Studio returned an invalid language intent.") from error
 
     def propose_recall(self, text, focus, candidates, operation):
+        """Offer a candidate ID; the planner still validates membership and relevance."""
         messages, _ = self._request("recall", text,
             {"focus": focus, "relation": operation, "candidates": candidates},
             output_tokens=self.synaptic_settings.recall_output_tokens)
@@ -196,6 +199,7 @@ class LMStudioAdapter:
         return self.respond(text, memory_context, history, task_context=task_context)
 
     def navigate_memory(self, text, state, history):
+        """Exchange structured routing data without adding hidden semantic instructions."""
         messages, report = self._request("navigate", text, {"state": state, "memory_scope": self.memory_policy}, history,
             output_tokens=self.synaptic_settings.navigation_output_tokens)
         memory = json.dumps(state.get("read_nodes", []), ensure_ascii=False)
@@ -215,6 +219,7 @@ class LMStudioAdapter:
         return self._respond(text, memory_context, history, task_context, bounded=True)
 
     def propose_groups(self, directory, settings):
+        """Propose grouping assignments only; the Core owns validation and atomic writes."""
         if not any(len(getattr(directory, direction)) >= 2 for direction in ("incoming", "outgoing")):
             return []
         messages, _ = self._request("group", "", {"directory": directory.payload(),
@@ -240,10 +245,12 @@ class LMStudioAdapter:
         return self._respond(text, memory_context, history, task_context, bounded=False)
 
     def _respond(self, text, memory_context, history, task_context, *, bounded):
+        """Share free response generation while preserving complete navigational readings."""
         budget = self.prompt_budget
         if budget.count(task_context) > budget.task_limit:
             raise ValueError("Task exceeds the configured task budget.")
         original = memory_context
+        # Navigation already bounded its readings and reserved complete directories.
         if not bounded:
             memory_context = budget.truncate(memory_context, budget.memory_limit)
         messages, report = self._request("respond", text, {
@@ -259,6 +266,7 @@ class LMStudioAdapter:
             raise LanguageAdapterUnavailable("The model did not return a conversational response.") from error
 
     def _record_usage(self, model):
+        """Compare provider usage with local counting without changing the generated answer."""
         usage = getattr(model, "last_usage", {})
         if isinstance(usage, dict):
             self.last_prompt_report.update({"server_" + key: value for key, value in usage.items()})
@@ -267,6 +275,7 @@ class LMStudioAdapter:
 
     @classmethod
     def _intent_from_json(cls, value: object, original_text: str) -> LanguageIntent:
+        """Reject malformed lessons rather than allowing partial writes into memory."""
         if not isinstance(value, dict):
             raise LanguageAdapterUnavailable("LM Studio did not return a JSON object.")
         kind = value.get("kind")
@@ -300,6 +309,7 @@ class LMStudioAdapter:
 
     @staticmethod
     def _response_format() -> dict[str, object]:
+        """Describe the legacy intent wire format, not extra model instructions."""
         return {
             "type": "json_schema",
             "json_schema": {

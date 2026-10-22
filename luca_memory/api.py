@@ -59,6 +59,7 @@ class LucaRuntime:
         )
         self.search = MemorySearch(self.session.store)
         self.editor = MemoryEditor(self.session.store)
+        # Reuse the store's reentrant lock so nested state reads stay atomic.
         self._lock = self.session.store.lock
         self.maintenance = MemoryMaintenance(self.session.carousel.synaptic, self.session.synaptic_settings)
         self.sleep = IdleMaintenance(self.maintenance, self.session.adapter)
@@ -160,6 +161,7 @@ class LucaRuntime:
             return {"state": self.state()}
 
     def maintenance_operation(self, operation, payload):
+        """Keep preview, confirmation and restore operations under the store lock."""
         self.sleep.touch()
         with self._lock:
             if operation == "preview":
@@ -205,10 +207,7 @@ class LucaRuntime:
             vram_nodes = [self._serialize_tier_node(node, in_vram=True) for node in carousel.vram.nodes()]
             ram_nodes = [self._serialize_tier_node(node, in_vram=False) for node in carousel.ram.nodes()]
             chains = [
-                [
-                    (load_node(self.session.store, nid).title if load_node(self.session.store, nid) else str(nid))
-                    for nid in chain
-                ]
+                [self._node_title(nid) for nid in chain]
                 for chain in carousel.vram_graph.chains()
             ]
             families = self._serialize_vram_families()
@@ -289,7 +288,13 @@ class LucaRuntime:
                 },
             }
 
+    def _node_title(self, node_id: int) -> str:
+        """Resolve a dashboard label once, retaining IDs for missing nodes."""
+        node = load_node(self.session.store, node_id)
+        return node.title if node is not None else str(node_id)
+
     def _serialize_vram_families(self) -> list[dict[str, Any]]:
+        """Describe bounded edge families in VRAM order, prefix before suffix."""
         carousel = self.session.carousel
         store = self.session.store
         vram_ids = list(carousel.vram.node_ids())
@@ -300,45 +305,30 @@ class LucaRuntime:
             node = load_node(store, node_id)
             if node is None:
                 continue
-            prefix_members = store.prefix_family_ids(node_id, limit=8)
-            if len(prefix_members) >= 2 and ("prefix", node_id) not in seen:
-                seen.add(("prefix", node_id))
+            for direction, family_ids, pattern, slug_pattern in (
+                ("prefix", store.prefix_family_ids, f"{node_id}:*", f"{node.slug}:*"),
+                ("suffix", store.suffix_family_ids, f"*:{node_id}", f"*:{node.slug}"),
+            ):
+                members = family_ids(node_id, limit=8)
+                if len(members) < 2 or (direction, node_id) in seen:
+                    continue
+                seen.add((direction, node_id))
                 result.append(
                     {
                         "anchor_id": node_id,
                         "anchor_slug": node.slug,
                         "anchor_title": node.title,
-                        "direction": "prefix",
-                        "pattern": f"{node_id}:*",
-                        "slug_pattern": f"{node.slug}:*",
-                        "member_ids": list(prefix_members),
-                        "member_titles": [
-                            (load_node(store, mid).title if load_node(store, mid) else str(mid))
-                            for mid in prefix_members
-                        ],
-                    }
-                )
-            suffix_members = store.suffix_family_ids(node_id, limit=8)
-            if len(suffix_members) >= 2 and ("suffix", node_id) not in seen:
-                seen.add(("suffix", node_id))
-                result.append(
-                    {
-                        "anchor_id": node_id,
-                        "anchor_slug": node.slug,
-                        "anchor_title": node.title,
-                        "direction": "suffix",
-                        "pattern": f"*:{node_id}",
-                        "slug_pattern": f"*:{node.slug}",
-                        "member_ids": list(suffix_members),
-                        "member_titles": [
-                            (load_node(store, mid).title if load_node(store, mid) else str(mid))
-                            for mid in suffix_members
-                        ],
+                        "direction": direction,
+                        "pattern": pattern,
+                        "slug_pattern": slug_pattern,
+                        "member_ids": list(members),
+                        "member_titles": [self._node_title(mid) for mid in members],
                     }
                 )
         return result
 
     def _build_memory_items(self) -> list[dict[str, Any]]:
+        """Prefer knowledge nodes, falling back to the legacy concept/fact schema."""
         memory: list[dict[str, Any]] = []
         knowledge_cells = self.search.cells_by_kind("knowledge", limit=100)
         if knowledge_cells:
@@ -371,6 +361,7 @@ class LucaRuntime:
         return memory
 
     def _serialize_tier_node(self, node: KnowledgeNode, *, in_vram: bool) -> dict[str, Any]:
+        """Keep VRAM links resident-only; RAM links describe stored topology."""
         carousel = self.session.carousel
         family_limit = MemoryStore.DEFAULT_FAMILY_LIMIT
         incoming = [
@@ -416,6 +407,7 @@ _STATIC_ROUTES: dict[str, tuple[str, str]] = {
 
 
 class ApiHandler(BaseHTTPRequestHandler):
+    """Translate HTTP requests while retaining each route's validation contract."""
     runtime: LucaRuntime
     shutdown_server: Any
 
@@ -465,10 +457,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         if self.path.startswith("/api/maintenance/") or self.path.startswith("/api/memory/"):
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= 2_000_000:
-                    raise ValueError("Invalid request size.")
-                payload = json.loads(self.rfile.read(length))
+                payload = self._read_json(max_bytes=2_000_000)
                 if not isinstance(payload, dict):
                     raise ValueError("The request must be an object.")
                 operation = self.path.rsplit("/", 1)[1]
@@ -481,8 +470,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/task":
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                payload = json.loads(self.rfile.read(length))
+                payload = self._read_json()
                 self._json(self.runtime.update_task(payload))
             except (ValueError, TypeError, json.JSONDecodeError) as error:
                 self._json({"error": str(error)}, status=400)
@@ -493,8 +481,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         if self.path in {"/api/recall", "/api/alternative", "/api/section"}:
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                payload = json.loads(self.rfile.read(length))
+                payload = self._read_json()
                 if not isinstance(payload, dict):
                     raise ValueError("The request body must be an object.")
                 node_id = int(payload.get("node_id"))
@@ -515,8 +502,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             self._json({"error": "Not found"}, status=404)
             return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(length))
+            payload = self._read_json()
             text = payload.get("text") if isinstance(payload, dict) else None
             if not isinstance(text, str) or not text.strip():
                 raise ValueError("text must be a non-empty string")
@@ -528,6 +514,13 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: object) -> None:
         return None
+
+    def _read_json(self, *, max_bytes: int | None = None) -> Any:
+        """Decode the declared body; only newer mutation routes impose a size cap."""
+        length = int(self.headers.get("Content-Length", "0"))
+        if max_bytes is not None and not 0 < length <= max_bytes:
+            raise ValueError("Invalid request size.")
+        return json.loads(self.rfile.read(length))
 
     def _json(self, payload: dict[str, Any], *, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -544,6 +537,7 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 
 def create_server(config: dict[str, Any]) -> ThreadingHTTPServer:
+    """Bind one runtime per server and release it if socket setup fails."""
     runtime = LucaRuntime(config)
 
     class BoundApiHandler(ApiHandler):

@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Code maintenance: [simplification and internal English comments](docs/code-maintenance-review.md).
+235 Python tests with real CUDA/tokenizer and 19 JavaScript tests passed.
+No behavior, dependency, configuration or bible changes. Restart Luca cleanly
+and reload the page to load the revised implementation.
+
 Graph fix: [centering after dragging and changing views](docs/memory-graph-centering.md).
 10 JavaScript regression tests and 219 Python tests passed. Reload the page
 to load the corrected frontend; no server restart needed.

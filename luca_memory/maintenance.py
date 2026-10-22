@@ -30,6 +30,7 @@ class MaintenancePlan:
 
 
 class MemoryMaintenance:
+    """Separate proposal validation, atomic application and guarded undo."""
     def __init__(self, memory, settings):
         self.memory, self.store, self.settings = memory, memory.store, settings
 
@@ -43,6 +44,7 @@ class MemoryMaintenance:
                      if self.memory.directory(row[0]).external_degree > self.settings.edge_upper)
 
     def plan(self, node_id, proposed_groups):
+        """Calculate degree reduction against a versioned directory without changing memory."""
         with self.store.lock:
             directory = self.memory.directory(node_id)
             degree = directory.external_degree
@@ -76,6 +78,7 @@ class MemoryMaintenance:
             return MaintenancePlan(directory.focus_id, directory.revision, degree, after, tuple(groups))
 
     def apply(self, plan: MaintenancePlan, *, confirmed=False, automatic=False):
+        """Replace local routes and persist their undo record in the same transaction."""
         with self.store.transaction():
             current = self.memory.directory(plan.root_id)
             if current.revision != plan.revision:
@@ -114,6 +117,7 @@ class MemoryMaintenance:
                     added.append(replacement)
             if self.memory.directory(plan.root_id).external_degree != plan.degree_after:
                 raise ValueError("Maintenance did not produce its planned degree.")
+            # Restoration must detect edits to generated nodes, aliases and routes, not just degree.
             record = {"plan": plan.payload(), "original_edges": before, "added_edges": added,
                       "created_ids": created,
                       "created_aliases": {str(nid): [row[0] for row in self.store.connection.execute(
@@ -125,6 +129,7 @@ class MemoryMaintenance:
             return operation_id
 
     def restore(self, operation_id, *, confirmed=False):
+        """Undo only an unchanged grouping, preserving usage gained on replacement routes."""
         if confirmed is not True:
             raise ValueError("Restoration requires explicit confirmation.")
         with self.store.transaction():
@@ -185,6 +190,7 @@ class IdleMaintenance:
         self.last_activity = time.monotonic()
 
     def run_once(self, *, now=None):
+        """Attempt at most one idle proposal; new input cancels it before any write."""
         if self._stop.is_set() or not self.settings.automatic_sleep or not hasattr(self.adapter, "propose_groups"):
             return None
         now = time.monotonic() if now is None else now
@@ -196,6 +202,7 @@ class IdleMaintenance:
                 return None
             for root in self.maintenance.candidates():
                 directory = self.maintenance.memory.directory(root)
+                # Back off by directory revision: unrelated edits do not restart failed work.
                 previous = self._attempted.get(root)
                 if previous and previous[0] == directory.revision and now - previous[1] < self.settings.sleep_retry_seconds:
                     continue
@@ -228,6 +235,7 @@ class IdleMaintenance:
                 self.last_error = str(error)
 
     def close(self):
+        """Join the owned worker before closing the database or unloading tier storage."""
         self._stop.set()
         if self._thread is not None:
             self._thread.join()

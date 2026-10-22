@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 import sqlite3
@@ -12,6 +12,7 @@ import threading
 from typing import Iterable, Iterator, Literal
 
 
+# Immutable values shared by storage queries and recall callers.
 @dataclass(frozen=True, slots=True)
 class Cell:
     id: int
@@ -92,11 +93,9 @@ class ConvergenceResult:
     @property
     def available_alternatives(self) -> tuple[ConvergenceMatch, ...]:
         """Remaining ranked candidates (or partial matches when strict intersection is empty) available for the next step."""
-        if self.ranked_matches:
-            opened_set = set(self.opened_ids)
-            return tuple(m for m in self.ranked_matches if m.node_id not in opened_set)
+        candidates = self.ranked_matches or self.partial_matches
         opened_set = set(self.opened_ids)
-        return tuple(m for m in self.partial_matches if m.node_id not in opened_set)
+        return tuple(m for m in candidates if m.node_id not in opened_set)
 
     @property
     def has_only_partial_matches(self) -> bool:
@@ -110,22 +109,11 @@ class ConvergenceResult:
 
     def with_recall_outcome(self, opened_ids: Iterable[int], recall_ms: float) -> "ConvergenceResult":
         """Return a copy annotated with the candidate IDs actually opened in VRAM and total recall time."""
-        return ConvergenceResult(
-            mode=self.mode,
-            required_anchors=self.required_anchors,
-            context_anchors=self.context_anchors,
-            exact_matches=self.exact_matches,
-            partial_matches=self.partial_matches,
+        return replace(
+            self,
             opened_ids=tuple(int(nid) for nid in opened_ids),
-            estimated_seed_edges=self.estimated_seed_edges,
-            selection_ms=self.selection_ms,
-            query_ms=self.query_ms,
-            elapsed_ms=self.elapsed_ms,
             recall_ms=recall_ms,
-            strategy=self.strategy,
         )
-
-
 
 
 class MemoryStore:
@@ -147,6 +135,8 @@ class MemoryStore:
         self.connection.execute("PRAGMA journal_mode = WAL")
         self.connection.execute("PRAGMA synchronous = NORMAL")
         try:
+            # Upgrade legacy edge columns before building usage summaries; the
+            # synaptic schema must exist before search indexing writes its catalog.
             self._create_schema()
             self._ensure_edge_usage_columns()
             self._ensure_cell_usage_summary()
@@ -169,6 +159,8 @@ class MemoryStore:
     @contextmanager
     def transaction(self) -> Iterator[None]:
         with self.lock:
+            # A savepoint also preserves a transaction opened by a direct write.
+            # Only the outermost scope here owns COMMIT or a full rollback.
             nested = self.connection.in_transaction
             self._savepoint += 1
             name = f"luca_{self._savepoint}"
@@ -178,6 +170,7 @@ class MemoryStore:
                 self.connection.execute(f"RELEASE {name}" if nested else "COMMIT")
             except BaseException:
                 if nested:
+                    # ROLLBACK TO leaves the savepoint active; release it as well.
                     self.connection.execute(f"ROLLBACK TO {name}")
                     self.connection.execute(f"RELEASE {name}")
                 else:
@@ -194,6 +187,7 @@ class MemoryStore:
             row = self.connection.execute("SELECT content_revision, directory_revision FROM node_versions WHERE node_id=?", (node_id,)).fetchone()
             return tuple(row) if row else (-1, -1)
 
+    # Cell, alias, event and usage writes participate in the caller's transaction.
     def add_cell(self, cell: Cell) -> None:
         self.connection.execute(
             "INSERT INTO cells (id, content, created_at) VALUES (?, ?, ?)",
@@ -230,6 +224,8 @@ class MemoryStore:
         )
 
     def cells_by_alias(self, alias: str, limit: int = 8) -> list[Cell]:
+        # Materialized incident-edge usage avoids grouping every edge of a hub.
+        # LEFT JOIN keeps isolated cells eligible, with IDs breaking usage ties.
         rows = self.connection.execute(
             """SELECT cells.*
                FROM cell_aliases
@@ -311,6 +307,8 @@ class MemoryStore:
         ).fetchone()
         return self._edge_from_row(row) if row else None
 
+    # Ordered edge access serves both bounded recall and complete directories.
+    # None must keep the full family; zero and negative limits retain SQLite semantics.
     def outgoing(self, source_id: int, limit: int | None = None) -> list[Edge]:
         if limit is not None:
             rows = self.connection.execute(
@@ -408,6 +406,7 @@ class MemoryStore:
             result[int(row["cell_id"])] = int(row["deg"])
         return result
 
+    # Convergence selects candidates in SQL without loading their cell payloads.
     def resolve_convergence(
         self,
         required_anchors: Iterable[int],
@@ -478,6 +477,11 @@ class MemoryStore:
         hot_edges_read = 0
         strategy = "pk_probe" if use_pk_probe else "exhaustive"
 
+        # CROSS JOIN fixes the loop order: start with the candidate/anchor sets
+        # and probe edge addresses instead of letting SQLite scan a large family.
+        # UNION deduplicates candidate IDs; UNION ALL retains both edge directions.
+        # DISTINCT anchor counts prevent reciprocal edges counting twice as evidence,
+        # while their individual use counts still contribute to the ranking.
         smallest_req = sorted_req[0]
         if not use_pk_probe and hot_k > 0 and deg_map[smallest_req] > hot_k:
             # "Hot first": candidate domain = top-K hottest edges (both directions) of the smallest required family,
@@ -682,6 +686,8 @@ class MemoryStore:
     def _classify_rows(
         rows: Iterable[sqlite3.Row], req_total: int, ctx_total: int, limit: int
     ) -> tuple[tuple[ConvergenceMatch, ...], tuple[ConvergenceMatch, ...]]:
+        # Keep SQL relevance order within each bucket and cap them independently.
+        # Strict callers still receive partial matches as fallback alternatives.
         exact: list[ConvergenceMatch] = []
         partial: list[ConvergenceMatch] = []
         for row in rows:
@@ -723,7 +729,10 @@ class MemoryStore:
     def _edge_from_row(row: sqlite3.Row) -> Edge:
         return Edge(source_id=row["source_id"], target_id=row["target_id"])
 
+    # Startup schema creation and historical upgrades are intentionally separate.
     def _create_schema(self) -> None:
+        # The edge primary key supports outgoing/address probes; edges_by_target
+        # supports reverse lookup. Degree triggers track both ends of a self-loop.
         self.connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS cells (
@@ -805,6 +814,8 @@ class MemoryStore:
         )
 
     def _ensure_edge_usage_columns(self) -> None:
+        # Old databases may predate usage columns, degree counters or shared aliases.
+        # Add columns before creating the ordered indexes used by recall and summaries.
         columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(edges)")}
         if "last_used_at" not in columns:
             self.connection.execute("ALTER TABLE edges ADD COLUMN last_used_at INTEGER NOT NULL DEFAULT 0")
@@ -819,6 +830,7 @@ class MemoryStore:
         has_degrees = self.connection.execute("SELECT EXISTS(SELECT 1 FROM cell_degrees)").fetchone()[0] == 1
         has_edges = self.connection.execute("SELECT EXISTS(SELECT 1 FROM edges)").fetchone()[0] == 1
         if has_edges and not has_degrees:
+            # Backfill only an empty summary; reopening must not double its counts.
             self.connection.executescript(
                 """
                 INSERT INTO cell_degrees (cell_id, out_degree, in_degree)
@@ -836,6 +848,7 @@ class MemoryStore:
             if int(row["pk"]) > 0
         ]
         if alias_pk_cols == ["alias"]:
+            # Widen the historical one-cell-per-alias key while preserving its rows.
             self.connection.executescript(
                 """
                 CREATE TABLE cell_aliases_new (
@@ -869,10 +882,14 @@ class MemoryStore:
                 if column not in columns:
                     self.connection.execute(f"ALTER TABLE cell_degrees ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
             if migrate:
+                # Usage counts each incident edge once, including self-loops;
+                # degrees above deliberately count its incoming and outgoing ends.
                 self.connection.execute(f"""UPDATE cell_degrees SET last_used_at = {latest},
                     use_count = COALESCE((SELECT SUM(use_count) FROM edges WHERE source_id = cell_degrees.cell_id), 0)
                               + COALESCE((SELECT SUM(use_count) FROM edges WHERE target_id = cell_degrees.cell_id
                                           AND source_id != target_id), 0)""")
+            # Trigger deltas roll back with the edge write. Re-read indexed maxima
+            # so deletion or a decreasing timestamp cannot leave stale recency.
             self.connection.execute(f"""CREATE TRIGGER IF NOT EXISTS trg_edges_ai_usage
                 AFTER INSERT ON edges BEGIN
                     INSERT INTO cell_degrees(cell_id, last_used_at, use_count)
@@ -896,12 +913,15 @@ class MemoryStore:
                         use_count = MAX(0, use_count - OLD.use_count)
                     WHERE cell_id IN (OLD.source_id, OLD.target_id);
                 END""")
+            # Endpoint changes would bypass degree/usage deltas; require delete+insert.
             self.connection.execute("""CREATE TRIGGER IF NOT EXISTS trg_edges_immutable_address
                 BEFORE UPDATE OF source_id, target_id ON edges
                 WHEN NEW.source_id != OLD.source_id OR NEW.target_id != OLD.target_id
                 BEGIN SELECT RAISE(ABORT, 'Edge addresses are immutable; remove and insert the edge instead.'); END""")
 
     def _rebuild_cell_search_index(self) -> None:
+        # Preserve the startup count check: this repairs missing index rows, not
+        # content changes. Normal cell writes refresh their own entries below.
         cell_count = int(self.connection.execute("SELECT COUNT(*) FROM cells").fetchone()[0])
         indexed_count = int(self.connection.execute("SELECT COUNT(*) FROM cell_search").fetchone()[0])
         if cell_count == indexed_count:
@@ -918,6 +938,8 @@ class MemoryStore:
         title = node.title
         self.connection.execute("INSERT INTO node_catalog VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET title=excluded.title", (cell.id, title))
         index_entry(self, node)
+        # Retain legacy JSON fields and raw bytes as searchable text alongside
+        # the current node catalog/entry index, all within the cell write transaction.
         try:
             payload = json.loads(cell.content)
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError):

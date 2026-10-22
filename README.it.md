@@ -2,6 +2,11 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Manutenzione: [semplificazione e commenti interni in inglese](docs/it/fase-1-sinapsi/20-revisione-codice-e-commenti.md).
+235 test Python con CUDA/tokenizer reali e 19 JavaScript superati. Nessuna modifica
+a comportamento, dipendenze, configurazione o Bibbia. Riavviare Luca ordinatamente
+e aggiornare la pagina per caricare il codice rivisto.
+
 Correzione mappa: [centratura dopo trascinamento e cambio vista](docs/it/fase-1-sinapsi/19-correzione-centratura-mappa.md).
 10 test JavaScript e 219 test Python superati. Aggiornare la pagina per
 caricare il frontend corretto, senza riavviare il server.

@@ -2,7 +2,10 @@
 
 
 def ensure_synaptic_schema(store):
+    """Upgrade metadata and revision tracking without rewriting stored knowledge."""
     db = store.connection
+    # IDs are never recycled. Triggers invalidate content/directory views in the same write.
+    # Family guards keep external routes on roots while allowing internal root/part links.
     db.executescript("""
         CREATE TABLE IF NOT EXISTS graph_revision (
             singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL
@@ -67,6 +70,7 @@ def ensure_synaptic_schema(store):
                 THEN RAISE(ABORT, 'External edges must use the family root') END;
         END;
     """)
+    # Both directed edges and explicit family membership change the affected directories.
     for table, prefix, ids in (
         ("edges", "edge", "{row}.source_id, {row}.target_id"),
         ("family_parts", "family", "{row}.part_id, {row}.root_id"),

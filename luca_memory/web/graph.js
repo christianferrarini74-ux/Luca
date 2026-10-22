@@ -3,6 +3,7 @@
 (function (scope) {
   const validPoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 
+  // Topology projection: collapse only declared content families, never ordinary neighbors.
   function projectGraph(snapshot, expanded = new Set()) {
     const byId = new Map(snapshot.nodes.map(n => [n.id, n]));
     const representative = id => {
@@ -77,6 +78,15 @@
       `${roots.get(s.reading_id) ?? s.reading_id}:${roots.get(s.target_id) ?? s.target_id}`));
   }
 
+  function matchingRepresentatives(snapshot, representative, query) {
+    if (!query) return null;
+    const matches = new Set();
+    for (const node of snapshot.nodes) {
+      if (`${node.id} ${node.title}`.toLocaleLowerCase().includes(query)) matches.add(representative(node.id));
+    }
+    return matches;
+  }
+
   class MemoryGraph {
     constructor({fetchGraph, recall, isBusy}) {
       this.fetchGraph = fetchGraph; this.recall = recall; this.isBusy = isBusy;
@@ -85,6 +95,7 @@
       this.svg = document.getElementById("synaptic-graph-svg");
       this.el = id => document.getElementById("graph-" + id);
       this.camera = {x:-550, y:-300, w:1100, h:600};
+      // Inspection controls change only client state; recall is the explicit Core mutation.
       this.el("mode").addEventListener("change", () => {this.center = null; this.refresh(true);});
       this.el("search").addEventListener("input", () => this.draw());
       this.el("refresh").addEventListener("click", () => this.refresh());
@@ -109,6 +120,7 @@
         if (target && (e.key === "Enter" || e.key === " ")) {e.preventDefault(); this.select(Number(target.dataset.graphId));}
       });
       this.svg.addEventListener("wheel", e => {e.preventDefault(); this.zoom(e.deltaY > 0 ? 1.12 : .89, this.point(e));}, {passive:false});
+      // Store plain coordinates: DOMPoint getters disappear under object spread on scope changes.
       this.svg.addEventListener("pointerdown", e => {
         if (e.button !== 0) return;
         const target = e.target.closest("[data-graph-id]");
@@ -132,6 +144,7 @@
     }
 
     update(state) {
+      // Reuse cockpit polling; do not run a second timer or fetch hidden graph views.
       this.el("recall").disabled = this.selected === null || this.isBusy();
       if (document.getElementById("view-graphs").style.display === "none") return;
       const key = JSON.stringify([state.synaptic, state.working_set]);
@@ -139,6 +152,7 @@
     }
 
     async refresh(fit = false) {
+      // Late responses from a previous scope must not replace the user's newer selection.
       const generation = ++this.generation;
       this.loading = true; this.el("status").textContent = "Lettura dei metadati della memoria…";
       try {
@@ -177,12 +191,15 @@
         nav.append(item);
       }
       if (!nav.children.length) {const li = document.createElement("li"); li.textContent = "Nessuna apertura registrata dal navigatore nell'ultimo turno."; nav.append(li);}
-      this.draw(); this.inspect(); if (fit) this.fit();
+      // Fit already redraws; avoid rebuilding the same SVG twice after a scope change.
+      if (fit) this.fit(); else this.draw();
+      this.inspect();
     }
 
     node() {return this.snapshot?.nodes.find(n => n.id === this.selected);}
     select(id) {this.selected = id; this.draw(); this.inspect();}
     inspect() {
+      // Metadata may describe a family whose members occupy different physical tiers.
       const n = this.node();
       this.el("node-title").textContent = n ? n.title : "Seleziona un nodo";
       this.el("node-info").textContent = n ? `#${n.id} · ${n.tier.toUpperCase()} · famiglia #${n.root_id} · ${n.part_count} parti dirette. Nessun contenuto caricato dalla mappa.` : "Clic o Invio: metadati. Trascina: sposta nodo o mappa. Rotella: zoom.";
@@ -224,12 +241,14 @@
         line.append(this.element("title", {}, `#${e.source} → #${e.target}${e.family ? " · parte della famiglia" : ""}`)); fragment.append(line);
       }
       const query = this.el("search").value.trim().toLocaleLowerCase();
+      // Build matches once per draw instead of scanning every family for every visible node.
+      const matches = matchingRepresentatives(this.snapshot, this.model.representative, query);
       const read = new Set(this.snapshot.read_node_ids.map(id => this.model.representative(id)));
       for (const n of this.model.nodes) {
         const p = this.positions.get(n.id), selected = this.selected === n.id;
         if (!validPoint(p)) continue;
-        const matches = !query || this.snapshot.nodes.some(item => this.model.representative(item.id) === n.id && `${item.id} ${item.title}`.toLocaleLowerCase().includes(query));
-        const group = this.element("g", {transform:`translate(${p.x},${p.y}) scale(${scale})`, class:`memory-graph-node${selected ? " selected" : ""}${matches ? "" : " dim"}`, "data-graph-id":n.id, tabindex:0, role:"button", "aria-label":`#${n.id} ${n.title}, ${n.tier}`, "aria-pressed":String(selected)});
+        const matched = !matches || matches.has(n.id);
+        const group = this.element("g", {transform:`translate(${p.x},${p.y}) scale(${scale})`, class:`memory-graph-node${selected ? " selected" : ""}${matched ? "" : " dim"}`, "data-graph-id":n.id, tabindex:0, role:"button", "aria-label":`#${n.id} ${n.title}, ${n.tier}`, "aria-pressed":String(selected)});
         if (n.id === this.model.representative(this.snapshot.focus_id)) group.append(this.element("circle", {r:24, class:"focus-ring"}));
         if (read.has(n.id)) group.append(this.element("circle", {r:28, class:"read-ring"}));
         group.append(this.element("circle", {r:n.part_count ? 18 : 14, fill:{vram:"#059669", ram:"#d97706", ssd:"#64748b"}[n.tier], stroke:"#fff", "stroke-width":1.5}));
@@ -238,11 +257,12 @@
         group.append(this.element("text", {y:43, "text-anchor":"middle"}, `#${n.id} ${title}${n.part_count && !this.expanded.has(n.id) ? ` (+${n.part_count})` : ""}`));
         fragment.append(group);
       }
-      this.svg.replaceChildren(fragment); this.viewBox();
+      this.svg.replaceChildren(fragment);
       if (activeId) this.svg.querySelector(`[data-graph-id="${Number(activeId)}"]`)?.focus({preventScroll:true});
     }
     point(e) {return new DOMPoint(e.clientX, e.clientY).matrixTransform(this.svg.getScreenCTM().inverse());}
     viewBox() {
+      // Validate the camera before serializing SVG attributes; invalid geometry must recover.
       if (![this.camera.x, this.camera.y, this.camera.w, this.camera.h].every(Number.isFinite) || this.camera.w <= 0 || this.camera.h <= 0)
         this.camera = fitCamera([...this.positions.values()], this.svg.clientWidth, this.svg.clientHeight);
       const c = this.camera; this.svg.setAttribute("viewBox", `${c.x} ${c.y} ${c.w} ${c.h}`);
@@ -262,6 +282,6 @@
       this.draw();
     }
   }
-  if (typeof module !== "undefined" && module.exports) module.exports = {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph};
+  if (typeof module !== "undefined" && module.exports) module.exports = {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph, matchingRepresentatives};
   else scope.MemoryGraph = MemoryGraph;
 })(typeof window !== "undefined" ? window : globalThis);

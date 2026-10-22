@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Manutenzione 2026-10-22: [revisione del codice e commenti interni](fase-1-sinapsi/20-revisione-codice-e-commenti.md)
+([English](../code-maintenance-review.md)). Duplicazioni ridotte, passaggi interni
+documentati in inglese, 235 test Python con CUDA/tokenizer reali e 19 JavaScript.
+
 Correzione 2026-10-22: [centratura della mappa dopo il trascinamento](fase-1-sinapsi/19-correzione-centratura-mappa.md)
 ([English](../memory-graph-centering.md)). Risolta la perdita delle coordinate
 DOMPoint e aggiunto recupero della geometria; 10 test JavaScript e 219 Python.

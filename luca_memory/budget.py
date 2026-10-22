@@ -9,6 +9,7 @@ def units(text: str) -> int:
 
 
 def clip(text: str, limit: int) -> str:
+    """Bound physical UTF-8 storage without leaving a partial Unicode character."""
     return text.encode("utf-8")[:max(0, limit)].decode("utf-8", errors="ignore")
 
 
@@ -108,6 +109,7 @@ class PromptBudget:
         return history[-2 * max(1, low):] if history else []
 
     def _token_messages(self, instruction, memory, history, question, required_context):
+        """Pack mandatory context first, then optional memory and complete history pairs."""
         if self.count(required_context) > self.task_limit:
             raise ValueError("Il compito supera il budget riservato in token.")
         if required_context:
@@ -118,6 +120,7 @@ class PromptBudget:
                     *selected, {"role": "user", "content": question}]
         def measure(memory_text, selected):
             return self.counter.messages(assemble(memory_text, selected))
+        # Count the provider's full chat template; isolated strings can have different boundaries.
         fixed = measure("", [])
         if fixed > available:
             raise ValueError("Messaggio, istruzioni e rubrica completa superano il contesto in token configurato.")
@@ -125,6 +128,7 @@ class PromptBudget:
         # Template boundaries may tokenize differently from isolated text.
         while measure(memory_text, []) > available:
             memory_text = self.truncate(memory_text, max(0, self.count(memory_text) - 32))
+        # Binary-search whole pairs; excerpt only the newest pair when no full pair fits.
         low, high = 0, len(history) // 2
         while low < high:
             pairs = (low + high + 1) // 2
@@ -156,6 +160,7 @@ class PromptBudget:
             "history_excerpted": excerpted, "memory_truncated": memory_text != memory}
 
     def messages(self, instruction: str, memory: str, history: list, question: str, *, required_context: str = "") -> tuple[list, dict]:
+        """Keep native-token packing distinct from the legacy conservative byte contract."""
         if self.unit == "tokens":
             self.count("")  # Fail clearly when no model tokenizer has been bound.
             return self._token_messages(instruction, memory, history, question, required_context)

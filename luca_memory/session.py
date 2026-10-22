@@ -73,6 +73,7 @@ class LucaSession:
         self.editor = MemoryEditor(store)
         self.search = MemorySearch(store)
         settings = memory_settings or {}
+        # When bound, reuse the adapter's native counter throughout the session.
         self.carousel = SynapticCarousel(
             store, vram_capacity=vram_capacity, ram_capacity=ram_capacity, search_policy=search_policy,
             recent_window=int(settings.get("recent_window", 8)),
@@ -115,6 +116,7 @@ class LucaSession:
         planner_mode: str = "hybrid",
         memory_settings: dict | None = None,
     ) -> "LucaSession":
+        # Seed migration and session construction share ownership of this one connection.
         store = MemoryStore(database)
         seed_file = Path(seed_path)
         try:
@@ -169,6 +171,7 @@ class LucaSession:
         self.last_plan = None
         self.task.update({"clear": True})
         previous = self.carousel
+        # Construct first: failed GPU allocation must not destroy the existing carousel.
         replacement = SynapticCarousel(
             self.store,
             vram_capacity=self.carousel.vram.capacity,
@@ -193,6 +196,8 @@ class LucaSession:
 
     @serialized
     def handle(self, text: str) -> SessionReply:
+        """Serialize a turn: validate, navigate, preserve task continuity, then answer."""
+        # Refresh revisions before accepting input; a new turn does not erase durable memory.
         self.carousel.synchronize()
         self.navigator.begin_turn()
         budget = self.carousel.prompt_budget
@@ -201,6 +206,7 @@ class LucaSession:
         self.carousel.begin_turn()
         previous_focus = self.current_subject_id
         prev_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
+        # Explicit task edits/resume take precedence over ordinary recall planning.
         task_changed = self.task.apply_text(text, self.current_subject_id)
         if task_changed:
             self.last_plan = RecallPlan("task_update", expose_memory=False)
@@ -220,6 +226,7 @@ class LucaSession:
                 recalled_ids = []
         else:
             recalled_ids = self._activate_carousel_from_text(text) if self.is_v1 else []
+        # A local traversal stays in the task even if a small VRAM slot evicts its origin.
         new_component = active_vram_component_ids(self.carousel) if self.is_v1 else set()
         local_steps = [step for step in self.navigator.trace if "target_id" in step] if self.planner_mode == "llm" else []
         connected = (previous_focus == self.carousel.focus_id or not prev_component
@@ -234,39 +241,52 @@ class LucaSession:
                 self.history.clear()
         current_subject = self._current_subject_label()
         if hasattr(self.adapter, "respond"):
-            context = self._memory_context(text)
-            if self.planner_mode == "llm" and self.navigator.response is not None:
-                response = self.navigator.response
-                report = getattr(self.adapter, "last_prompt_report", None)
-                if isinstance(report, dict):
-                    report["memory_units"] = budget.count(context)
-                    report["memory_bytes"] = len(context.encode("utf-8"))
-            elif self.planner_mode == "llm" and hasattr(self.adapter, "respond_with_navigation"):
-                response = self.adapter.respond_with_navigation(text, context, self.history, self.task.state.render())
-            elif hasattr(self.adapter, "respond_with_task"):
-                response = self.adapter.respond_with_task(text, context, self.history, self.task.state.render())
-            else:
-                response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
-            exposed = self.carousel.context_report.get("node_ids", ())
-            report = getattr(self.adapter, "last_prompt_report", {})
-            if self.planner_mode != "llm" and ("memory_bytes" in report or "memory_units" in report):
-                exposed = [span["node_id"] for span in self.carousel.context_report.get("node_spans", ())
-                            if span["start"] < report.get("memory_bytes", report.get("memory_units", 0))]
-            self.carousel.mark_exposed(exposed, read_ids=self.navigator.workspace.nodes if self.planner_mode == "llm" else ())
-            trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
-            if not self.is_v1:
-                try:
-                    intent = self.adapter.interpret(text, current_subject)
-                except LanguageAdapterUnavailable:
-                    intent = None
-                if intent is not None:
-                    consolidated = self._consolidate_intent(intent)
-                    if consolidated:
-                        trace = consolidated
-            self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
-            self.history = budget.trim_history(self.history)
-            return SessionReply(response, trace)
+            return self._respond_with_model(text, current_subject)
+        return self._respond_with_rules(text, current_subject, task_changed, recalled_ids)
 
+    def _respond_with_model(self, text: str, current_subject: str | None) -> SessionReply:
+        """Generate one answer and record only the knowledge actually exposed."""
+        budget = self.carousel.prompt_budget
+        context = self._memory_context(text)
+        # Navigation may already have produced the final answer; never generate it twice.
+        if self.planner_mode == "llm" and self.navigator.response is not None:
+            response = self.navigator.response
+            report = getattr(self.adapter, "last_prompt_report", None)
+            if isinstance(report, dict):
+                report["memory_units"] = budget.count(context)
+                report["memory_bytes"] = len(context.encode("utf-8"))
+        elif self.planner_mode == "llm" and hasattr(self.adapter, "respond_with_navigation"):
+            response = self.adapter.respond_with_navigation(text, context, self.history, self.task.state.render())
+        elif hasattr(self.adapter, "respond_with_task"):
+            response = self.adapter.respond_with_task(text, context, self.history, self.task.state.render())
+        else:
+            response = self.adapter.respond(text, self.task.state.render() + "\n" + context, self.history)
+        # Byte spans describe serialized excerpts; model token counts are not byte offsets.
+        exposed = self.carousel.context_report.get("node_ids", ())
+        report = getattr(self.adapter, "last_prompt_report", {})
+        if self.planner_mode != "llm" and ("memory_bytes" in report or "memory_units" in report):
+            exposed = [span["node_id"] for span in self.carousel.context_report.get("node_spans", ())
+                        if span["start"] < report.get("memory_bytes", report.get("memory_units", 0))]
+        self.carousel.mark_exposed(exposed, read_ids=self.navigator.workspace.nodes if self.planner_mode == "llm" else ())
+        trace: tuple[int, ...] = tuple(self.carousel.vram.node_ids())
+        # Only the legacy assertion path interprets lessons after answering.
+        if not self.is_v1:
+            try:
+                intent = self.adapter.interpret(text, current_subject)
+            except LanguageAdapterUnavailable:
+                intent = None
+            if intent is not None:
+                consolidated = self._consolidate_intent(intent)
+                if consolidated:
+                    trace = consolidated
+        self.history.extend(({"role": "user", "content": text}, {"role": "assistant", "content": response}))
+        self.history = budget.trim_history(self.history)
+        return SessionReply(response, trace)
+
+    def _respond_with_rules(self, text: str, current_subject: str | None,
+                            task_changed: bool, recalled_ids: list[int]) -> SessionReply:
+        """Keep the deterministic seed/test path separate from model generation."""
+        budget = self.carousel.prompt_budget
         if task_changed:
             return SessionReply("Ho aggiornato il compito.", tuple(self.carousel.vram.node_ids()))
 
@@ -359,7 +379,9 @@ class LucaSession:
         return tuple(value for item in remembered for value in (item.subject_id, item.assertion_id, item.predicate_id, item.object_id))
 
     def _memory_context(self, text: str, intent: LanguageIntent | None = None) -> str:
+        """Render actual readings for LLM navigation, or preserve legacy context assembly."""
         self.carousel.context_report = {}
+        # Preserve per-turn readings and their full directories, even after physical eviction.
         if self.planner_mode == "llm" and self.navigator.response is not None and self.navigator.workspace.nodes:
             context = self.navigator.workspace.render(self.carousel, self.navigator.status)
             self.carousel.context_report["memory_used"] = self.navigator.expose_memory
@@ -376,6 +398,7 @@ class LucaSession:
         if self.is_v1:
             return "\n\n".join(sections) if sections else "(Nessun fatto specifico attivo in questo momento)"
 
+        # The original concept/assertion seed remains usable without the V1 node planner.
         lines: list[str] = []
         seen: set[int] = set()
         sources = [text]
