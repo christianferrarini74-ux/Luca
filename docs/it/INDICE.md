@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Confronto 2026-10-22: [modello, letture obbligatorie e multi-GPU](fase-1-sinapsi/25-modello-lettura-obbligatoria-multi-gpu.md)
+([English](../model-and-required-read.md)). Gemma E2B/Qwen 27B, 24 esecuzioni,
+movimenti fisici e token cumulativi. Configurazione principale non modificata.
+
 Indagine 2026-10-22: [autonomia di lettura e aggiornamenti](fase-1-sinapsi/24-autonomia-e-attualita-memoria.md)
 ([English](../memory-autonomy-investigation.md)). Confronto di istruzioni e
 revisione della bozza, versioni/bozze e conflitti. Nessuna promozione nel runtime.

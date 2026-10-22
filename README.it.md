@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Confronto misurato: [Qwen 27B, lettura obbligatoria e giostra in ambiente multi-GPU](docs/it/fase-1-sinapsi/25-modello-lettura-obbligatoria-multi-gpu.md).
+24 esecuzioni live: miglioramenti, limiti residui e costi per chiamata documentati.
+
 Indagine: [lettura autonoma e attualità della conoscenza](docs/it/fase-1-sinapsi/24-autonomia-e-attualita-memoria.md).
 Profili sperimentali separati; completamento autonomo non ancora affidabile.
 

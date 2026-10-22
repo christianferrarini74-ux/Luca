@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Measured comparison: [Qwen 27B, required reads and multi-GPU carousel coexistence](docs/model-and-required-read.md).
+24 live executions; larger-model gains and remaining limitations, with per-call costs.
+
 Investigation: [autonomous reading and knowledge freshness](docs/memory-autonomy-investigation.md).
 Experimental profiles remain isolated; autonomous completion is not yet reliable.
 

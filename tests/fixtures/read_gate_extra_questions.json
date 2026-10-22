@@ -1,0 +1,18 @@
+[
+  {
+    "id": "generic_revision",
+    "seed": "iris17_freshness_v1.json",
+    "question": "Che cosa significa revisione di un documento?",
+    "required_slugs": [],
+    "terms": [
+      [
+        "version",
+        "modific",
+        "aggiorn",
+        "controll",
+        "correz"
+      ]
+    ],
+    "rubric": "Give a general definition. IRIS-17 port values are not needed. This query can match revision titles; assess the cost of reading a candidate irrelevant to the general question."
+  }
+]

@@ -49,6 +49,8 @@ def run_case(config, case, seed, database, *, history=(), adapter_type=None):
                 "navigation_status": session.navigator.status,
                 "seconds": round(perf_counter() - started, 3),
                 "request": dict(adapter.last_prompt_report),
+                "requests": list(getattr(adapter, "request_observations", ())),
+                "memory_activity": session.carousel.activity.snapshot(),
                 "physical_memory": session.carousel.physical_state()}
     finally:
         session.close()
