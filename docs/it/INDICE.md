@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Biblioteca 2026-10-22: [avvio con memoria vuota e separazione degli esperimenti](fase-1-sinapsi/22-avvio-biblioteca-reale.md)
+([English](../real-library-start.md)). Nuovo database configurato, vecchia memoria
+intatta e seed sintetici conservati per i test. Richiesto riavvio ordinato.
+
 CI 2026-10-22: [controlli GitHub riproducibili](fase-1-sinapsi/21-controlli-github-actions.md)
 ([English](../github-actions-checks.md)). Ruff fissato, Actions aggiornate e test
 Python/JavaScript su Ubuntu e Windows. Nessuna nuova dipendenza applicativa.

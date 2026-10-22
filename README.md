@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Real-library workspace: [empty initial memory, synthetic examples isolated](docs/real-library-start.md).
+Exit and restart Luca to use the new database; the previous database is preserved.
+
 CI maintenance: [reproducible GitHub checks](docs/github-actions-checks.md),
 with lint and Python/JavaScript tests on explicit Ubuntu and Windows runners.
 

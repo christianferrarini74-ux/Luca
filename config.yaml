@@ -1,7 +1,7 @@
 storage:
   directory: D:/Test/Luca
-  database: luca_v1.sqlite
-  seed: seed/knowledge_base_v1.json
+  database: luca_library.sqlite
+  seed: seed/library_empty_v1.json
 
 runtime:
   bible: bible.md
@@ -30,8 +30,8 @@ runtime:
     interpretation_output_tokens: 1024
     recall_output_tokens: 1024
     search_query_characters: 2000
-  # The current seed contains deliberate counterfactual experiments.
-  memory_policy: experimental
+  # Synthetic experiments use separate seeds and disposable test databases.
+  memory_policy: grounded
   recent_window: 8
   vram_bytes: 8000000
   ram_bytes: 32000000
