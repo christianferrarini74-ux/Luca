@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Follow-up investigation: [asking Luca why it stopped reading](docs/memory-stopping-interview.md).
+Same-session self-assessment is checked against actual reading traces, not taken as causal proof.
+
 Measured comparison: [Qwen 27B, required reads and multi-GPU carousel coexistence](docs/model-and-required-read.md).
 24 live executions; larger-model gains and remaining limitations, with per-call costs.
 

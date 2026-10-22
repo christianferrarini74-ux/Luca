@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Intervista 2026-10-22: [perché Luca si ferma nella lettura](fase-1-sinapsi/26-intervista-arresto-lettura.md)
+([English](../memory-stopping-interview.md)). Domande neutra/esplicita nella
+stessa sessione; confronto fra spiegazioni, cronologia disponibile e letture reali.
+
 Confronto 2026-10-22: [modello, letture obbligatorie e multi-GPU](fase-1-sinapsi/25-modello-lettura-obbligatoria-multi-gpu.md)
 ([English](../model-and-required-read.md)). Gemma E2B/Qwen 27B, 24 esecuzioni,
 movimenti fisici e token cumulativi. Configurazione principale non modificata.

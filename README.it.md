@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Indagine successiva: [chiedere a Luca perché si è fermato](docs/it/fase-1-sinapsi/26-intervista-arresto-lettura.md).
+Autovalutazione nella stessa sessione confrontata con le letture, non assunta come prova causale.
+
 Confronto misurato: [Qwen 27B, lettura obbligatoria e giostra in ambiente multi-GPU](docs/it/fase-1-sinapsi/25-modello-lettura-obbligatoria-multi-gpu.md).
 24 esecuzioni live: miglioramenti, limiti residui e costi per chiamata documentati.
 
