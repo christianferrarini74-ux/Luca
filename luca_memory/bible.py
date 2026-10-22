@@ -1,6 +1,7 @@
 """Load the single, explicit source of model-facing instructions."""
 
 from pathlib import Path
+
 from .llm.models import LLMConfigurationError
 
 DEFAULT_BIBLE = Path(__file__).resolve().parent.parent / "bible.md"

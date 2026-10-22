@@ -1,13 +1,12 @@
 """Behavioral contract derived from the user's submarine conversation."""
 
-from pathlib import Path
 import unittest
+from pathlib import Path
 
-from luca_memory.session import LucaSession
-from luca_memory.planning import RecallPlanner
 from luca_memory.node import KnowledgeNode, save_node
+from luca_memory.planning import RecallPlanner
+from luca_memory.session import LucaSession
 from luca_memory.store import Edge, MemoryStore
-
 
 SEED = Path(__file__).parents[1] / "seed/knowledge_base_v1.json"
 

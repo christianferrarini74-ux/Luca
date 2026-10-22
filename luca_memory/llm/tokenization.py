@@ -6,16 +6,16 @@ applyPromptTemplate). Each operation closes its WebSocket deterministically.
 """
 
 import base64
-from collections import OrderedDict
 import hashlib
 import json
 import os
 import socket
 import ssl
 import struct
+import uuid
+from collections import OrderedDict
 from threading import Lock
 from urllib.parse import urlsplit
-import uuid
 
 from .models import LLMConfigurationError
 
@@ -136,7 +136,8 @@ class LMStudioTokenCounter:
                 raise ValueError("Tokenizer RPC failed")
             result = response["result"]
             if not isinstance(result, dict):
-                raise ValueError("Invalid tokenizer RPC result")
+                # Preserve the existing ValueError contract used by validation callers.
+                raise ValueError("Invalid tokenizer RPC result")  # noqa: TRY004
             return result
         except (OSError, ValueError, KeyError, TypeError) as error:
             raise LLMConfigurationError("Conteggio token LM Studio non disponibile; nessuna stima in byte viene usata al suo posto.") from error

@@ -1,9 +1,9 @@
 """Behavioral freedom, explicit protocols and bounded multi-node readings."""
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from luca_memory.adapters import LMStudioAdapter
@@ -11,10 +11,10 @@ from luca_memory.bible import read_bible
 from luca_memory.budget import PromptBudget
 from luca_memory.llm.models import LLMConfigurationError
 from luca_memory.navigation_schema import navigation_schema
+from luca_memory.node import KnowledgeNode
 from luca_memory.reading_workspace import ReadingWorkspace
 from luca_memory.session import LucaSession
 from luca_memory.store import MemoryStore
-from luca_memory.node import KnowledgeNode
 from luca_memory.synaptic import Directory, DirectoryEntry, SynapticMemory
 from luca_memory.synaptic_settings import SynapticSettings
 

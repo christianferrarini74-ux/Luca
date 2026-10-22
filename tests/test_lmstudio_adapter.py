@@ -1,5 +1,6 @@
 import json
 import unittest
+from typing import Self
 from unittest.mock import patch
 
 from luca_memory import LMStudioAdapter
@@ -9,7 +10,7 @@ class FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
-    def __enter__(self) -> "FakeResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -25,9 +26,11 @@ class LMStudioAdapterTests(unittest.TestCase):
         response = {"choices": [{"finish_reason": "length", "message": {
             "content": "", "reasoning_content": "Unfinished reasoning"}}]}
         adapter = LMStudioAdapter()
-        with patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)):
-            with self.assertRaisesRegex(LLMConfigurationError, "max_tokens"):
-                adapter.connector.create_chat_model().complete([], response_format={"type": "json_schema"}, max_tokens=160)
+        with (
+            patch("luca_memory.llm.providers.urlopen", return_value=FakeResponse(response)),
+            self.assertRaisesRegex(LLMConfigurationError, "max_tokens"),
+        ):
+            adapter.connector.create_chat_model().complete([], response_format={"type": "json_schema"}, max_tokens=160)
 
     def test_uses_local_endpoint_and_validates_a_lesson(self) -> None:
         response = {

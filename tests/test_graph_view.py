@@ -2,9 +2,9 @@
 
 import json
 import os
-from pathlib import Path
 import threading
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import urlopen

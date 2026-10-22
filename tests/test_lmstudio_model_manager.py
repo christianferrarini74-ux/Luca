@@ -1,5 +1,6 @@
 import json
 import unittest
+from typing import Self
 from unittest.mock import patch
 
 from luca_memory import LLMConfigurationError, LMStudioModelManager
@@ -11,7 +12,7 @@ class FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
-    def __enter__(self) -> "FakeResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -53,12 +54,14 @@ class LMStudioModelManagerTests(unittest.TestCase):
 
     def test_reports_available_models_when_the_configured_model_is_missing(self) -> None:
         manager = LMStudioModelManager("http://127.0.0.1:1234")
-        with patch(
-            "luca_memory.llm.lmstudio.urlopen",
-            return_value=FakeResponse({"models": [{"key": "other/model", "loaded_instances": []}]}),
+        with (
+            patch(
+                "luca_memory.llm.lmstudio.urlopen",
+                return_value=FakeResponse({"models": [{"key": "other/model", "loaded_instances": []}]}),
+            ),
+            self.assertRaisesRegex(LLMConfigurationError, "other/model"),
         ):
-            with self.assertRaisesRegex(LLMConfigurationError, "other/model"):
-                manager.ensure_loaded("google/gemma")
+            manager.ensure_loaded("google/gemma")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
-from pathlib import Path
+import json
 import threading
 import unittest
-import json
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 from luca_memory.api import LucaRuntime, create_server

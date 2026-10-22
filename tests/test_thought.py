@@ -1,6 +1,13 @@
 import unittest
 
-from luca_memory import Cell, Edge, MemoryStore, ThoughtBudget, ThoughtEngine, ThoughtRequest
+from luca_memory import (
+    Cell,
+    Edge,
+    MemoryStore,
+    ThoughtBudget,
+    ThoughtEngine,
+    ThoughtRequest,
+)
 
 
 class ThoughtEngineTests(unittest.TestCase):

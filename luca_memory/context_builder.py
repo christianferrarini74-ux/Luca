@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from .budget import clip, units
 from .node import KnowledgeNode, load_node
 from .tiers.carousel import SynapticCarousel
-from .budget import clip, units
 
 
 def active_vram_component_ids(carousel: SynapticCarousel) -> set[int]:

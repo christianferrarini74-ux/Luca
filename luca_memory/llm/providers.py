@@ -55,7 +55,7 @@ class _HTTPChatModel:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.profile.timeout_seconds) as response:  # noqa: S310
+            with urlopen(request, timeout=self.profile.timeout_seconds) as response:
                 decoded = json.loads(response.read().decode("utf-8"))
             if not isinstance(decoded, dict):
                 raise LLMConfigurationError("The provider returned an invalid response object.")
@@ -143,11 +143,11 @@ class _OllamaChatModel:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.profile.timeout_seconds) as response:  # noqa: S310
+            with urlopen(request, timeout=self.profile.timeout_seconds) as response:
                 decoded = json.loads(response.read().decode("utf-8"))
             return decoded["message"]["content"]
         except (HTTPError, URLError, OSError, json.JSONDecodeError, KeyError, TypeError) as error:
-            raise LLMConfigurationError(f"Ollama non ha restituito una risposta valida.") from error
+            raise LLMConfigurationError("Ollama non ha restituito una risposta valida.") from error
 
 
 REMOTE_PROVIDER_KINDS = {"xai", "mistral", "deepseek", "qwen", "moonshot", "zhipu"}

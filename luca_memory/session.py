@@ -2,28 +2,28 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import json
 import re
+from dataclasses import dataclass
+from pathlib import Path
 
 from .adapters import LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
+from .budget import PromptBudget
 from .context_builder import active_vram_component_ids, build_vram_context
 from .curriculum import Curriculum, cell_payload, curriculum_from_file, load_curriculum
 from .language import ItalianSeedInterface
 from .memory import MemoryEditor
+from .navigation import MemoryNavigator, answer_context
 from .node import load_node
+from .planning import RecallPlan, RecallPlanner
 from .protocol import EvidenceBundle, LanguageIntent
-from .planning import RecallPlanner, RecallPlan
-from .budget import PromptBudget
-from .task_state import TaskMemory
 from .search import MemorySearch
 from .seed_v1 import ensure_knowledge_seed, is_v1_seed, knowledge_seed_from_file
 from .store import MemoryStore
-from .tiers import SynapticCarousel
-from .navigation import MemoryNavigator, answer_context
-from .synaptic_settings import SynapticSettings
 from .synaptic import serialized
+from .synaptic_settings import SynapticSettings
+from .task_state import TaskMemory
+from .tiers import SynapticCarousel
 
 _STOPWORDS = {
     "a", "ad", "al", "alla", "alle", "altri", "altro", "anche", "argomento", "avere",
@@ -115,7 +115,7 @@ class LucaSession:
         search_policy: str = "fast",
         planner_mode: str = "hybrid",
         memory_settings: dict | None = None,
-    ) -> "LucaSession":
+    ) -> LucaSession:
         # Seed migration and session construction share ownership of this one connection.
         store = MemoryStore(database)
         seed_file = Path(seed_path)

@@ -7,9 +7,9 @@ import struct
 import unittest
 from unittest.mock import patch
 
-from luca_memory.llm.tokenization import _RPCSocket, LMStudioTokenCounter
 from luca_memory.llm.lmstudio import LMStudioModelManager
 from luca_memory.llm.models import LLMConfigurationError
+from luca_memory.llm.tokenization import LMStudioTokenCounter, _RPCSocket
 
 
 def frame(body, opcode=1, final=True):
@@ -61,16 +61,20 @@ class TokenTransportTests(unittest.TestCase):
     def test_authentication_failure_does_not_fall_back_or_leak(self):
         fake = FakeSocket(frame({"success": False}))
         counter = LMStudioTokenCounter(LMStudioModelManager("http://localhost:1234"), "model")
-        with patch("luca_memory.llm.tokenization.socket.create_connection", return_value=fake):
-            with self.assertRaises(LLMConfigurationError):
-                counter.count("Ciao")
+        with (
+            patch("luca_memory.llm.tokenization.socket.create_connection", return_value=fake),
+            self.assertRaises(LLMConfigurationError),
+        ):
+            counter.count("Ciao")
         self.assertTrue(fake.closed)
 
     def test_invalid_handshake_closes_socket(self):
         fake = FakeSocket(valid_handshake=False)
-        with patch("luca_memory.llm.tokenization.socket.create_connection", return_value=fake):
-            with self.assertRaises(ValueError):
-                _RPCSocket("http://localhost:1234", 2)
+        with (
+            patch("luca_memory.llm.tokenization.socket.create_connection", return_value=fake),
+            self.assertRaises(ValueError),
+        ):
+            _RPCSocket("http://localhost:1234", 2)
         self.assertTrue(fake.closed)
 
     def test_fragmented_message_with_interleaved_ping(self):

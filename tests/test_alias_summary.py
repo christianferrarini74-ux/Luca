@@ -1,11 +1,11 @@
 """Materialized alias usage must match the original incident-edge aggregation."""
 
 import os
-from pathlib import Path
 import random
 import sqlite3
 import tempfile
 import unittest
+from pathlib import Path
 
 from luca_memory.store import Cell, Edge, MemoryStore
 
@@ -69,10 +69,9 @@ class AliasSummaryTests(unittest.TestCase):
         self.assert_summaries()
         self.assertEqual(self.store.out_degree(1), 1)
         self.assertEqual(self.store.in_degree(1), 1)
-        with self.assertRaisesRegex(RuntimeError, "rollback"):
-            with self.store.transaction():
-                self.store.touch_edge(1, 1, 20)
-                raise RuntimeError("rollback")
+        with self.assertRaisesRegex(RuntimeError, "rollback"), self.store.transaction():
+            self.store.touch_edge(1, 1, 20)
+            raise RuntimeError("rollback")
         self.assert_summaries()
         with self.store.transaction():
             self.store.remove_edge(1, 1)
@@ -94,9 +93,8 @@ class AliasSummaryTests(unittest.TestCase):
     def test_edge_addresses_cannot_change_in_place(self):
         with self.store.transaction():
             self.store.add_edge(Edge(1, 2))
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
-            with self.store.transaction():
-                self.store.connection.execute("UPDATE edges SET target_id=3 WHERE source_id=1")
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"), self.store.transaction():
+            self.store.connection.execute("UPDATE edges SET target_id=3 WHERE source_id=1")
         self.assert_summaries()
 
     def test_old_schemas_migrate_and_reopen_without_double_counting(self):

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import json
 import re
 import time
 import unicodedata
+from dataclasses import dataclass, replace
 
 from .store import Cell, MemoryStore
 
@@ -52,12 +52,12 @@ class KnowledgeNode:
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return Cell(id=self.id, content=encoded, created_at=created)
 
-    def with_recall(self, timestamp: int | None = None) -> "KnowledgeNode":
+    def with_recall(self, timestamp: int | None = None) -> KnowledgeNode:
         now = int(time.time()) if timestamp is None else timestamp
         return replace(self, last_recalled_at=now, recall_count=self.recall_count + 1)
 
     @classmethod
-    def from_cell(cls, cell: Cell) -> "KnowledgeNode":
+    def from_cell(cls, cell: Cell) -> KnowledgeNode:
         try:
             payload = json.loads(cell.content)
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError):

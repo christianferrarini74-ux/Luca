@@ -1,68 +1,91 @@
 """Persistent cell-and-edge memory primitives for the Luca experiments."""
 
-from .store import Cell, Edge, MemoryStore
-from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest, ThoughtResult
+from .adapters import (
+    ConversationAdapter,
+    LanguageAdapter,
+    LanguageAdapterUnavailable,
+    LMStudioAdapter,
+    RuleAdapter,
+)
+from .context_builder import build_vram_context
 from .curriculum import Curriculum, curriculum_from_file, load_curriculum
 from .language import Answer, ItalianSeedInterface
+from .llm import (
+    LLMCapabilities,
+    LLMConfigurationError,
+    LLMConnector,
+    LLMProfile,
+    LMStudioModelManager,
+)
+from .maintenance import IdleMaintenance, MaintenancePlan, MemoryMaintenance
 from .memory import MemoryEditor, RememberedAssertion
-from .session import LucaSession, SessionReply
-from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
-from .adapters import ConversationAdapter, LMStudioAdapter, LanguageAdapter, LanguageAdapterUnavailable, RuleAdapter
-from .llm import LLMCapabilities, LLMConfigurationError, LLMConnector, LLMProfile, LMStudioModelManager
-from .search import AssertionSearchResult, CellSearchResult, MemorySearch
 from .node import KnowledgeNode, load_node, save_node
-from .tiers import GraphView, RecallEvent, SynapticCarousel, TierSlot
-from .seed_v1 import KnowledgeSeed, is_v1_seed, knowledge_seed_from_file, load_knowledge_seed
-from .context_builder import build_vram_context
-from .synaptic import SynapticMemory, Directory, DirectoryEntry, StaleRevision
+from .protocol import EvidenceBundle, LanguageIntent, MemoryProposal
+from .search import AssertionSearchResult, CellSearchResult, MemorySearch
+from .seed_v1 import (
+    KnowledgeSeed,
+    is_v1_seed,
+    knowledge_seed_from_file,
+    load_knowledge_seed,
+)
+from .session import LucaSession, SessionReply
+from .store import Cell, Edge, MemoryStore
+from .synaptic import Directory, DirectoryEntry, StaleRevision, SynapticMemory
 from .synaptic_settings import SynapticSettings
-from .maintenance import MemoryMaintenance, MaintenancePlan, IdleMaintenance
+from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest, ThoughtResult
+from .tiers import GraphView, RecallEvent, SynapticCarousel, TierSlot
 
 __all__ = [
-    "SynapticMemory", "Directory", "DirectoryEntry", "StaleRevision",
-    "SynapticSettings", "MemoryMaintenance", "MaintenancePlan", "IdleMaintenance",
-    "Cell",
-    "Edge",
-    "MemoryStore",
-    "ThoughtBudget",
-    "ThoughtEngine",
-    "ThoughtRequest",
-    "ThoughtResult",
-    "Curriculum",
-    "load_curriculum",
-    "curriculum_from_file",
     "Answer",
-    "ItalianSeedInterface",
-    "MemoryEditor",
-    "RememberedAssertion",
-    "LucaSession",
-    "SessionReply",
-    "EvidenceBundle",
-    "LanguageIntent",
-    "MemoryProposal",
-    "LanguageAdapter",
+    "AssertionSearchResult",
+    "Cell",
+    "CellSearchResult",
     "ConversationAdapter",
-    "LanguageAdapterUnavailable",
-    "LMStudioAdapter",
-    "RuleAdapter",
+    "Curriculum",
+    "Directory",
+    "DirectoryEntry",
+    "Edge",
+    "EvidenceBundle",
+    "GraphView",
+    "IdleMaintenance",
+    "ItalianSeedInterface",
+    "KnowledgeNode",
+    "KnowledgeSeed",
     "LLMCapabilities",
     "LLMConfigurationError",
     "LLMConnector",
     "LLMProfile",
+    "LMStudioAdapter",
     "LMStudioModelManager",
-    "AssertionSearchResult",
-    "CellSearchResult",
+    "LanguageAdapter",
+    "LanguageAdapterUnavailable",
+    "LanguageIntent",
+    "LucaSession",
+    "MaintenancePlan",
+    "MemoryEditor",
+    "MemoryMaintenance",
+    "MemoryProposal",
     "MemorySearch",
-    "KnowledgeNode",
-    "load_node",
-    "save_node",
-    "GraphView",
+    "MemoryStore",
     "RecallEvent",
+    "RememberedAssertion",
+    "RuleAdapter",
+    "SessionReply",
+    "StaleRevision",
     "SynapticCarousel",
+    "SynapticMemory",
+    "SynapticSettings",
+    "ThoughtBudget",
+    "ThoughtEngine",
+    "ThoughtRequest",
+    "ThoughtResult",
     "TierSlot",
-    "KnowledgeSeed",
+    "build_vram_context",
+    "curriculum_from_file",
     "is_v1_seed",
     "knowledge_seed_from_file",
+    "load_curriculum",
     "load_knowledge_seed",
-    "build_vram_context",
+    "load_node",
+    "save_node",
 ]

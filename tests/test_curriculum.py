@@ -1,7 +1,14 @@
-from pathlib import Path
 import unittest
+from pathlib import Path
 
-from luca_memory import ItalianSeedInterface, MemoryStore, ThoughtBudget, ThoughtEngine, ThoughtRequest, load_curriculum
+from luca_memory import (
+    ItalianSeedInterface,
+    MemoryStore,
+    ThoughtBudget,
+    ThoughtEngine,
+    ThoughtRequest,
+    load_curriculum,
+)
 
 
 class CurriculumTests(unittest.TestCase):

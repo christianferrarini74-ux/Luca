@@ -1,8 +1,8 @@
 """Explicit, bounded task continuity independent of the active knowledge cluster."""
 
-from dataclasses import asdict, dataclass, field
 import json
 import re
+from dataclasses import asdict, dataclass, field
 
 from .budget import units
 from .node import normalise_key
@@ -75,7 +75,7 @@ class TaskMemory:
         self._save(state)
 
     def apply_text(self, text: str, focus: int | None) -> bool:
-        match = re.fullmatch(r"\s*(obiettivo|nuovo compito|vincolo|decisione)\s*:\s*(.+)\s*", text, re.I | re.S)
+        match = re.fullmatch(r"\s*(obiettivo|nuovo compito|vincolo|decisione)\s*:\s*(.+)\s*", text, re.IGNORECASE | re.DOTALL)
         if not match:
             return False
         kind, value = match.groups()

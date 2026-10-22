@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import sqlite3
+import threading
+import time
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-import json
 from pathlib import Path
-import sqlite3
-import time
-import threading
-from typing import Iterable, Iterator, Literal
+from typing import Literal, Self
 
 
 # Immutable values shared by storage queries and recall callers.
@@ -107,7 +108,7 @@ class ConvergenceResult:
         """Backward-compatible alias for `estimated_seed_edges`."""
         return self.estimated_seed_edges
 
-    def with_recall_outcome(self, opened_ids: Iterable[int], recall_ms: float) -> "ConvergenceResult":
+    def with_recall_outcome(self, opened_ids: Iterable[int], recall_ms: float) -> ConvergenceResult:
         """Return a copy annotated with the candidate IDs actually opened in VRAM and total recall time."""
         return replace(
             self,
@@ -150,7 +151,7 @@ class MemoryStore:
     def close(self) -> None:
         self.connection.close()
 
-    def __enter__(self) -> "MemoryStore":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -932,8 +933,8 @@ class MemoryStore:
         self.connection.commit()
 
     def _index_cell_for_search(self, cell: Cell) -> None:
-        from .node import KnowledgeNode
         from .entry_index import index_entry
+        from .node import KnowledgeNode
         node = KnowledgeNode.from_cell(cell)
         title = node.title
         self.connection.execute("INSERT INTO node_catalog VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET title=excluded.title", (cell.id, title))

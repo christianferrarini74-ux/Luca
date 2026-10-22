@@ -1,9 +1,9 @@
 """Exercise the complete synaptic dashboard contract over local HTTP."""
 
 import json
-from pathlib import Path
 import threading
 import unittest
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 

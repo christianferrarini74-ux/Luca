@@ -1,8 +1,8 @@
 """Behavioral contracts around the simplified turn and reading serializers."""
 
 import json
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 from luca_memory.adapters import RuleAdapter
 from luca_memory.budget import PromptBudget

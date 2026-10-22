@@ -85,9 +85,9 @@ def ensure_synaptic_schema(store):
                 END;
             """)
     # Populate only missing metadata, once per legacy node; no durable content is rewritten.
+    from .entry_index import ensure_entry_index, index_entry
     from .node import KnowledgeNode, normalise_key
     from .store import Cell
-    from .entry_index import ensure_entry_index, index_entry
     ensure_entry_index(store)
     rows = db.execute("""SELECT c.* FROM cells c LEFT JOIN node_catalog n ON n.node_id=c.id
                          WHERE n.node_id IS NULL""")

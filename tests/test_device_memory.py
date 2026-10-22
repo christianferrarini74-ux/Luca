@@ -1,18 +1,18 @@
 """Deterministic failure tests and explicitly enabled hardware integration tests."""
 
-from dataclasses import replace
-from pathlib import Path
 import os
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
 from luca_memory.node import KnowledgeNode, KnowledgeSection, load_node, save_node
 from luca_memory.store import Edge, MemoryStore
 from luca_memory.tiers import SynapticCarousel
 from luca_memory.tiers.cuda import CudaMemory, DeviceMemoryError
-from luca_memory.tiers.device_slot import DeviceSlot, encode_node, decode_node
+from luca_memory.tiers.device_slot import DeviceSlot, decode_node, encode_node
 
 
 class FakeDevice:
@@ -103,7 +103,10 @@ class DeviceSlotTests(unittest.TestCase):
         self.assertEqual(len(self.memory.buffers), 2)
 
     def test_component_traversal_never_reads_payload_and_prompt_reads_open_nodes_only(self):
-        from luca_memory.context_builder import active_vram_component_ids, build_vram_context
+        from luca_memory.context_builder import (
+            active_vram_component_ids,
+            build_vram_context,
+        )
         with MemoryStore(":memory:") as store:
             carousel = SynapticCarousel(store)
             carousel.vram.close()
@@ -147,10 +150,12 @@ class DeviceSlotTests(unittest.TestCase):
             carousel.close()
 
     def test_missing_driver_does_not_construct_a_host_slot(self):
-        with MemoryStore(":memory:") as store:
-            with patch("luca_memory.tiers.device_slot.CudaMemory", side_effect=DeviceMemoryError("No driver")):
-                with self.assertRaises(DeviceMemoryError):
-                    SynapticCarousel(store, memory_backend="cuda")
+        with (
+            MemoryStore(":memory:") as store,
+            patch("luca_memory.tiers.device_slot.CudaMemory", side_effect=DeviceMemoryError("No driver")),
+            self.assertRaises(DeviceMemoryError),
+        ):
+            SynapticCarousel(store, memory_backend="cuda")
 
     def test_ram_copy_survives_failed_device_promotion(self):
         with MemoryStore(":memory:") as store:
@@ -179,30 +184,33 @@ class PhysicalCudaTests(unittest.TestCase):
         from luca_memory.synaptic import SynapticMemory
         root = Path(os.getenv("LUCA_TEST_DIRECTORY", "D:/Test/Luca"))
         root.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="hardware-revision-", dir=root) as directory:
-            with MemoryStore(Path(directory) / "synthetic.sqlite") as store:
-                memory = SynapticMemory(store)
-                memory.update_node(KnowledgeNode(1, "synthetic", "Before", "Original content"))
-                carousel = SynapticCarousel(store, vram_capacity=1, memory_backend="cuda",
-                    gpu_device=int(os.getenv("LUCA_TEST_GPU", "1")))
-                gpu = carousel.vram.memory
-                try:
-                    carousel.recall(1)
-                    self.assertEqual(carousel.vram.get(1).content, "Original content")
-                    memory.update_node(KnowledgeNode(1, "synthetic", "After", "Updated content è 🧠"))
-                    self.assertIsNone(carousel.vram.get(1))
-                    self.assertEqual(carousel.physical_state()["allocations"], 0)
-                    carousel.recall(1)
-                    self.assertEqual(carousel.vram.get(1).content, "Updated content è 🧠")
-                    self.assertEqual(carousel.vram.get(1).title, "After")
-                finally:
-                    carousel.close()
-                self.assertTrue(gpu.closed)
-                self.assertEqual(gpu._buffers, {})
+        with (
+            tempfile.TemporaryDirectory(prefix="hardware-revision-", dir=root) as directory,
+            MemoryStore(Path(directory) / "synthetic.sqlite") as store,
+        ):
+            memory = SynapticMemory(store)
+            memory.update_node(KnowledgeNode(1, "synthetic", "Before", "Original content"))
+            carousel = SynapticCarousel(store, vram_capacity=1, memory_backend="cuda",
+                gpu_device=int(os.getenv("LUCA_TEST_GPU", "1")))
+            gpu = carousel.vram.memory
+            try:
+                carousel.recall(1)
+                self.assertEqual(carousel.vram.get(1).content, "Original content")
+                memory.update_node(KnowledgeNode(1, "synthetic", "After", "Updated content è 🧠"))
+                self.assertIsNone(carousel.vram.get(1))
+                self.assertEqual(carousel.physical_state()["allocations"], 0)
+                carousel.recall(1)
+                self.assertEqual(carousel.vram.get(1).content, "Updated content è 🧠")
+                self.assertEqual(carousel.vram.get(1).title, "After")
+            finally:
+                carousel.close()
+            self.assertTrue(gpu.closed)
+            self.assertEqual(gpu._buffers, {})
 
     def test_http_worker_reset_and_shutdown_release_context_and_buffers(self):
-        from urllib.request import Request, urlopen
         import json
+        from urllib.request import Request, urlopen
+
         from luca_memory.api import create_server
         root = Path(os.getenv("LUCA_TEST_DIRECTORY", "D:/Test/Luca"))
         root.mkdir(parents=True, exist_ok=True)
@@ -276,7 +284,7 @@ class PhysicalCudaTests(unittest.TestCase):
                     def worker():
                         try:
                             self.assertEqual(carousel.vram.get(2).content, nodes[1].content)
-                        except BaseException as error:
+                        except BaseException as error:  # noqa: BLE001 - Collect every worker failure for assertion in the main thread.
                             errors.append(error)
                     thread = threading.Thread(target=worker)
                     thread.start()

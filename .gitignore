@@ -5,6 +5,7 @@ __pycache__/
 *.sqlite-wal
 tests/*-runtime.sqlite
 .venv/
+.ruff_cache/
 luca_memory.egg-info/
 # Preserve local artifacts from the retired frontend without tracking them.
 /gui/

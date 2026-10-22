@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
 import time
+from dataclasses import dataclass
+from pathlib import Path
 
 from .node import KnowledgeNode, KnowledgeSection, save_node
 from .store import Edge, MemoryStore
@@ -33,7 +33,8 @@ def is_v1_seed(path: str | Path) -> bool:
 def _seed_metadata(document: dict) -> KnowledgeSeed:
     """Identify the seed's ID mapping and topology, not mutable personal content."""
     if not isinstance(document, dict) or not isinstance(document.get("nodes"), list) or not isinstance(document.get("edges", []), list):
-        raise ValueError("A knowledge seed must contain node and edge lists.")
+        # Preserve the existing ValueError contract used by validation callers.
+        raise ValueError("A knowledge seed must contain node and edge lists.")  # noqa: TRY004
     raw_nodes = document.get("nodes", [])
     if any(not isinstance(item, dict) or "slug" not in item for item in raw_nodes):
         raise ValueError("Every seed node must contain a slug.")

@@ -1,17 +1,17 @@
 """Index hints are metadata only; the model remains responsible for opening nodes."""
 
+import unittest
 from dataclasses import replace
 from pathlib import Path
-import unittest
 from unittest.mock import patch
 
+from luca_memory.budget import PromptBudget, units
+from luca_memory.navigation import MemoryNavigator
 from luca_memory.node import KnowledgeNode, load_node
 from luca_memory.seed_v1 import load_knowledge_seed
 from luca_memory.store import MemoryStore
 from luca_memory.synaptic import SynapticMemory
 from luca_memory.tiers import SynapticCarousel
-from luca_memory.navigation import MemoryNavigator
-from luca_memory.budget import PromptBudget, units
 
 
 class EntryCueTests(unittest.TestCase):
@@ -35,9 +35,11 @@ class EntryCueTests(unittest.TestCase):
     def test_rename_and_failed_update_keep_entry_index_atomic(self):
         self.memory.update_node(KnowledgeNode(1, "a", "Old quartz heading", "Body"))
         node = load_node(self.store, 1)
-        with patch.object(self.memory, "_event", side_effect=RuntimeError("Injected failure")):
-            with self.assertRaises(RuntimeError):
-                self.memory.update_node(replace(node, title="New zircon heading"))
+        with (
+            patch.object(self.memory, "_event", side_effect=RuntimeError("Injected failure")),
+            self.assertRaises(RuntimeError),
+        ):
+            self.memory.update_node(replace(node, title="New zircon heading"))
         self.assertEqual(self.memory.entry_candidates("zircon"), ())
         self.assertEqual(self.memory.entry_candidates("quartz")[0].id, 1)
         self.memory.update_node(replace(node, title="New zircon heading"))

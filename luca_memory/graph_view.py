@@ -5,7 +5,8 @@ def graph_settings(frontend):
     """Validate display limits independently of memory/navigation budgets."""
     settings = frontend.get("graph", {})
     if not isinstance(settings, dict):
-        raise ValueError("frontend.graph must be a mapping.")
+        # Preserve the existing ValueError contract used by validation callers.
+        raise ValueError("frontend.graph must be a mapping.")  # noqa: TRY004
     result = {}
     for key, default, maximum in (("node_limit", 500, 2000), ("edge_limit", 2000, 10000)):
         value = settings.get(key, default)

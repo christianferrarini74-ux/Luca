@@ -1,9 +1,9 @@
 """LRU node payloads resident in device memory, not mirrored in a host cache."""
 
-from collections import OrderedDict
-from dataclasses import asdict
 import hashlib
 import json
+from collections import OrderedDict
+from dataclasses import asdict
 
 from ..node import KnowledgeNode, KnowledgeSection
 from .cuda import CudaMemory, DeviceMemoryError

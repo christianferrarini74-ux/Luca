@@ -1,8 +1,9 @@
 """Verify actual traversal, bounded recent activity and index-free usage updates."""
 
 import unittest
-from luca_memory.node import KnowledgeNode, save_node, load_node
-from luca_memory.store import MemoryStore, Edge
+
+from luca_memory.node import KnowledgeNode, load_node, save_node
+from luca_memory.store import Edge, MemoryStore
 from luca_memory.tiers import SynapticCarousel
 
 

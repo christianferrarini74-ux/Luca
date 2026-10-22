@@ -1,15 +1,15 @@
 """Opt-in real-model validation using only a disposable synthetic memory."""
 
 import argparse
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import tempfile
 import time
+from datetime import UTC, datetime
+from pathlib import Path
 
 from .adapters import LMStudioAdapter
 from .config import load_config
-from .maintenance import MemoryMaintenance, IdleMaintenance
+from .maintenance import IdleMaintenance, MemoryMaintenance
 from .node import KnowledgeNode
 from .session import LucaSession
 
@@ -59,7 +59,7 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     fixture = Path(__file__).resolve().parents[1] / "seed/phase11_validation.json"
     report = {"model": adapter.model, "backend": settings.get("memory_backend"),
-              "started_utc": datetime.now(timezone.utc).isoformat(), "checks": [], "turns": []}
+              "started_utc": datetime.now(UTC).isoformat(), "checks": [], "turns": []}
     report_path = root / ("phase11-live-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
     try:
         with tempfile.TemporaryDirectory(prefix="phase11-live-", dir=root) as temporary:
@@ -106,7 +106,8 @@ def main():
                                 "read_ids": list(session.navigator.workspace.nodes),
                                 "trace": session.navigator.trace, "choices": choices,
                                 "seconds": round(time.perf_counter() - started, 3)}
-                    except Exception as error:
+                    # Record diagnostic failures while allowing cleanup and the remaining checks.
+                    except Exception as error:  # noqa: BLE001
                         turn = {"name": name, "passed": False, "error": str(error)}
                     report["turns"].append(turn)
                     report["checks"].append({"name": name, "passed": turn["passed"]})
@@ -132,7 +133,8 @@ def main():
                         "source_categories": sorted({("Botanica", "Geologia", "Astronomia")[(nid - 101) // 17]
                                                      for nid in group["members"]})} for group in groups]
                     report["checks"].append({"name": "llm_grouping_and_restore", "passed": passed})
-                except Exception as error:
+                # Record diagnostic failures while allowing cleanup and the remaining checks.
+                except Exception as error:  # noqa: BLE001
                     report["maintenance"] = {"error": str(error)}
                     report["checks"].append({"name": "llm_grouping_and_restore", "passed": False})
                 try:
@@ -146,7 +148,8 @@ def main():
                         "restored": memory.directory(100).external_degree, "error": sleep.last_error,
                         "accelerated_idle_clock": True}
                     report["checks"].append({"name": "llm_idle_grouping", "passed": passed})
-                except Exception as error:
+                # Record diagnostic failures while allowing cleanup and the remaining checks.
+                except Exception as error:  # noqa: BLE001
                     report["idle_maintenance"] = {"error": str(error)}
                     report["checks"].append({"name": "llm_idle_grouping", "passed": False})
                 report["physical_memory"] = session.carousel.physical_state()

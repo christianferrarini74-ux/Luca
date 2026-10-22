@@ -2,11 +2,11 @@
 
 import json
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from luca_memory.node import KnowledgeNode, save_node, load_node
+from luca_memory.node import KnowledgeNode, load_node, save_node
 from luca_memory.seed_v1 import ensure_knowledge_seed, knowledge_seed_from_file
 from luca_memory.session import LucaSession
 from luca_memory.store import MemoryStore

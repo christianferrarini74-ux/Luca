@@ -1,15 +1,15 @@
 """Directional regrouping, confirmation, stale plans and lossless route restoration."""
 
-from dataclasses import replace
-from pathlib import Path
 import tempfile
 import unittest
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
-from luca_memory.maintenance import MemoryMaintenance, IdleMaintenance
+from luca_memory.maintenance import IdleMaintenance, MemoryMaintenance
 from luca_memory.node import KnowledgeNode, load_node
 from luca_memory.store import MemoryStore
-from luca_memory.synaptic import SynapticMemory, StaleRevision
+from luca_memory.synaptic import StaleRevision, SynapticMemory
 from luca_memory.synaptic_settings import SynapticSettings
 
 
@@ -91,9 +91,11 @@ class MaintenanceTests(unittest.TestCase):
 
     def test_failed_batch_rolls_back_every_node_edge_index_and_revision(self):
         before = self.store.revision
-        with patch.object(self.memory, "_event", side_effect=RuntimeError("Injected failure")):
-            with self.assertRaises(RuntimeError):
-                self.maintenance.apply(self.maintenance.plan(1, self.groups), confirmed=True)
+        with (
+            patch.object(self.memory, "_event", side_effect=RuntimeError("Injected failure")),
+            self.assertRaises(RuntimeError),
+        ):
+            self.maintenance.apply(self.maintenance.plan(1, self.groups), confirmed=True)
         self.assertEqual(self.store.revision, before)
         self.assertEqual(self.store.cell_count(), 10)
         self.assertEqual(self.memory.directory(1).external_degree, 7)
@@ -151,7 +153,6 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(self.memory.directory(1).external_degree, 7)
 
     def test_owned_sleep_worker_stops_cleanly(self):
-        import threading
         class Adapter:
             def propose_groups(adapter, directory, settings):
                 return self.groups

@@ -1,6 +1,6 @@
 import json
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 from luca_memory import Cell, MemorySearch, MemoryStore, ThoughtBudget, load_curriculum
 

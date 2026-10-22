@@ -1,15 +1,15 @@
 """Replay the reported dialogue against an isolated copy of the configured seed."""
 
 import argparse
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import tempfile
+from datetime import UTC, datetime
+from pathlib import Path
 
 from .config import load_config
 from .live_memory_check import ObservedAdapter
-from .session import LucaSession
 from .seed_v1 import knowledge_seed_from_file
+from .session import LucaSession
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     report_path = storage / ("dialogue-live-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
     seed = config["storage"]["seed"]
     expected_id = knowledge_seed_from_file(seed).id_for("famiglia_topi")
-    report = {"model": adapter.model, "started_utc": datetime.now(timezone.utc).isoformat(),
+    report = {"model": adapter.model, "started_utc": datetime.now(UTC).isoformat(),
               "note": "Lexical regression checks, not certification of biological facts.", "turns": []}
     cases = [
         ("recall_entry", "Hai mai sentito parlare dei topi intagliatori di formaggio?", "memory"),
@@ -67,7 +67,8 @@ def main():
                         turn["style_warnings"] = [word for word in (
                             "fornit", "ricevut", "racconto", "narrazion", "metafor", "si dice")
                             if kind == "memory" and word in text]
-                    except Exception as error:
+                    # Record diagnostic failures in the report and continue cleanup/remaining checks.
+                    except Exception as error:  # noqa: BLE001
                         turn = {"name": name, "question": question, "passed": False, "error": str(error)}
                     report["turns"].append(turn)
                     print(json.dumps(turn, ensure_ascii=True), flush=True)

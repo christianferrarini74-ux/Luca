@@ -1,12 +1,12 @@
 """Bounded LLM-led navigation over complete directories, not semantic Core rules."""
 
-from dataclasses import asdict
 import json
+from dataclasses import asdict
 
 from .budget import units
 from .node import load_node
-from .synaptic import StaleRevision, serialized
 from .reading_workspace import ReadingWorkspace
+from .synaptic import StaleRevision, serialized
 
 
 def focus_context(carousel, *, structured=False) -> str | dict:

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
+from dataclasses import dataclass
 
 from .store import Cell, Edge, MemoryStore
 from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest, ThoughtResult

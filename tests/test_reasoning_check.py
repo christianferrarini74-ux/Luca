@@ -1,6 +1,7 @@
 """The integration replay must test actual reads, not merely recognized titles."""
 
 import unittest
+
 from luca_memory.reasoning_check import INTEGRATION_CASES, assess
 
 

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import yaml
-from .budget import PromptBudget
-from .synaptic_settings import SynapticSettings
+
 from .bible import DEFAULT_BIBLE, read_bible
+from .budget import PromptBudget
 from .graph_view import graph_settings
+from .synaptic_settings import SynapticSettings
 
 
 class ConfigurationError(ValueError):

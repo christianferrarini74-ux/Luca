@@ -24,7 +24,8 @@ class SynapticSettings:
     def from_config(cls, runtime):
         values = runtime.get("synaptic", {})
         if not isinstance(values, dict):
-            raise ValueError("runtime.synaptic must be a mapping.")
+            # Preserve the existing ValueError contract used by validation callers.
+            raise ValueError("runtime.synaptic must be a mapping.")  # noqa: TRY004
         settings = cls(**values)
         for name in ("edge_upper", "edge_target", "navigation_steps", "global_candidates",
                      "fast_index_bytes", "idle_seconds", "sleep_poll_seconds", "sleep_retry_seconds",

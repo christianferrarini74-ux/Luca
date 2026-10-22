@@ -1,7 +1,7 @@
 """Regression coverage for result copies, alternatives and transaction ownership."""
 
-from dataclasses import fields
 import unittest
+from dataclasses import fields
 
 from luca_memory.store import Cell, ConvergenceMatch, ConvergenceResult, MemoryStore
 
@@ -74,10 +74,9 @@ class TransactionOwnershipTests(unittest.TestCase):
     def test_failed_nested_scope_leaves_outer_writes_committable(self) -> None:
         with self.store.transaction():
             self.store.add_cell(Cell(1, b"outer", 1))
-            with self.assertRaisesRegex(RuntimeError, "inner failure"):
-                with self.store.transaction():
-                    self.store.add_cell(Cell(2, b"inner", 1))
-                    raise RuntimeError("inner failure")
+            with self.assertRaisesRegex(RuntimeError, "inner failure"), self.store.transaction():
+                self.store.add_cell(Cell(2, b"inner", 1))
+                raise RuntimeError("inner failure")
             self.assertTrue(self.store.connection.in_transaction)
             self.assertIsNone(self.store.cell(2))
             self.store.add_cell(Cell(3, b"continued", 1))

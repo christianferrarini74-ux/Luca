@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
+import secrets
 import threading
 import time
 import webbrowser
-import secrets
 from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -18,13 +18,13 @@ from .adapters import LanguageAdapter, LMStudioAdapter, RuleAdapter
 from .config import load_config
 from .context_builder import convergence_signals
 from .curriculum import cell_payload
+from .graph_view import graph_settings, graph_snapshot
+from .maintenance import IdleMaintenance, MemoryMaintenance
 from .memory import MemoryEditor
 from .node import KnowledgeNode, load_node
 from .search import MemorySearch
 from .session import LucaSession, SessionReply
 from .store import MemoryStore
-from .maintenance import IdleMaintenance, MemoryMaintenance
-from .graph_view import graph_settings, graph_snapshot
 
 
 class LucaRuntime:
@@ -242,7 +242,7 @@ class LucaRuntime:
                     "automatic_sleep": self.session.synaptic_settings.automatic_sleep,
                     "sleep_error": self.sleep.last_error,
                     "last_operation": self.sleep.last_operation,
-                    "operations": [dict(id=row[0], active=bool(row[1])) for row in self.session.store.connection.execute(
+                    "operations": [{"id": row[0], "active": bool(row[1])} for row in self.session.store.connection.execute(
                         "SELECT id,active FROM maintenance_operations ORDER BY id DESC LIMIT 20")],
                 },
                 "physical_memory": carousel.physical_state(),
@@ -411,12 +411,12 @@ class ApiHandler(BaseHTTPRequestHandler):
     runtime: LucaRuntime
     shutdown_server: Any
 
-    def do_OPTIONS(self) -> None:  # noqa: N802
+    def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._headers()
         self.end_headers()
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         clean_path = self.path.split("?", 1)[0]
         if clean_path == "/api/graph":
             try:
@@ -450,7 +450,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         self._json({"error": "Not found"}, status=404)
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         origin = self.headers.get("Origin")
         if origin and origin != "http://" + self.headers.get("Host", ""):
             self._json({"error": "Cross-origin mutations are not allowed."}, status=403)
@@ -459,13 +459,15 @@ class ApiHandler(BaseHTTPRequestHandler):
             try:
                 payload = self._read_json(max_bytes=2_000_000)
                 if not isinstance(payload, dict):
-                    raise ValueError("The request must be an object.")
+                    # Preserve the existing ValueError contract used by validation callers.
+                    raise ValueError("The request must be an object.")  # noqa: TRY004
                 operation = self.path.rsplit("/", 1)[1]
                 method = self.runtime.maintenance_operation if self.path.startswith("/api/maintenance/") else self.runtime.memory_operation
                 self._json(method(operation, payload))
             except (ValueError, TypeError, KeyError) as error:
                 self._json({"error": str(error)}, status=400)
-            except Exception as error:
+            # Convert unexpected backend failures to an explicit HTTP error response.
+            except Exception as error:  # noqa: BLE001
                 self._json({"error": str(error)}, status=500)
             return
         if self.path == "/api/task":
@@ -483,7 +485,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             try:
                 payload = self._read_json()
                 if not isinstance(payload, dict):
-                    raise ValueError("The request body must be an object.")
+                    # Preserve the existing ValueError contract used by validation callers.
+                    raise ValueError("The request body must be an object.")  # noqa: TRY004
                 node_id = int(payload.get("node_id"))
                 if self.path == "/api/section":
                     key = payload.get("key")
@@ -509,7 +512,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             self._json(self.runtime.chat(text.strip()))
         except (ValueError, json.JSONDecodeError) as error:
             self._json({"error": str(error)}, status=400)
-        except Exception as error:  # pragma: no cover - defensive HTTP boundary
+        # Convert unexpected backend failures to an explicit HTTP error response.
+        except Exception as error:  # pragma: no cover - defensive HTTP boundary  # noqa: BLE001
             self._json({"error": str(error)}, status=500)
 
     def log_message(self, format: str, *args: object) -> None:

@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+CI 2026-10-22: [controlli GitHub riproducibili](fase-1-sinapsi/21-controlli-github-actions.md)
+([English](../github-actions-checks.md)). Ruff fissato, Actions aggiornate e test
+Python/JavaScript su Ubuntu e Windows. Nessuna nuova dipendenza applicativa.
+
 Manutenzione 2026-10-22: [revisione del codice e commenti interni](fase-1-sinapsi/20-revisione-codice-e-commenti.md)
 ([English](../code-maintenance-review.md)). Duplicazioni ridotte, passaggi interni
 documentati in inglese, 235 test Python con CUDA/tokenizer reali e 19 JavaScript.

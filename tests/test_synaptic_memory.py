@@ -1,15 +1,15 @@
 """Phase 1.11 contracts use isolated temporary databases, never personal memory."""
 
+import tempfile
+import threading
+import unittest
 from dataclasses import replace
 from pathlib import Path
-import tempfile
-import unittest
-import threading
 from unittest.mock import patch
 
-from luca_memory.node import KnowledgeNode, load_node, save_node
+from luca_memory.node import KnowledgeNode, load_node
 from luca_memory.store import Edge, MemoryStore
-from luca_memory.synaptic import SynapticMemory, StaleRevision
+from luca_memory.synaptic import StaleRevision, SynapticMemory
 from luca_memory.tiers import SynapticCarousel
 
 
@@ -72,9 +72,11 @@ class SynapticTests(unittest.TestCase):
     def test_failed_node_update_rolls_back_payload_aliases_catalog_and_revision(self):
         before = self.store.revision
         node = load_node(self.store, 1)
-        with patch.object(self.memory, "_event", side_effect=RuntimeError("Injected journal failure")):
-            with self.assertRaises(RuntimeError):
-                self.memory.update_node(replace(node, title="Wrong", content="Wrong"))
+        with (
+            patch.object(self.memory, "_event", side_effect=RuntimeError("Injected journal failure")),
+            self.assertRaises(RuntimeError),
+        ):
+            self.memory.update_node(replace(node, title="Wrong", content="Wrong"))
         self.assertEqual(load_node(self.store, 1), node)
         self.assertEqual(self.store.revision, before)
         self.assertIsNone(self.store.cell_by_alias("wrong"))
@@ -148,7 +150,7 @@ class SynapticTests(unittest.TestCase):
         def writer():
             try:
                 self.memory.update_node(KnowledgeNode(1, "updated", "Updated", "New body"))
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - Collect worker failures for assertion in this concurrency test.
                 errors.append(error)
         def reader():
             result.append(load_node(self.store, 1))
@@ -172,9 +174,10 @@ class SynapticTests(unittest.TestCase):
 
     def test_gpu_failure_after_committed_update_cannot_resurrect_old_payload(self):
         from test_device_memory import FakeDevice
+
         from luca_memory.tiers.coherent_slot import CoherentSlot
-        from luca_memory.tiers.device_slot import DeviceSlot
         from luca_memory.tiers.cuda import DeviceMemoryError
+        from luca_memory.tiers.device_slot import DeviceSlot
         carousel = SynapticCarousel(self.store, vram_capacity=1)
         self.addCleanup(carousel.close)
         carousel.vram.close()

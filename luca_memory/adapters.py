@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Protocol
 import re
 from dataclasses import replace
-from .synaptic_settings import SynapticSettings
+from typing import Any, ClassVar, Protocol
 
-from .llm import LLMConfigurationError, LLMConnector, LMStudioModelManager
-from .protocol import LanguageIntent
-from .budget import PromptBudget
 from .bible import DEFAULT_BIBLE, read_bible
-from .navigation_schema import navigation_schema
+from .budget import PromptBudget
 from .grouping_schema import grouping_schema, groups_from_assignments
+from .llm import LLMConfigurationError, LLMConnector, LMStudioModelManager
+from .navigation_schema import navigation_schema
+from .protocol import LanguageIntent
+from .synaptic_settings import SynapticSettings
 
 
 class LanguageAdapter(Protocol):
@@ -46,7 +46,7 @@ class RuleAdapter:
         if lesson is not None:
             subject, predicate, object_ = lesson
             return LanguageIntent("remember", text, subject, predicate, (object_,))
-        if normalised.startswith("parlami del ") or normalised.startswith("parlami di "):
+        if normalised.startswith(("parlami del ", "parlami di ")):
             subject = normalised.removeprefix("parlami del ").removeprefix("parlami di ")
             return LanguageIntent("describe", text, subject=subject)
         if normalised in {"e cosa produce", "e cosa produce il"} and current_subject:
@@ -74,7 +74,7 @@ class LMStudioAdapter:
 
     DEFAULT_BASE_URL = "http://127.0.0.1:1234/v1"
     DEFAULT_MODEL = "google/gemma-3-1b"
-    _KINDS = {"greet", "ask", "describe", "remember", "unknown"}
+    _KINDS: ClassVar[set[str]] = {"greet", "ask", "describe", "remember", "unknown"}
 
     def __init__(
         self,
@@ -121,7 +121,7 @@ class LMStudioAdapter:
         self.synaptic_settings = SynapticSettings()
 
     @classmethod
-    def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> "LMStudioAdapter":
+    def from_config(cls, config: dict[str, Any], assignment: str = "orchestrator") -> LMStudioAdapter:
         """Build the adapter from the active LLM runtime in config.yaml."""
 
         # Resolve one provider/model profile before acquiring a model or tokenizer.

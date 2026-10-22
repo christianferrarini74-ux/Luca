@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import random
 import time
+from pathlib import Path
 
 from .store import Cell, Edge, MemoryStore
 from .thought import ThoughtBudget, ThoughtEngine, ThoughtRequest

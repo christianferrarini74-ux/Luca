@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Manutenzione CI: [controlli GitHub riproducibili](docs/it/fase-1-sinapsi/21-controlli-github-actions.md),
+con lint e test Python/JavaScript su runner Ubuntu e Windows espliciti.
+
 Manutenzione: [semplificazione e commenti interni in inglese](docs/it/fase-1-sinapsi/20-revisione-codice-e-commenti.md).
 235 test Python con CUDA/tokenizer reali e 19 JavaScript superati. Nessuna modifica
 a comportamento, dipendenze, configurazione o Bibbia. Riavviare Luca ordinatamente

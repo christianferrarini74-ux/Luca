@@ -2,12 +2,13 @@
 
 import unittest
 from pathlib import Path
+
 from luca_memory.budget import PromptBudget, units
 from luca_memory.context_builder import build_vram_context
-from luca_memory.node import KnowledgeNode, KnowledgeSection, save_node, load_node
+from luca_memory.node import KnowledgeNode, KnowledgeSection, load_node, save_node
+from luca_memory.session import LucaSession
 from luca_memory.store import MemoryStore
 from luca_memory.tiers import SynapticCarousel
-from luca_memory.session import LucaSession
 
 
 class ContextBudgetTests(unittest.TestCase):

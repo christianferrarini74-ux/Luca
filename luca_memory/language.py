@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+from typing import ClassVar
 
 from .curriculum import Curriculum, cell_payload
 from .store import MemoryStore
@@ -30,7 +31,7 @@ class ItalianSeedInterface:
     corresponding assertion cell has been recovered from Luca's graph.
     """
 
-    _intents = {
+    _intents: ClassVar[dict[str, Intent]] = {
         "come ti chiami": Intent("luca", "nome", "Mi chiamo {object}."),
         "chi e il tuo creatore": Intent("luca", "creatore", "Il mio creatore è {object}."),
         "cos e il fuoco": Intent("fuoco", "is", "Il fuoco è {object}."),

@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+CI maintenance: [reproducible GitHub checks](docs/github-actions-checks.md),
+with lint and Python/JavaScript tests on explicit Ubuntu and Windows runners.
+
 Code maintenance: [simplification and internal English comments](docs/code-maintenance-review.md).
 235 Python tests with real CUDA/tokenizer and 19 JavaScript tests passed.
 No behavior, dependency, configuration or bible changes. Restart Luca cleanly

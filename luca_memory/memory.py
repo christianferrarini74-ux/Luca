@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
 import time
+from dataclasses import dataclass
 
 from .curriculum import cell_payload
 from .protocol import MemoryProposal

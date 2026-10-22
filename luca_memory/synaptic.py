@@ -1,11 +1,11 @@
 """Canonical families, complete metadata directories and atomic Core mutations."""
 
-from dataclasses import asdict, dataclass
-from functools import wraps
 import json
 import time
+from dataclasses import asdict, dataclass
+from functools import wraps
 
-from .node import KnowledgeNode, save_node, normalise_key
+from .node import KnowledgeNode, normalise_key, save_node
 from .search import MemorySearch
 from .store import Edge, MemoryStore
 

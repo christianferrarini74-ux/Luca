@@ -20,13 +20,13 @@ class LMStudioModelManager:
         self.api_key = api_key
 
     @classmethod
-    def from_provider_config(cls, provider_config: dict[str, Any], timeout_seconds: float) -> "LMStudioModelManager":
+    def from_provider_config(cls, provider_config: dict[str, Any], timeout_seconds: float) -> LMStudioModelManager:
         base_url = str(provider_config.get("base_url") or "").strip().rstrip("/")
         if not base_url:
             raise LLMConfigurationError("LM Studio non definisce base_url.")
         management_url = str(provider_config.get("management_url") or "").strip().rstrip("/")
         if not management_url:
-            management_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+            management_url = base_url.removesuffix("/v1")
         api_key = str(provider_config.get("api_key") or "").strip()
         api_key_env = str(provider_config.get("api_key_env") or "").strip()
         if not api_key and api_key_env:
@@ -87,7 +87,7 @@ class LMStudioModelManager:
             method=method,
         )
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310
+            with urlopen(request, timeout=self.timeout_seconds) as response:
                 decoded = json.loads(response.read().decode("utf-8"))
             if not isinstance(decoded, dict):
                 raise LLMConfigurationError("LM Studio ha restituito una risposta non valida.")

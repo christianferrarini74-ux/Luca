@@ -6,8 +6,8 @@ backend must reproduce this work model before it may be used as an accelerator.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import heapq
+from dataclasses import dataclass
 
 from .store import Edge, MemoryStore
 

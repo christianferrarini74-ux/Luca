@@ -1,9 +1,9 @@
 """Small CUDA Driver API binding; no toolkit or third-party Python package."""
 
-from contextlib import contextmanager
 import ctypes as C
 import os
 import threading
+from contextlib import contextmanager
 
 
 class DeviceMemoryError(RuntimeError):

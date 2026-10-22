@@ -1,9 +1,9 @@
 """Model choices, complete directories and family focus through the real session."""
 
-from pathlib import Path
 import json
 import tempfile
 import unittest
+from pathlib import Path
 
 from luca_memory.navigation import MemoryNavigator, focus_context
 from luca_memory.node import KnowledgeNode

@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import time
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import Literal
 
-from ..node import KnowledgeNode, load_node
-from ..store import ConvergenceResult, Edge, MemoryStore
 from ..activity import MemoryActivity
 from ..budget import PromptBudget
+from ..node import KnowledgeNode, load_node
+from ..store import ConvergenceResult, Edge, MemoryStore
+from ..synaptic import SynapticMemory, serialized
+from .coherent_slot import CoherentSlot
+from .device_slot import DeviceSlot
 from .graph_view import GraphView
 from .slot import TierSlot
-from .device_slot import DeviceSlot
-from .coherent_slot import CoherentSlot
-from ..synaptic import SynapticMemory, serialized
 
 
 @dataclass(frozen=True, slots=True)

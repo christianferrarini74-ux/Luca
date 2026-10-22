@@ -1,17 +1,16 @@
 """Replay memory/general-knowledge dialogues against disposable real-model memory."""
 
 import argparse
-from datetime import datetime, timezone
-import json
 import hashlib
-from pathlib import Path
+import json
 import tempfile
+from datetime import UTC, datetime
+from pathlib import Path
 
+from .bible import read_bible
 from .config import load_config
 from .live_memory_check import ObservedAdapter
 from .session import LucaSession
-from .bible import read_bible
-
 
 CASES = (
     ("greeting", "buonasera", None),
@@ -74,7 +73,7 @@ def main():
     root = Path(config["storage"]["database"]).parent
     root.mkdir(parents=True, exist_ok=True)
     path = root / ("reasoning-live-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
-    report = {"started_utc": datetime.now(timezone.utc).isoformat(), "model": adapter.model,
+    report = {"started_utc": datetime.now(UTC).isoformat(), "model": adapter.model,
               "scenario": args.scenario, "bible_snapshot": bible,
               "bible_sha256": hashlib.sha256(bible.encode("utf-8")).hexdigest(),
               "note": "Synthetic seed; lexical and actual-reading checks, not factual certification.", "turns": []}
@@ -95,7 +94,8 @@ def main():
                             "direct_answer": session.navigator.response is not None,
                             "request": dict(adapter.last_prompt_report),
                             "passed": assess(kind, reply.text, readings)}
-                    except Exception as error:
+                    # Record diagnostic failures while allowing cleanup and the remaining checks.
+                    except Exception as error:  # noqa: BLE001
                         turn = {"name": name, "question": question, "error": str(error), "passed": False}
                     report["turns"].append(turn)
                     print(json.dumps(turn, ensure_ascii=True), flush=True)

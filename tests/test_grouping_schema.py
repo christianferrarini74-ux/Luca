@@ -1,6 +1,7 @@
 """Grouping addresses are unique by construction, without choosing semantics."""
 
 import unittest
+
 from luca_memory.grouping_schema import grouping_schema, groups_from_assignments
 from luca_memory.synaptic import Directory, DirectoryEntry
 

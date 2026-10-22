@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import re
+from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
 from typing import Any
 
+from .budget import clip
 from .node import load_node, normalise_key
 from .store import MemoryStore
-from .budget import clip
-
 
 _WORDS = re.compile(r"[a-z0-9_]+")
-_STOP = set("a ad al alla alle anche altri altro animali che chi ci come con cosa da dal dei del della delle di dove e ed gli ha hai ho i il in io la le lo ma mai mi nei nel non o parlare parlami parliamo per perche poi puoi quale quali quando questi questo questa queste sai sei sentito si solo sono su sui sul ti tu un una voglio guidano conducono".split())
+_STOP = {
+    "a", "ad", "al", "alla", "alle", "anche", "altri", "altro",
+    "animali", "che", "chi", "ci", "come", "con", "cosa", "da",
+    "dal", "dei", "del", "della", "delle", "di", "dove", "e",
+    "ed", "gli", "ha", "hai", "ho", "i", "il", "in",
+    "io", "la", "le", "lo", "ma", "mai", "mi", "nei",
+    "nel", "non", "o", "parlare", "parlami", "parliamo", "per", "perche",
+    "poi", "puoi", "quale", "quali", "quando", "questi", "questo", "questa",
+    "queste", "sai", "sei", "sentito", "si", "solo", "sono", "su",
+    "sui", "sul", "ti", "tu", "un", "una", "voglio", "guidano",
+    "conducono",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +106,7 @@ class RecallPlanner:
         query = normalise_key(text)
         mentions, excluded = self._mentions(text)
         available = [nid for nid in mentions if nid not in excluded]
-        base = dict(anchors=tuple(available), excluded_ids=tuple(excluded))
+        base = {"anchors": tuple(available), "excluded_ids": tuple(excluded)}
         current = load_node(self.store, focus) if focus is not None else None
         if current is not None and current.sections and re.search(r"\b(?:sezione|capitolo)\b", query):
             words = set(_WORDS.findall(query)) - _STOP - {"sezione", "capitolo", "apri", "leggi"}

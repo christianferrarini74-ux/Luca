@@ -4,10 +4,10 @@ import json
 import unittest
 from unittest.mock import Mock
 
-from luca_memory.adapters import LMStudioAdapter, LanguageAdapterUnavailable
+from luca_memory.adapters import LanguageAdapterUnavailable, LMStudioAdapter
+from luca_memory.budget import PromptBudget
 from luca_memory.synaptic import Directory, DirectoryEntry
 from luca_memory.synaptic_settings import SynapticSettings
-from luca_memory.budget import PromptBudget
 
 
 class NavigationAdapterTests(unittest.TestCase):

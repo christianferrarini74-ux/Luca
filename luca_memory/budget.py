@@ -60,7 +60,8 @@ class PromptBudget:
     def from_config(cls, config: dict):
         options = config.get("context_budget", {})
         if not isinstance(options, dict):
-            raise ValueError("context_budget must be a mapping.")
+            # Preserve the existing ValueError contract used by validation callers.
+            raise ValueError("context_budget must be a mapping.")  # noqa: TRY004
         return cls(**{key: str(value) if key == "unit" else int(value) for key, value in options.items()})
 
     @property

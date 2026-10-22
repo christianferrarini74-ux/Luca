@@ -1,5 +1,5 @@
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 from luca_memory.api import LucaRuntime
 from luca_memory.session import LucaSession
@@ -90,6 +90,7 @@ class Phase1KnowledgeSeedTests(unittest.TestCase):
             self.assertNotIn("Formaggio Blu", context_sub)
 
             import json
+
             from luca_memory.bible import read_bible
             adapter = LMStudioAdapter()
             messages, _ = adapter._request("respond", "Domanda", {"memory": context_sub})

@@ -1,12 +1,11 @@
 """Task goals and decisions survive detours, restarts and context trimming."""
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from luca_memory.session import LucaSession
 from luca_memory.budget import PromptBudget
-
+from luca_memory.session import LucaSession
 
 SEED = Path(__file__).parents[1] / "seed/knowledge_base_v1.json"
 

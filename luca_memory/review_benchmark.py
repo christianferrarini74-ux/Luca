@@ -4,14 +4,14 @@ import argparse
 import hashlib
 import json
 import math
-from pathlib import Path
 import statistics
 import tempfile
 import time
+from pathlib import Path
 
 from .config import load_config
-from .store import MemoryStore
 from .session import LucaSession
+from .store import MemoryStore
 
 
 class SyntheticAdapter:
@@ -50,37 +50,39 @@ def measure(call, repeats):
 def aliases(root, cells=500000, edges=100000, repeats=20):
     if cells < edges + 2 or edges < 1:
         raise ValueError("The fixture needs at least edges + 2 cells.")
-    with tempfile.TemporaryDirectory(prefix="alias-review-", dir=root) as directory:
-        with MemoryStore(Path(directory) / "synthetic.sqlite") as store:
-            with store.transaction():
-                store.connection.execute("""WITH RECURSIVE ids(n) AS
-                    (VALUES(1) UNION ALL SELECT n+1 FROM ids WHERE n < ?)
-                    INSERT INTO cells SELECT n, CAST('synthetic' AS BLOB), 1 FROM ids""", (cells,))
-                store.connection.executemany("INSERT INTO edges(source_id,target_id) VALUES(1,?)", ((i,) for i in range(2, edges + 2)))
-                store.add_alias("hub", 1)
-                store.add_alias("hub", cells)
-                store.touch_edge(1, 2, 10)
-            reference = lambda: list(store.connection.execute(REFERENCE_ALIAS_SQL, ("hub", 8)))
-            current = lambda: store.cells_by_alias("hub")
-            if [r["id"] for r in reference()] != [cell.id for cell in current()]:
-                raise RuntimeError("Alias ordering differs from the reference query.")
-            result = {"kind": "aliases", "cells": cells, "hub_edges": edges,
-                      "reference": measure(reference, repeats), "current": measure(current, repeats)}
-            tick = 100
-            def touch():
-                nonlocal tick
-                tick += 1
-                store.touch_edge(1, 2, tick)
-            store.connection.execute("BEGIN")
-            try:
-                result["touch_with_summary"] = measure(touch, max(100, repeats))
-                # Disable only the disposable fixture's new usage triggers, then roll back.
-                for name in ("trg_edges_ai_usage", "trg_edges_au_usage", "trg_edges_ad_usage"):
-                    store.connection.execute(f"DROP TRIGGER IF EXISTS {name}")
-                result["touch_without_summary"] = measure(touch, max(100, repeats))
-            finally:
-                store.connection.rollback()
-            return result
+    with (
+        tempfile.TemporaryDirectory(prefix="alias-review-", dir=root) as directory,
+        MemoryStore(Path(directory) / "synthetic.sqlite") as store,
+    ):
+        with store.transaction():
+            store.connection.execute("""WITH RECURSIVE ids(n) AS
+                (VALUES(1) UNION ALL SELECT n+1 FROM ids WHERE n < ?)
+                INSERT INTO cells SELECT n, CAST('synthetic' AS BLOB), 1 FROM ids""", (cells,))
+            store.connection.executemany("INSERT INTO edges(source_id,target_id) VALUES(1,?)", ((i,) for i in range(2, edges + 2)))
+            store.add_alias("hub", 1)
+            store.add_alias("hub", cells)
+            store.touch_edge(1, 2, 10)
+        reference = lambda: list(store.connection.execute(REFERENCE_ALIAS_SQL, ("hub", 8)))
+        current = lambda: store.cells_by_alias("hub")
+        if [r["id"] for r in reference()] != [cell.id for cell in current()]:
+            raise RuntimeError("Alias ordering differs from the reference query.")
+        result = {"kind": "aliases", "cells": cells, "hub_edges": edges,
+                  "reference": measure(reference, repeats), "current": measure(current, repeats)}
+        tick = 100
+        def touch():
+            nonlocal tick
+            tick += 1
+            store.touch_edge(1, 2, tick)
+        store.connection.execute("BEGIN")
+        try:
+            result["touch_with_summary"] = measure(touch, max(100, repeats))
+            # Disable only the disposable fixture's new usage triggers, then roll back.
+            for name in ("trg_edges_ai_usage", "trg_edges_au_usage", "trg_edges_ad_usage"):
+                store.connection.execute(f"DROP TRIGGER IF EXISTS {name}")
+            result["touch_without_summary"] = measure(touch, max(100, repeats))
+        finally:
+            store.connection.rollback()
+        return result
 
 
 def turns(root, device=1, repeats=5):

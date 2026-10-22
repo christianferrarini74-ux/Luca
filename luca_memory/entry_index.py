@@ -4,15 +4,24 @@ import re
 
 from .node import normalise_key
 
-
-_CONNECTORS = frozenset("""anche ancora avere avete avevo che chi cio come con cosa dal dalla dalle
-degli dei del della delle dello descrivi descrivimi dimmi dove essere erano fatto fanno fare
-gli hai hanno ho loro mai mia mie mio miei molto nel nella nelle nello noi non ora parlami
-parlare per perche puoi quale quali quanto quando questo questa questi queste sai sei sentito
-sia siamo sono stato stai stiamo sulla sulle sul suo sua suoi sue tutto tutti una uno voi
-the and are about can could did does for from have has how into its not our please some tell
-that their them there these they this those was were what when where which who why will with
-would you your""".split())
+_CONNECTORS = frozenset([
+    "anche", "ancora", "avere", "avete", "avevo", "che", "chi", "cio",
+    "come", "con", "cosa", "dal", "dalla", "dalle", "degli", "dei",
+    "del", "della", "delle", "dello", "descrivi", "descrivimi", "dimmi", "dove",
+    "essere", "erano", "fatto", "fanno", "fare", "gli", "hai", "hanno",
+    "ho", "loro", "mai", "mia", "mie", "mio", "miei", "molto",
+    "nel", "nella", "nelle", "nello", "noi", "non", "ora", "parlami",
+    "parlare", "per", "perche", "puoi", "quale", "quali", "quanto", "quando",
+    "questo", "questa", "questi", "queste", "sai", "sei", "sentito", "sia",
+    "siamo", "sono", "stato", "stai", "stiamo", "sulla", "sulle", "sul",
+    "suo", "sua", "suoi", "sue", "tutto", "tutti", "una", "uno",
+    "voi", "the", "and", "are", "about", "can", "could", "did",
+    "does", "for", "from", "have", "has", "how", "into", "its",
+    "not", "our", "please", "some", "tell", "that", "their", "them",
+    "there", "these", "they", "this", "those", "was", "were", "what",
+    "when", "where", "which", "who", "why", "will", "with", "would",
+    "you", "your",
+])
 
 
 def ensure_entry_index(store):

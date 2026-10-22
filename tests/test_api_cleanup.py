@@ -1,10 +1,10 @@
 """Regression coverage for dashboard serialization and legacy HTTP contracts."""
 
+import json
+import unittest
 from dataclasses import replace
 from io import BytesIO
-import json
 from pathlib import Path
-import unittest
 from unittest.mock import Mock, patch
 
 from luca_memory.api import ApiHandler, LucaRuntime

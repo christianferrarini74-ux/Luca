@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-
 IntentKind = Literal["greet", "ask", "describe", "remember", "unknown"]
 
 
@@ -22,7 +21,7 @@ class LanguageIntent:
     confidence: float = 1.0
     ambiguity: str | None = None
 
-    def proposal(self, source: str = "user") -> "MemoryProposal":
+    def proposal(self, source: str = "user") -> MemoryProposal:
         if self.kind != "remember" or not self.subject or not self.predicate or not self.objects:
             raise ValueError("Only a complete remember intent can become a memory proposal.")
         return MemoryProposal(self, source)

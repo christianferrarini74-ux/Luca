@@ -1,9 +1,9 @@
 """Confirmed local edge regrouping with versioned plans and guarded restoration."""
 
-from dataclasses import asdict, dataclass
 import json
 import threading
 import time
+from dataclasses import asdict, dataclass
 
 from .node import KnowledgeNode, save_node
 from .store import Edge
@@ -51,7 +51,8 @@ class MemoryMaintenance:
             if degree <= self.settings.edge_target:
                 return MaintenancePlan(directory.focus_id, directory.revision, degree, degree, ())
             if not isinstance(proposed_groups, list):
-                raise ValueError("A list of directional groups is required.")
+                # Preserve the existing ValueError contract used by validation callers.
+                raise ValueError("A list of directional groups is required.")  # noqa: TRY004
             allowed = {"incoming": {entry.id for entry in directory.incoming},
                        "outgoing": {entry.id for entry in directory.outgoing}}
             seen = set()
@@ -59,7 +60,8 @@ class MemoryMaintenance:
             reduction = 0
             for raw in proposed_groups:
                 if not isinstance(raw, dict):
-                    raise ValueError("Each group must be an object.")
+                    # Preserve the existing ValueError contract used by validation callers.
+                    raise ValueError("Each group must be an object.")  # noqa: TRY004
                 title, direction, members = raw.get("title"), raw.get("direction"), raw.get("members")
                 if not isinstance(title, str) or not title.strip() or len(title) > 256:
                     raise ValueError("Groups need a nonempty title of at most 256 characters.")
@@ -88,7 +90,7 @@ class MemoryMaintenance:
             if not automatic and confirmed is not True:
                 raise ValueError("Manual maintenance requires explicit confirmation.")
             # Revalidate public plan objects rather than trusting client/deserialized fields.
-            checked = self.plan(plan.root_id, [dict(title=g.title, direction=g.direction, members=list(g.members)) for g in plan.groups])
+            checked = self.plan(plan.root_id, [{"title": g.title, "direction": g.direction, "members": list(g.members)} for g in plan.groups])
             if checked != plan:
                 raise ValueError("Invalid maintenance plan.")
             if not plan.groups:
@@ -216,7 +218,8 @@ class IdleMaintenance:
                     self.last_operation = self.maintenance.apply(plan, automatic=True)
                     self.last_error = None
                     return self.last_operation
-                except Exception as error:
+                # Keep worker failures visible without terminating idle maintenance.
+                except Exception as error:  # noqa: BLE001
                     # Keep the worker alive and expose failure, never invent a grouping.
                     self.last_error = str(error)
                     return None
@@ -231,7 +234,8 @@ class IdleMaintenance:
         while not self._stop.wait(self.settings.sleep_poll_seconds):
             try:
                 self.run_once()
-            except Exception as error:
+            # Keep worker failures visible without terminating idle maintenance.
+            except Exception as error:  # noqa: BLE001
                 self.last_error = str(error)
 
     def close(self):
