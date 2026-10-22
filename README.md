@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Goal-first experiment: [complete recovery without changing node visibility](docs/goal-first-recovery.md).
+Two fresh Qwen runs read the missing thresholds and complete the procedure; limited evidence, not a general guarantee.
+
 Follow-up investigation: [asking Luca why it stopped reading](docs/memory-stopping-interview.md).
 Same-session self-assessment is checked against actual reading traces, not taken as causal proof.
 

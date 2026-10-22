@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Prova con obiettivo esplicito: [ripristino completo senza cambiare la visibilità dei nodi](docs/it/fase-1-sinapsi/27-ripristino-obiettivo-esplicito.md).
+Due nuove prove Qwen leggono le soglie mancanti e completano la procedura; non è una garanzia generale.
+
 Indagine successiva: [chiedere a Luca perché si è fermato](docs/it/fase-1-sinapsi/26-intervista-arresto-lettura.md).
 Autovalutazione nella stessa sessione confrontata con le letture, non assunta come prova causale.
 

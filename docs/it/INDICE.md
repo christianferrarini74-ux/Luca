@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Prova 2026-10-22: [ripristino con obiettivo esplicito](fase-1-sinapsi/27-ripristino-obiettivo-esplicito.md)
+([English](../goal-first-recovery.md)). Due conversazioni nuove, procedura completa
+e collegamenti locali invariati; confronto con le letture precedenti.
+
 Intervista 2026-10-22: [perché Luca si ferma nella lettura](fase-1-sinapsi/26-intervista-arresto-lettura.md)
 ([English](../memory-stopping-interview.md)). Domande neutra/esplicita nella
 stessa sessione; confronto fra spiegazioni, cronologia disponibile e letture reali.

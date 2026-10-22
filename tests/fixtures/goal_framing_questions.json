@@ -1,0 +1,10 @@
+[
+  {
+    "id": "complete_recovery",
+    "seed": "iris17_controlled_v1.json",
+    "question": "Voglio che la centralina IRIS-17 torni a irrigare davvero: la valvola deve aprirsi e l'acqua deve uscire. Al momento non irriga: è comparso E42 e il segnale del sensore è tornato normale, ma l'irrigazione non riparte. Qual è la procedura completa per ripristinare il funzionamento, dalla situazione attuale fino all'effettiva apertura della valvola? Indica tutti i passaggi e le condizioni necessarie.",
+    "required_slugs": ["iris_recovery", "iris_sensor"],
+    "terms": [["quattro", "4"], ["conferma"], ["avvia"], ["tre", "3"], ["28"]],
+    "rubric": "Explain safe U7 check and restart, four consecutive valid samples, CONFERMA, OSSERVA then AVVIA, no active alarm, and three consecutive readings strictly below 28%. Distinguish return to IRRIGA from actual valve opening. Never send this answer key to the model."
+  }
+]

@@ -45,16 +45,37 @@ def profile_config(config, bible_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.yaml")
+    parser.add_argument("--questions", type=Path, default=CASES, help="Question set; evaluation rubrics are never sent to the model.")
+    parser.add_argument("--model", help="Override the model only in the experimental configuration copy.")
+    parser.add_argument("--capture-inputs", action="store_true", help="Record actual public navigation states.")
+    parser.add_argument("--vram-capacity", type=int, help="Experimental slot override; main config is not edited.")
+    parser.add_argument("--ram-capacity", type=int, help="Experimental slot override; main config is not edited.")
     parser.add_argument("--case", default="all", help="Comma-separated case IDs, or all.")
     parser.add_argument("--profile", choices=("all", "current", "candidate", "audited", "addressed"), default="all")
     parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args()
-    cases = json.loads(CASES.read_text(encoding="utf-8"))
+    cases = json.loads(args.questions.read_text(encoding="utf-8"))
+    if args.capture_inputs and args.profile == "audited":
+        parser.error("Input capture and the audited adapter are separate experimental modes.")
+    if any(value is not None and value < 1 for value in (args.vram_capacity, args.ram_capacity)):
+        parser.error("Slot overrides must be positive.")
     wanted = set(args.case.split(","))
     if args.repeat < 1 or (args.case != "all" and not wanted.issubset({case["id"] for case in cases})):
         parser.error("Use positive repeats and existing case IDs.")
     selected = [case for case in cases if args.case == "all" or case["id"] in wanted]
     config = load_config(args.config)
+    for name, value in (("vram_capacity", args.vram_capacity), ("ram_capacity", args.ram_capacity)):
+        if value is not None:
+            config["runtime"][name] = value
+    if args.model:
+        active = config["llm"]["active_runtime"]
+        role = config["runtime"].get("adapter_role", "orchestrator")
+        config["llm"]["runtimes"][active]["agents"][role]["model"] = args.model
+    capture_adapter = None
+    if args.capture_inputs:
+        # Import lazily: the continuous-session diagnostic also reuses this module's fixtures.
+        from .memory_interview_check import InterviewAdapter
+        capture_adapter = InterviewAdapter
     base = read_bible(config["runtime"]["bible"])
     guidance = GUIDANCE.read_text(encoding="utf-8").strip()
     profiles = {"current": base, "candidate": base + "\n\n" + guidance}
@@ -66,6 +87,8 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     path = root / ("autonomy-check-" + datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f") + ".json")
     report = {"started_utc": datetime.now(UTC).isoformat(), "profiles": profiles,
+              "questions_path": str(args.questions.resolve()),
+              "questions_sha256": hashlib.sha256(args.questions.read_bytes()).hexdigest(),
               "profile_sha256": {key: hashlib.sha256(value.encode()).hexdigest() for key, value in profiles.items()},
               "runtime": config["runtime"], "turns": [], "review_required": True,
               "note": "Fresh sessions; fixed current/candidate order. Stale history is explicitly injected test data, not an old model's generated answer."}
@@ -90,7 +113,7 @@ def main():
                             outcome = run_case(profile_config(config, bible_path), case, seed,
                                                Path(directory) / f"{repeat}-{case['id']}-{profile}.sqlite",
                                                history=case.get("history", ()),
-                                               adapter_type=AuditedAdapter if profile == "audited" else None)
+                                               adapter_type=AuditedAdapter if profile == "audited" else capture_adapter)
                             outcome["indicators"] = indicators(case, outcome["reply"], outcome["read_ids"], ids)
                             turn[profile] = outcome
                         # Preserve failed arms as diagnostic evidence, without altering the runtime.
