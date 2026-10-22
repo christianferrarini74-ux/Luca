@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Confronto modelli: [sonno con Gemma 26B A4B](docs/it/fase-1-sinapsi/31-confronto-sonno-gemma26.md).
+Quattro prove: nessun gruppo tematicamente misto, ma tre riduzioni insufficienti rifiutate; il solo cambio di modello non completa la manutenzione autonoma.
+
 Correzione manutenzione: [arresto all'obiettivo configurato](docs/it/fase-1-sinapsi/30-arresto-riorganizzazione-obiettivo.md).
 Applicati solo i gruppi interi necessari; gli archi dei gruppi scartati restano diretti.
 

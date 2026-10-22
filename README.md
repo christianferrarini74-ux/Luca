@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Model comparison: [sleep with Gemma 26B A4B](docs/sleep-gemma26-comparison.md).
+Four runs: no mixed-theme proposals, but three insufficient reductions rejected; model size alone does not complete autonomous maintenance.
+
 Maintenance correction: [stop at the configured target](docs/maintenance-target-stop.md).
 Apply only necessary whole groups; retain original routes for unselected groups.
 

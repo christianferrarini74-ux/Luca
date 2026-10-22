@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Confronto 2026-10-22: [sonno con Gemma 26B A4B](fase-1-sinapsi/31-confronto-sonno-gemma26.md)
+([English](../sleep-gemma26-comparison.md)). Input identici, quattro prove,
+temi corretti ma tre riduzioni insufficienti; nessuna modifica alla Bibbia.
+
 Correzione 2026-10-22: [arresto della riorganizzazione all'obiettivo](fase-1-sinapsi/30-arresto-riorganizzazione-obiettivo.md)
 ([English](../maintenance-target-stop.md)). Soglie 50/45, selezione dei soli gruppi
 necessari, minimo scarto indivisibile, ripetizione con Gemma e limiti residui.
