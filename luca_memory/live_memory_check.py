@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .adapters import LMStudioAdapter
+from .classification import ClassifiedDirectory
 from .config import load_config
 from .maintenance import IdleMaintenance, MemoryMaintenance
 from .node import KnowledgeNode
@@ -119,8 +120,12 @@ def main():
                     memory.connect(100, index) if index < 135 else memory.connect(index, 100)
                 maintenance = MemoryMaintenance(memory, session.synaptic_settings)
                 try:
-                    groups = adapter.propose_groups(memory.directory(100), session.synaptic_settings)
-                    plan = maintenance.plan(100, groups)
+                    directory = memory.directory(100)
+                    proposal = adapter.propose_groups(directory, session.synaptic_settings)
+                    plan = maintenance.plan(100, proposal)
+                    groups = ([{"title": title, "direction": direction, "members": list(members)}
+                               for direction, title, members in proposal.categories(directory)]
+                              if isinstance(proposal, ClassifiedDirectory) else proposal)
                     operation = maintenance.apply(plan, confirmed=True)
                     after = memory.directory(100).external_degree
                     maintenance.restore(operation, confirmed=True)

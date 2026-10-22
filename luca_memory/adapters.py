@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Protocol
 
 from .bible import DEFAULT_BIBLE, read_bible
 from .budget import PromptBudget
-from .grouping_schema import grouping_schema, groups_from_assignments
+from .grouping_schema import grouping_schema
 from .llm import LLMConfigurationError, LLMConnector, LMStudioModelManager
 from .navigation_schema import navigation_schema
 from .protocol import LanguageIntent
@@ -219,22 +219,20 @@ class LMStudioAdapter:
         return self._respond(text, memory_context, history, task_context, bounded=True)
 
     def propose_groups(self, directory, settings):
-        """Propose grouping assignments only; the Core owns validation and atomic writes."""
+        """Classify the complete neighborhood; the Core alone sizes routing groups."""
+        from .classification import classification_from_assignments
         if not any(len(getattr(directory, direction)) >= 2 for direction in ("incoming", "outgoing")):
             return []
         messages, _ = self._request("group", "", {"directory": directory.payload(),
-            "constraints": {"edge_upper": settings.edge_upper, "edge_target": settings.edge_target,
-                "degree_before": directory.external_degree, "min_members": 2,
-                "max_members": min(settings.edge_upper - 1, max(2, directory.external_degree - settings.edge_target + 1)),
-                "unique_members_per_direction": True,
-                "required_reduction": max(0, directory.external_degree - settings.edge_target)}},
+            "classification_contract": {"complete": True, "uncertain_label": None,
+                "directions": ["incoming", "outgoing"]}},
             output_tokens=settings.maintenance_output_tokens)
         try:
             raw = self.connector.create_chat_model(self.assignment).complete(messages,
                 response_format=self._json_schema("memory_groups", grouping_schema(directory)),
                 max_tokens=settings.maintenance_output_tokens)
             value = json.loads(raw)
-            return groups_from_assignments(value, directory) if isinstance(value, dict) else None
+            return classification_from_assignments(value, directory)
         except (LLMConfigurationError, ValueError, TypeError) as error:
             raise LanguageAdapterUnavailable("Invalid LLM maintenance proposal; memory was not changed.") from error
 

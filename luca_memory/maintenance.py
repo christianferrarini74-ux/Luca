@@ -5,7 +5,8 @@ import threading
 import time
 from dataclasses import asdict, dataclass
 
-from .maintenance_selection import select_groups
+from .classification import ClassifiedDirectory
+from .maintenance_selection import route_categories, select_groups
 from .node import KnowledgeNode, save_node
 from .store import Edge
 from .synaptic import StaleRevision
@@ -51,6 +52,12 @@ class MemoryMaintenance:
             degree = directory.external_degree
             if degree <= self.settings.edge_target:
                 return MaintenancePlan(directory.focus_id, directory.revision, degree, degree, ())
+            if isinstance(proposed_groups, ClassifiedDirectory):
+                categories = proposed_groups.categories(directory)
+                groups = tuple(EdgeGroup(*group) for group in route_categories(
+                    categories, degree - self.settings.edge_target, self.settings.edge_upper - 1))
+                return MaintenancePlan(directory.focus_id, directory.revision, degree,
+                                       self.settings.edge_target, groups)
             if not isinstance(proposed_groups, list):
                 # Preserve the existing ValueError contract used by validation callers.
                 raise ValueError("A list of directional groups is required.")  # noqa: TRY004

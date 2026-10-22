@@ -2,6 +2,9 @@
 
 2026-10-22. [Italiano](it/fase-1-sinapsi/31-confronto-sonno-gemma26.md).
 
+Follow-up implementation: [classification separated from routing arithmetic](category-routing-planner.md).
+The observations below preserve the preceding numerical-proposal interface.
+
 ## Controlled protocol
 
 Repeat the [target-stop experiment](maintenance-target-stop.md) using the exact

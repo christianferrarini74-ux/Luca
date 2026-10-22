@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Current sleep planner: [semantic categories, deterministic arc reduction](docs/category-routing-planner.md).
+Both Gemma models classified the full fixture; the Core reached 52→45 in all four live runs.
+
 Model comparison: [sleep with Gemma 26B A4B](docs/sleep-gemma26-comparison.md).
 Four runs: no mixed-theme proposals, but three insufficient reductions rejected; model size alone does not complete autonomous maintenance.
 

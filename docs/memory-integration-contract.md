@@ -3,7 +3,7 @@
 2026-10-22. [Italiano](it/fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
 
 This is the current integration guide for external producers and consumers.
-Updated target-stop policy: [bounded regrouping](maintenance-target-stop.md).
+Current automatic policy: [classification and deterministic routing](category-routing-planner.md).
 Earlier design documents remain historical records. The application package
 version is currently 0.1.0; this guide does not invent a separate versioned wire
 protocol or promise backward compatibility that the project has not established.
@@ -102,7 +102,7 @@ of the current contract. After a mutation, refresh directories and search result
 
 | Configuration (`config.yaml`) | Current distributed value | Effect |
 | --- | ---: | --- |
-| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | External incoming + outgoing degree. Automatic sleep only above upper; stop at target, or closest below using indivisible proposed groups. Temporary overflow is allowed. |
+| `runtime.synaptic.edge_upper` / `edge_target` | 50 / 45 | External incoming + outgoing degree. Automatic sleep only above upper; classified routing reaches target exactly when compatible capacity suffices. Explicit concrete groups retain nearest-whole-group selection. Temporary overflow is allowed. |
 | `navigation_steps` / `global_candidates` | 8 / 20 | Maximum model actions per turn / bounded global results. Not maximum graph size. |
 | `fast_index_bytes` | 65536 | Serialized complete directory allowance, measured in UTF-8 bytes. Never silently drops arcs. |
 | `automatic_sleep` / `idle_seconds` | true / 60 | Automatic reorganization and idle threshold. |
@@ -209,21 +209,28 @@ above target even below/equal upper. Automatic sleep only selects independent
 canonical identities whose external degree is **greater than** upper. Internal
 family links do not trigger it. At/below target manual maintenance is a no-op.
 
-The proposer receives the complete directory (IDs/titles), not node bodies.
-External producers must give distinguishable, informative titles. In each
-direction a group needs a nonempty title of at most 256 characters and
-2..`edge_upper-1` distinct existing members. A member may be used once per
-direction; incoming/outgoing groups are separate. The reduction is
-`sum(member_count-1)`. The Core validates the complete proposal, then selects
-only the whole groups necessary to reach target: minimum excess reduction,
-then fewest groups, then stable proposal order. Members are not arbitrarily
-clipped to hit an exact number. Unselected groups stay direct and are not
-created. If no combination reaches target, nothing is applied. Preview and
-undo describe only selected groups. The model is asked for smaller groups
-bounded by the reduction gap, but Core structural membership validation retains
-the `edge_upper-1` ceiling: an oversized model proposal can still yield an
-indivisible undershoot, which remains visible in the plan.
-Structural validity does not prove semantic grouping quality.
+The LLM receives the complete directory (IDs/titles), not node bodies or arc
+arithmetic. Producers must give informative titles. It returns a complete
+`ClassifiedDirectory`: every external directional ID has a category title of
+1..256 characters or explicit null (uncertain). Omission is invalid. Self and
+internal parts are excluded. Categories may have any size and are not routing
+nodes. The Core revalidates coverage, labels, IDs and directory revision.
+
+The Core builds disjoint routing groups of 2..`edge_upper-1` members within
+one category and direction, leaving unused/null/singleton addresses direct.
+Reduction is `sum(member_count-1)`. The last group may use only part of its
+category to reach `edge_target` exactly. Insufficient compatible single-level
+capacity fails without writes, never by merging unrelated topics. No content
+is split. Preview and undo show only the concrete applied groups.
+
+External Core consumers can call `classification_from_assignments(value,
+directory)` from `luca_memory.classification`, then pass the result to
+`MemoryMaintenance.plan`. See the executable-shaped example and capacity limits
+in [the planner specification](category-routing-planner.md). The default local
+preview uses this path automatically. Explicit HTTP `groups` and custom adapters
+returning concrete lists remain a separate compatibility path: whole-group
+subset selection with minimum overshoot, no splitting of those manual groups.
+Structural validity and complete classification do not prove semantic quality.
 
 One worker tick attempts at most one candidate. It records errors and backs off
 failed proposals by node-directory revision. No invalid proposal changes the

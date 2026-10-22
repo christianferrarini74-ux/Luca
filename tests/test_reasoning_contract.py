@@ -46,15 +46,14 @@ class BibleContractTests(unittest.TestCase):
         self.assertEqual(result["response"], "Ciao")
         self.assert_bible_only("navigate")
 
-    def test_grouping_has_only_bible_and_numeric_constraints(self):
-        self.model.complete.return_value = '{"groups":[]}'
+    def test_grouping_has_only_bible_and_classification_data(self):
+        self.model.complete.return_value = '{"assignments":{"incoming":{},"outgoing":{"2":null,"3":null}}}'
         directory = Directory(1, 1, (), (DirectoryEntry(2, "A"), DirectoryEntry(3, "B")), ())
         self.adapter.propose_groups(directory, SynapticSettings())
         self.assert_bible_only("group")
         data = json.loads(self.model.complete.call_args.args[0][-1]["content"])
-        self.assertEqual(data["constraints"]["edge_upper"], 50)
-        self.assertEqual(data["constraints"]["edge_target"], 45)
-        self.assertTrue(data["constraints"]["unique_members_per_direction"])
+        self.assertNotIn("constraints", data)
+        self.assertTrue(data["classification_contract"]["complete"])
 
     def test_recall_no_longer_silently_clips_question(self):
         self.model.complete.return_value = '{"target_id":null}'

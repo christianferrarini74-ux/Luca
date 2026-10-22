@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .adapters import LMStudioAdapter
+from .classification import ClassifiedDirectory
 from .config import load_config
 from .maintenance import IdleMaintenance, MemoryMaintenance
 from .sleep_fixture import graph_snapshot, populate, verify_regrouping
@@ -34,7 +35,13 @@ class SleepAdapter(LMStudioAdapter):
         started = time.perf_counter()
         try:
             groups = super().propose_groups(directory, settings)
-            self.proposals.append({"groups": groups, "seconds": round(time.perf_counter() - started, 3)})
+            if isinstance(groups, ClassifiedDirectory):
+                payload = {"classification": groups.payload(), "groups": [
+                    {"title": title, "direction": direction, "members": list(members)}
+                    for direction, title, members in groups.categories(directory)]}
+            else:
+                payload = {"groups": groups}
+            self.proposals.append({**payload, "seconds": round(time.perf_counter() - started, 3)})
             return groups
         finally:
             # The worker still validates and applies after this signal; close() joins it.

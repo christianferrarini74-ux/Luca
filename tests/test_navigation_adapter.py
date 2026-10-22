@@ -45,10 +45,10 @@ class NavigationAdapterTests(unittest.TestCase):
         self.assertEqual(memory, json.loads(self.model.complete.call_args.args[0][-1]["content"])["memory"])
 
     def test_group_request_and_invalid_model_response(self):
-        self.model.complete.return_value = json.dumps({"groups": [{"title": "Group", "direction": "outgoing", "members": [2, 3]}]})
+        self.model.complete.return_value = json.dumps({"assignments": {"incoming": {}, "outgoing": {"2": "Group", "3": "Group"}}})
         directory = Directory(1, 1, (), (DirectoryEntry(2, "Two"), DirectoryEntry(3, "Three")), ())
         groups = self.adapter.propose_groups(directory, SynapticSettings())
-        self.assertEqual(groups[0]["members"], [2, 3])
+        self.assertEqual(groups.outgoing, ((2, "Group"), (3, "Group")))
         self.assertEqual(self.model.complete.call_args.kwargs["max_tokens"], 2048)
         group_format = self.model.complete.call_args.kwargs["response_format"]
         directions = group_format["json_schema"]["schema"]["properties"]["assignments"]["properties"]
@@ -64,10 +64,12 @@ class NavigationAdapterTests(unittest.TestCase):
         schema = self.model.complete.call_args.kwargs["response_format"]["json_schema"]["schema"]
         self.assertEqual([v["properties"]["action"]["const"] for v in schema["anyOf"]], ["search", "answer"])
 
-    def test_group_request_sizes_proposals_to_the_configured_target_gap(self):
-        self.model.complete.return_value = '{"assignments":{"incoming":{},"outgoing":{}}}'
+    def test_classification_request_contains_no_degree_arithmetic(self):
+        self.model.complete.return_value = json.dumps({"assignments": {"incoming": {},
+            "outgoing": {str(index): None for index in range(2, 54)}}})
         directory = Directory(1, 1, (), tuple(DirectoryEntry(index, f"Node {index}") for index in range(2, 54)), ())
         self.adapter.propose_groups(directory, SynapticSettings())
-        constraints = json.loads(self.model.complete.call_args.args[0][-1]["content"])["constraints"]
-        self.assertEqual(constraints["required_reduction"], 7)
-        self.assertEqual(constraints["max_members"], 8)
+        data = json.loads(self.model.complete.call_args.args[0][-1]["content"])
+        self.assertNotIn("constraints", data)
+        self.assertEqual(data["classification_contract"], {"complete": True, "uncertain_label": None,
+                                                        "directions": ["incoming", "outgoing"]})

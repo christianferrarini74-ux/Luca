@@ -2,6 +2,10 @@
 
 2026-10-22. [English](../../maintenance-target-stop.md).
 
+Seguito: [classificazione e pianificazione algoritmica](32-classificazione-e-pianificazione-archi.md).
+Il selettore di gruppi interi qui descritto resta il percorso per piani concreti
+espliciti, non la pipeline LLM attuale.
+
 ## Comportamento corretto
 
 La politica 50/45 ha due soglie: avvio automatico solo oltre 50 archi esterni,

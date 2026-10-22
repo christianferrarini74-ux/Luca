@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Implementazione 2026-10-22: [classificazione e pianificazione degli archi](fase-1-sinapsi/32-classificazione-e-pianificazione-archi.md)
+([English](../category-routing-planner.md)). L'LLM classifica, il Core calcola;
+quattro prove Gemma con 52→45 esatto, contratto tecnico aggiornato.
+
 Confronto 2026-10-22: [sonno con Gemma 26B A4B](fase-1-sinapsi/31-confronto-sonno-gemma26.md)
 ([English](../sleep-gemma26-comparison.md)). Input identici, quattro prove,
 temi corretti ma tre riduzioni insufficienti; nessuna modifica alla Bibbia.

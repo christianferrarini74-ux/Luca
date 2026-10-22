@@ -7,6 +7,7 @@ def grouping_schema(directory):
         directions[direction] = {"type": "object", "properties": {
             str(entry.id): {"type": ["string", "null"]}
             for entry in getattr(directory, direction) if entry.id != directory.focus_id},
+            "required": [str(entry.id) for entry in getattr(directory, direction) if entry.id != directory.focus_id],
             "additionalProperties": False}
     return {"type": "object", "properties": {"assignments": {"type": "object",
         "properties": directions, "required": ["incoming", "outgoing"], "additionalProperties": False}},

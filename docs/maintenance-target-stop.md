@@ -2,6 +2,10 @@
 
 2026-10-22. [Italiano](it/fase-1-sinapsi/30-arresto-riorganizzazione-obiettivo.md).
 
+Successor: [classification and deterministic routing](category-routing-planner.md).
+The whole-group selector below remains the explicit concrete-plan path, not
+the current LLM classification pipeline.
+
 ## Corrected behavior
 
 The intended 50/45 policy has two thresholds: start automatic maintenance only

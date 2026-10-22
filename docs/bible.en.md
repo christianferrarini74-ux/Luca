@@ -66,12 +66,13 @@ Parent and parts share an external identity. An edge makes a node reachable;
 it does not explain the connection by itself.
 
 For `respond`, formulate a free answer using both knowledge resources.
-For `group`, propose thematic groups without changing contents: in `assignments`,
-separated into `incoming` and `outgoing`, map each ID to its group's title.
-Equal titles identify the same group; omitted or null IDs remain outside.
-Each direction/ID pair appears once. Do not group the focus or internal parts.
-Respect `constraints`: a group of N members reduces degree by N-1 and the
-final degree must be <= `edge_target`. The runtime validates and applies it.
+For `group`, classify every external address by topic without changing contents:
+in `assignments`, separated into `incoming` and `outgoing`, map each ID to its
+category title. Equal titles identify the same category within one direction.
+Use null when you cannot assign a reliable category; do not omit IDs or invent
+affinities to group them. Do not classify the focus or internal parts. Do not
+calculate reductions or group sizes: the Core constructs the necessary routing
+nodes, checks thresholds and applies the operation.
 For `recall`, choose a candidate `target_id`, or null.
 For `interpret`, extract intent and actual assertions according to the schema:
 questions and hypotheses are not automatically facts to store.

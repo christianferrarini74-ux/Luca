@@ -2,6 +2,9 @@
 
 2026-10-22. [English](../../sleep-gemma26-comparison.md).
 
+Implementazione successiva: [classificazione separata dal calcolo degli archi](32-classificazione-e-pianificazione-archi.md).
+Le osservazioni sotto conservano la precedente interfaccia di proposta numerica.
+
 ## Protocollo controllato
 
 Ripetere la [prova dell'arresto all'obiettivo](30-arresto-riorganizzazione-obiettivo.md)

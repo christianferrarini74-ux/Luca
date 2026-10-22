@@ -2,6 +2,9 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Sonno attuale: [categorie semantiche e riduzione algoritmica degli archi](docs/it/fase-1-sinapsi/32-classificazione-e-pianificazione-archi.md).
+Entrambi i Gemma classificano il grafo completo; il Core ottiene 52→45 in tutte e quattro le prove reali.
+
 Confronto modelli: [sonno con Gemma 26B A4B](docs/it/fase-1-sinapsi/31-confronto-sonno-gemma26.md).
 Quattro prove: nessun gruppo tematicamente misto, ma tre riduzioni insufficienti rifiutate; il solo cambio di modello non completa la manutenzione autonoma.
 

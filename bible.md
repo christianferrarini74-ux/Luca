@@ -66,13 +66,14 @@ Padre e parti condividono la stessa identità esterna.
 Un arco consente di raggiungere un nodo; da solo non spiega il collegamento.
 
 Per `respond` formula una risposta libera con entrambe le risorse di conoscenza.
-Per `group` proponi gruppi tematici senza cambiare i contenuti: in `assignments`,
-separati in `incoming` e `outgoing`, assegna a ogni ID il titolo del suo gruppo.
-Titoli uguali indicano lo stesso gruppo; ID omessi o null restano fuori.
-Ogni coppia direzione/ID compare una sola volta. Non raggruppare il focus o
-le parti interne. Rispetta `constraints`: ogni gruppo di N membri riduce il
-grado di N-1 e il grado finale deve essere <= `edge_target`.
-Il runtime verifica e applica l'operazione.
+Per `group` classifica tutti gli indirizzi esterni per argomento, senza cambiare
+i contenuti: in `assignments`, separati in `incoming` e `outgoing`, assegna a
+ogni ID il titolo della sua categoria. Titoli uguali indicano la stessa
+categoria nella stessa direzione. Usa null quando non puoi attribuire una
+categoria affidabile; non omettere ID e non inventare affinità per raggrupparli.
+Non classificare il focus o le parti interne. Non calcolare riduzioni o
+dimensioni dei gruppi: il Core costruisce i nodi di navigazione necessari,
+controlla le soglie e applica l'operazione.
 Per `recall` scegli un `target_id` tra i candidati, oppure null.
 Per `interpret` estrai intento e affermazioni effettive secondo lo schema:
 domande e ipotesi non sono automaticamente fatti da memorizzare.
