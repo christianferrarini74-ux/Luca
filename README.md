@@ -2,6 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Integration: [memory producer/consumer contract](docs/memory-integration-contract.md).
+Nodes, arcs, families, budgets, atomic mutations, APIs and an executable producer example.
+
+Sleep verification: [controlled real-worker and fault tests](docs/sleep-reorganization-verification.md).
+Structure/restart/undo verified; a real mixed-theme proposal exposes the limit of semantic grouping.
+Luca manages memory; external software produces and partitions content. Library creation is out of scope.
+
 Goal-first experiment: [complete recovery without changing node visibility](docs/goal-first-recovery.md).
 Two fresh Qwen runs read the missing thresholds and complete the procedure; limited evidence, not a general guarantee.
 
@@ -190,7 +197,10 @@ memory and LLM connector.
 
 ## Status
 
-The current milestone has a free LLM conversation path, bounded retrieval from
-cell-and-edge memory, controlled memory proposals, and a deterministic fallback.
-The next work extends consolidation and associative retrieval without moving
-memory ownership into the GUI or the model.
+Luca exposes canonical families, complete first-degree directories, atomic
+mutations, physical tier storage and guarded sleep reorganization. The chat and
+dashboard are test consumers. The integration contract and controlled sleep
+evidence above define the current delivery; semantic grouping is not guaranteed.
+Content production, document import, automatic splitting, library creation and
+Cesare integration are outside the current scope. Bible work is closed unless
+an interface-context problem prevents memory use.

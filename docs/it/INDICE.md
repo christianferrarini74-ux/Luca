@@ -7,6 +7,14 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Contratto 2026-10-22: [utilizzo e integrazione della memoria](fase-1-sinapsi/28-contratto-utilizzo-memoria.md)
+([English](../memory-integration-contract.md)). Regole per produttori/consumer,
+limiti reali, famiglie, scritture atomiche, API ed esempio eseguibile.
+
+Verifica 2026-10-22: [riorganizzazione nel sonno](fase-1-sinapsi/29-verifica-riorganizzazione-sonno.md)
+([English](../sleep-reorganization-verification.md)). Worker reale, guasti,
+riavvio e ripristino; separazione fra integrità e qualità semantica dei gruppi.
+
 Prova 2026-10-22: [ripristino con obiettivo esplicito](fase-1-sinapsi/27-ripristino-obiettivo-esplicito.md)
 ([English](../goal-first-recovery.md)). Due conversazioni nuove, procedura completa
 e collegamenti locali invariati; confronto con le letture precedenti.

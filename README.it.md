@@ -2,6 +2,13 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Integrazione: [contratto per produttori e utilizzatori della memoria](docs/it/fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
+Nodi, archi, famiglie, budget, modifiche atomiche, API ed esempio eseguibile.
+
+Verifica del sonno: [worker reale e simulazione dei guasti](docs/it/fase-1-sinapsi/29-verifica-riorganizzazione-sonno.md).
+Struttura/riapertura/ripristino verificati; una proposta reale mista mostra il limite del raggruppamento semantico.
+Luca gestisce la memoria; i contenuti e la loro suddivisione sono prodotti esternamente. Niente costruzione di biblioteche.
+
 Prova con obiettivo esplicito: [ripristino completo senza cambiare la visibilità dei nodi](docs/it/fase-1-sinapsi/27-ripristino-obiettivo-esplicito.md).
 Due nuove prove Qwen leggono le soglie mancanti e completano la procedura; non è una garanzia generale.
 
@@ -164,8 +171,10 @@ memoria di Luca e al connector LLM.
 
 ## Stato
 
-Il milestone attuale comprende un percorso conversazionale LLM libero, un
-recupero limitato dalla memoria a celle e archi, proposte di memoria controllate
-e un fallback deterministico. Il lavoro successivo estenderà consolidamento e
-recupero associativo senza spostare la proprietà della memoria nella GUI o nel
-modello.
+Luca espone famiglie canoniche, rubriche complete di primo grado, modifiche
+atomiche, livelli fisici di memoria e riorganizzazione protetta nel sonno.
+Chat e cruscotto sono utilizzatori di prova. Contratto d'integrazione e verifiche
+controllate del sonno definiscono la consegna attuale; qualità semantica dei
+raggruppamenti non garantita. Produzione dei contenuti, importazione documenti,
+suddivisione automatica, biblioteche e integrazione Cesare sono fuori ambito.
+Bibbia chiusa salvo problemi di contesto/interfaccia che impediscano l'uso della memoria.
