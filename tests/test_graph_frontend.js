@@ -2,7 +2,7 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {projectGraph, layoutGraph, traversedEdges} = require("../luca_memory/web/graph.js");
+const {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph} = require("../luca_memory/web/graph.js");
 const snapshot = {
   nodes:[{id:1,root_id:1,title:"Same",part_count:1}, {id:2,root_id:1,title:"Part"},
          {id:3,root_id:3,title:"Same"}, {id:4,root_id:4,title:"Isolated"}],
@@ -39,4 +39,42 @@ test("layout handles empty, self-linked, and larger graphs with finite coordinat
   const points = layoutGraph(nodes, [{source:1,target:1}]);
   assert.equal(points.size, 500);
   for (const point of points.values()) assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y));
+});
+test("changing scope after dragging copies browser DOMPoint coordinates, not enumerable fields", () => {
+  // DOMPoint exposes x/y on its prototype, so object spread loses them.
+  const browserPoint = Object.create({get x() {return -900;}, get y() {return 130;}});
+  assert.deepEqual({...browserPoint}, {});
+  const points = layoutGraph(snapshot.nodes, snapshot.edges, new Map([[1, browserPoint]]));
+  for (const point of points.values()) assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y));
+});
+test("invalid saved positions cannot poison the next layout", () => {
+  const points = layoutGraph(snapshot.nodes, snapshot.edges, new Map([[1, {x:NaN,y:Infinity}]]));
+  for (const point of points.values()) assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y));
+});
+test("fit centers a lone negative-coordinate node in wide and narrow viewports", () => {
+  for (const [width,height] of [[1158,600],[320,470],[1800,600]]) {
+    const c = fitCamera([{x:-1200,y:-950}], width, height);
+    assert.equal(c.x + c.w/2, -1200);
+    assert.equal(c.y + c.h/2, -950);
+    assert.equal(c.w/c.h, width/height);
+  }
+});
+test("fit includes negative/extreme bounds with pixel padding and handles empty/bad geometry", () => {
+  const points = [{x:-2400,y:-800},{x:1800,y:1200}];
+  const c = fitCamera(points, 1200, 600);
+  for (const p of points) {
+    const x = (p.x-c.x)/c.w*1200, y = (p.y-c.y)/c.h*600;
+    assert.ok(x >= 119 && x <= 1081 && y >= 79 && y <= 521);
+  }
+  assert.deepEqual(fitCamera([{x:NaN,y:NaN}],0,0), {x:-400,y:-300,w:800,h:600});
+});
+test("fit recovers a corrupted map and ignores positions outside the current scope", () => {
+  const graph = {model:{nodes:[{id:1}],edges:[]}, positions:new Map([[1,{x:NaN,y:NaN}],[999,{x:1e8,y:1e8}]]),
+    svg:{clientWidth:1200,clientHeight:600}, drag:{id:1}, draw() {this.drawn = true;}};
+  MemoryGraph.prototype.fit.call(graph);
+  assert.equal(graph.drag, null);
+  assert.ok(graph.drawn);
+  assert.equal(graph.positions.size,1);
+  const point = graph.positions.get(1);
+  assert.equal(graph.camera.x + graph.camera.w/2,point.x);
 });

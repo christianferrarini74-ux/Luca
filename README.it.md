@@ -2,6 +2,10 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Correzione mappa: [centratura dopo trascinamento e cambio vista](docs/it/fase-1-sinapsi/19-correzione-centratura-mappa.md).
+10 test JavaScript e 219 test Python superati. Aggiornare la pagina per
+caricare il frontend corretto, senza riavviare il server.
+
 Novità: [mappa interattiva della memoria](docs/it/fase-1-sinapsi/18-mappa-grafica-memoria.md),
 viste globale/focus, famiglie espandibili, colori dei livelli e richiamo separato
 dall'esplorazione. Nessuna nuova dipendenza. 219 test Python con CUDA/tokenizer

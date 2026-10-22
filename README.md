@@ -2,6 +2,10 @@
 
 [English](README.md) | [Italiano](README.it.md)
 
+Graph fix: [centering after dragging and changing views](docs/memory-graph-centering.md).
+10 JavaScript regression tests and 219 Python tests passed. Reload the page
+to load the corrected frontend; no server restart needed.
+
 New: [interactive memory graph](docs/memory-graph.md), global/focus views,
 expandable families, real-tier colors and explicit recall separate from inspection.
 No new dependencies. 219 Python tests with real CUDA/tokenizer and 5 JavaScript

@@ -1,6 +1,8 @@
 /* Display-only topology projection and interaction; no memory policy lives here. */
 "use strict";
 (function (scope) {
+  const validPoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+
   function projectGraph(snapshot, expanded = new Set()) {
     const byId = new Map(snapshot.nodes.map(n => [n.id, n]));
     const representative = id => {
@@ -21,7 +23,8 @@
 
   function layoutGraph(nodes, edges, previous = new Map()) {
     const radius = Math.max(130, Math.sqrt(nodes.length) * 27);
-    const points = new Map(nodes.map((n, i) => [n.id, previous.has(n.id) ? {...previous.get(n.id)} :
+    const points = new Map(nodes.map((n, i) => [n.id, validPoint(previous.get(n.id)) ?
+      {x:previous.get(n.id).x, y:previous.get(n.id).y} :
       {x:Math.cos(i * 2.39996) * radius * Math.sqrt((i + 1) / nodes.length),
        y:Math.sin(i * 2.39996) * radius * Math.sqrt((i + 1) / nodes.length)}]));
     // Sample repulsion for large graphs, bounding work without changing topology.
@@ -52,6 +55,20 @@
       }
     }
     return points;
+  }
+
+  function fitCamera(points, width, height) {
+    width = Number.isFinite(width) && width > 0 ? width : 800;
+    height = Number.isFinite(height) && height > 0 ? height : 600;
+    const finite = points.filter(validPoint);
+    if (!finite.length) return {x:-width / 2, y:-height / 2, w:width, h:height};
+    const xs = finite.map(p => p.x), ys = finite.map(p => p.y);
+    const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
+    // Padding is measured in pixels because labels and hit targets have fixed screen size.
+    const scale = Math.max(.75, (right - left) / Math.max(width * .2, width - 240),
+                          (bottom - top) / Math.max(height * .2, height - 160));
+    const w = width * scale, h = height * scale;
+    return {x:(left + right - w) / 2, y:(top + bottom - h) / 2, w, h};
   }
 
   function traversedEdges(snapshot) {
@@ -102,7 +119,7 @@
         if (!this.drag) return;
         const d = this.drag, p = this.point(e);
         d.moved ||= Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4;
-        if (d.id !== null) {this.positions.set(d.id, p); this.draw();}
+        if (d.id !== null) {this.positions.set(d.id, {x:p.x, y:p.y}); this.draw();}
         else {this.camera.x += d.start.x - p.x; this.camera.y += d.start.y - p.y; this.viewBox();}
       });
       const finish = e => {
@@ -139,6 +156,7 @@
       this.model = projectGraph(this.snapshot, this.expanded);
       const signature = JSON.stringify([this.model.nodes.map(n => n.id), this.model.edges]);
       if (signature !== this.signature) {
+        this.drag = null;
         this.positions = layoutGraph(this.model.nodes, this.model.edges, this.positions);
         this.signature = signature;
       }
@@ -188,6 +206,7 @@
     }
     draw() {
       if (!this.model) return;
+      this.viewBox();
       const activeId = document.activeElement?.dataset?.graphId;
       const fragment = document.createDocumentFragment();
       // Keep labels and hit targets readable while zooming a large world-space layout.
@@ -208,6 +227,7 @@
       const read = new Set(this.snapshot.read_node_ids.map(id => this.model.representative(id)));
       for (const n of this.model.nodes) {
         const p = this.positions.get(n.id), selected = this.selected === n.id;
+        if (!validPoint(p)) continue;
         const matches = !query || this.snapshot.nodes.some(item => this.model.representative(item.id) === n.id && `${item.id} ${item.title}`.toLocaleLowerCase().includes(query));
         const group = this.element("g", {transform:`translate(${p.x},${p.y}) scale(${scale})`, class:`memory-graph-node${selected ? " selected" : ""}${matches ? "" : " dim"}`, "data-graph-id":n.id, tabindex:0, role:"button", "aria-label":`#${n.id} ${n.title}, ${n.tier}`, "aria-pressed":String(selected)});
         if (n.id === this.model.representative(this.snapshot.focus_id)) group.append(this.element("circle", {r:24, class:"focus-ring"}));
@@ -222,20 +242,26 @@
       if (activeId) this.svg.querySelector(`[data-graph-id="${Number(activeId)}"]`)?.focus({preventScroll:true});
     }
     point(e) {return new DOMPoint(e.clientX, e.clientY).matrixTransform(this.svg.getScreenCTM().inverse());}
-    viewBox() {const c = this.camera; this.svg.setAttribute("viewBox", `${c.x} ${c.y} ${c.w} ${c.h}`);}
+    viewBox() {
+      if (![this.camera.x, this.camera.y, this.camera.w, this.camera.h].every(Number.isFinite) || this.camera.w <= 0 || this.camera.h <= 0)
+        this.camera = fitCamera([...this.positions.values()], this.svg.clientWidth, this.svg.clientHeight);
+      const c = this.camera; this.svg.setAttribute("viewBox", `${c.x} ${c.y} ${c.w} ${c.h}`);
+    }
     zoom(factor, at) {
       const c = this.camera, next = Math.max(100, Math.min(30000, c.w * factor));
       factor = next / c.w; at ||= {x:c.x+c.w/2, y:c.y+c.h/2};
       c.x = at.x - (at.x-c.x)*factor; c.y = at.y - (at.y-c.y)*factor; c.w *= factor; c.h *= factor; this.draw();
     }
     fit() {
-      const points = [...this.positions.values()];
-      if (!points.length) {this.camera = {x:-550,y:-300,w:1100,h:600}; this.viewBox(); return;}
-      const xs = points.map(p => p.x), ys = points.map(p => p.y);
-      const x = Math.min(...xs)-100, y = Math.min(...ys)-80;
-      this.camera = {x,y,w:Math.max(300,Math.max(...xs)-x+100),h:Math.max(250,Math.max(...ys)-y+100)}; this.draw();
+      this.drag = null;
+      const nodes = this.model?.nodes || [];
+      if (nodes.some(n => !validPoint(this.positions.get(n.id))))
+        this.positions = layoutGraph(nodes, this.model.edges);
+      const points = nodes.map(n => this.positions.get(n.id));
+      this.camera = fitCamera(points, this.svg.clientWidth, this.svg.clientHeight);
+      this.draw();
     }
   }
-  if (typeof module !== "undefined" && module.exports) module.exports = {projectGraph, layoutGraph, traversedEdges};
+  if (typeof module !== "undefined" && module.exports) module.exports = {projectGraph, layoutGraph, traversedEdges, fitCamera, MemoryGraph};
   else scope.MemoryGraph = MemoryGraph;
 })(typeof window !== "undefined" ? window : globalThis);

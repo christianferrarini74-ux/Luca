@@ -7,6 +7,10 @@
 
 ## 🧭 Bussola Rapida: Dove Siamo Oggi
 
+Correzione 2026-10-22: [centratura della mappa dopo il trascinamento](fase-1-sinapsi/19-correzione-centratura-mappa.md)
+([English](../memory-graph-centering.md)). Risolta la perdita delle coordinate
+DOMPoint e aggiunto recupero della geometria; 10 test JavaScript e 219 Python.
+
 Mappa 2026-10-22: [visualizzazione interattiva della memoria](fase-1-sinapsi/18-mappa-grafica-memoria.md)
 ([English](../memory-graph.md)). Globale/focus, famiglie, livelli e percorso del
 navigatore; ispezione senza richiamo. Nessuna nuova dipendenza; 219 test Python
