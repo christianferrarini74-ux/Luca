@@ -1,5 +1,7 @@
 # Model-token context budgets
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 [Italiano](it/fase-1-sinapsi/15-contesto-in-token.md)
 
 2026-10-21. This supersedes the earlier UTF-8 prompt budgets, not physical

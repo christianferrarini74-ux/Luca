@@ -1,5 +1,7 @@
 # LUCA: roadmap di validazione
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 La roadmap è ordinata secondo le evidenze. Una fase successiva non è giustificata solo perché la precedente è stata codificata.
 
 ## 1. Dimostratore di memoria conversazionale

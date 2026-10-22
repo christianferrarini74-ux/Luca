@@ -1,5 +1,7 @@
 # Fase 1.02 — Roadmap e Specifica Modulare del Codice (La Giostra Sinaptica)
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 > **Stato di avanzamento:** **COMPLETATA (Tappe 1–6 implementate e verificate — 43/43 test superati)**
 >
 > **Obiettivo di questo documento:** Definire la scomposizione modulare e i passi esatti di implementazione della **Fase 1A (La Giostra Sinaptica)**.

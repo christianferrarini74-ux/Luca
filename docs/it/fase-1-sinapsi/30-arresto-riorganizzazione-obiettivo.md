@@ -1,5 +1,7 @@
 # Riorganizzare solo fino all'obiettivo configurato
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 2026-10-22. [English](../../maintenance-target-stop.md).
 
 Seguito: [classificazione e pianificazione algoritmica](32-classificazione-e-pianificazione-archi.md).

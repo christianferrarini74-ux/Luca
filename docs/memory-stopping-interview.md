@@ -1,5 +1,7 @@
 # Asking Luca why it stopped reading
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 2026-10-22. [Italiano](it/fase-1-sinapsi/26-intervista-arresto-lettura.md).
 
 ## Protocol

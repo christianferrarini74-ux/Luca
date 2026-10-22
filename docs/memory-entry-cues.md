@@ -1,5 +1,7 @@
 # Memory entry and dialogue continuity — 2026-10-21
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 [Italiano](it/fase-1-sinapsi/14-ingresso-memoria-e-dialogo.md)
 
 ## Evidence and corrections

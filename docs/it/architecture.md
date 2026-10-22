@@ -1,5 +1,7 @@
 # Luca: architettura logica
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 ## Regola fondamentale
 
 Luca lavora su celle. Un arco non è mai un'affermazione, un'etichetta o un'unità di verità nascosta: è solo un indirizzo diretto e stabile tra due celle.

@@ -1,5 +1,7 @@
 # Mappa grafica della memoria
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 Data: 2026-10-22. [English](../../memory-graph.md).
 
 ## Scopo e utilizzo

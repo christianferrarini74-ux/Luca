@@ -1,5 +1,7 @@
 # LUCA: validation roadmap
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 This roadmap is ordered by evidence. A later stage is not considered justified merely because an earlier component has been coded.
 
 ## 1. Conversational memory demonstrator

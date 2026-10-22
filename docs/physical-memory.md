@@ -1,5 +1,7 @@
 # Physical synaptic carousel — Phase 1.09
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 Date: 2026-10-19
 
 [Italiano](it/fase-1-sinapsi/09-memoria-fisica.md) · [Dependency audit](dependency-audit.md)

@@ -1,5 +1,7 @@
 # Fase 1.01 — La Svolta Sinaptica: dai Nodi-Parola ai Blocchi di Conoscenza
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 ## 1. Perché nasce la Fase 1 (Critica della Fase 0)
 
 Nella **Fase 0** (vedi i documenti storici in [`docs/it/`](../INDICE.md)), il prototipo di LUCA rappresentava la frase *"il sole scalda la pelle"* creando tre celle-parola (`sole`, `scalda`, `pelle`) e una cella intermedia artificiale (`assertion`).

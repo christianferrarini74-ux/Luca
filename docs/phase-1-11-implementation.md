@@ -1,5 +1,7 @@
 # Phase 1.11 — Execution and acceptance
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 [Italiano](it/fase-1-sinapsi/12-implementazione-memoria-navigabile.md)
 
 Follow-up: [real LM Studio validation](phase-1-11-live-validation.md) records

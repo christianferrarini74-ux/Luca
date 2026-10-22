@@ -1,5 +1,7 @@
 # Separating the real library from synthetic experiments
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 2026-10-22. [Italiano](it/fase-1-sinapsi/22-avvio-biblioteca-reale.md).
 
 The default configuration now uses `seed/library_empty_v1.json` and the new

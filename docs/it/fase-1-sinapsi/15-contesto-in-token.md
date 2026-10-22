@@ -1,5 +1,7 @@
 # Contesto misurato in token del modello
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 [English](../../token-context.md)
 
 2026-10-21. Questa modifica sostituisce i precedenti budget del prompt in byte

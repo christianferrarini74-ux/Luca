@@ -1,5 +1,7 @@
 # Verifica delle dipendenze — 2026-10-19
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 [English](../dependency-audit.md)
 
 L'applicazione attiva usa Python e un cockpit HTML/CSS/JavaScript incluso nel

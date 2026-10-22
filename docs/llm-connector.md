@@ -1,53 +1,47 @@
 # LLM Connector
 
-Luca uses `luca_memory.llm.LLMConnector` as the single boundary between the
-Core and language engines. The Core does not know provider URLs, API keys, or
-wire protocols.
+[Italiano](it/llm-connector.md) · [Documentation index](README.md)
 
-## Configuration
+Current boundary guide, reviewed 2026-10-22. The older example is
+[archived](history/llm-connector.en.md).
 
-Configuration follows the same separation used by the Cesare project:
+`luca_memory.llm.LLMConnector` resolves a configured role to a provider/model
+profile and creates a chat client. Provider-neutral clients and the application
+adapter are different layers: configuring a client does not certify a provider
+for structured navigation, native token accounting or model management.
 
-```python
-config = {
-    "llm": {
-        "active_runtime": "local",
-        "runtimes": {
-            "local": {
-                "providers": {
-                    "lm_studio": {
-                        "kind": "openai_compatible",
-                        "base_url": "http://127.0.0.1:1234/v1",
-                    },
-                    "ollama": {
-                        "kind": "ollama",
-                        "base_url": "http://127.0.0.1:11434",
-                    },
-                },
-                "agents": {
-                    "orchestrator": {
-                        "provider": "lm_studio",
-                        "model": "google/gemma-3-1b",
-                        "temperature": 0.0,
-                        "timeout_seconds": 30,
-                    }
-                },
-            }
-        },
-    }
-}
-```
+The supplied application uses `LMStudioAdapter`, selected by the historical
+config name `runtime.language_adapter: gemma`. The configured model need not
+be Gemma. This adapter currently requires the `openai_compatible` provider kind,
+LM Studio-compatible model management and, with token budgets, its native
+tokenizer. The connector's other provider implementations are not automatically
+drop-in replacements for this full application path.
 
-Remote OpenAI-compatible providers require an HTTPS endpoint and an explicit
-key through `api_key` or `api_key_env`. The supported kinds are `openai`,
-`xai`, `mistral`, `deepseek`, `qwen`, `moonshot`, and `zhipu`.
+## Supplied profile
 
-## Boundaries
+`llm.active_runtime` is `local`. Under `llm.runtimes.local`, provider
+`lm_studio` has `base_url: http://127.0.0.1:1234/v1` and
+`management_url: http://127.0.0.1:1234`. Role `orchestrator` selects that
+provider, `google/gemma-4-e2b`, temperature 0, timeout 180 seconds and
+`generation: {}`. Settings belong in `config.yaml`, not in consumer code.
 
-- The connector creates clients. The LM Studio adapter additionally discovers
-  the configured model through `/api/v1/models` and asks LM Studio to load it
-  through `/api/v1/models/load` when it is installed but not resident.
-- Luca does not download models or start the LM Studio application itself.
-- A provider returns text; the language adapter validates the JSON.
-- Luca Core remains the sole owner of persistent memory.
-- Adding a provider does not require changes to memory, thought, or session code.
+The adapter discovers installed/resident models and requests loading the
+configured installed model when necessary. It does not download models, start
+the LM Studio app or claim support for a model merely because it is listed.
+
+## Requests and ownership
+
+Model instructions come from `runtime.bible`. Runtime facts, user text and
+history are data. Navigation and maintenance classification use structured
+output; a final conversational reply can be part of the navigation result.
+This is not a pipeline where JSON is used only for fact acquisition.
+
+The classifier labels the complete directional directory; the Core calculates
+routing groups and owns all memory writes. See the
+[classification contract](category-routing-planner.md) and
+[integration API](memory-integration-contract.md).
+
+Provider failures remain visible, without silently switching to a rules model.
+Remote connector profiles require the relevant authentication/HTTPS rules;
+do not put secrets in committed YAML. Different providers need explicit
+adapter/capability validation before production use.

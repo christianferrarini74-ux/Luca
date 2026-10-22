@@ -1,5 +1,7 @@
 # Ingresso nella memoria e continuità del dialogo — 2026-10-21
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 [English](../../memory-entry-cues.md)
 
 ## Evidenze e correzioni

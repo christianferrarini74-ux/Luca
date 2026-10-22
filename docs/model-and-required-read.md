@@ -1,5 +1,7 @@
 # Model size, required reads and multi-GPU coexistence
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 2026-10-22. [Italiano](it/fase-1-sinapsi/25-modello-lettura-obbligatoria-multi-gpu.md).
 
 ## Model selection and load

@@ -1,5 +1,7 @@
 # Language adapters and free conversation
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 Luca Core must not depend on a particular language model. Rule-based interpretation remains a deterministic fallback, while the LLM can now converse freely and receive retrieved memory as context.
 
 ```text

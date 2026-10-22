@@ -1,5 +1,7 @@
 # 04 — Unificazione della GUI di Luca con il Cockpit di Cesare
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 **Data**: 17 Ottobre 2026  
 **Stato**: Implementato (Fase 1 — Revisione GUI)  
 **Riferimento Cesare**: `D:\Coding\Python\Cesare\packages\gui_kit` (`docs/ita/gui_module_contract.md`)

@@ -1,5 +1,7 @@
 # LUCA: project vision
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 ## Purpose
 
 LUCA is an experiment in a different kind of artificial intelligence: a persistent cognitive architecture that learns by changing its explicit memory, rather than primarily by changing a large, opaque set of model weights.

@@ -1,43 +1,44 @@
-# Runtime della dashboard di Luca
+# Cruscotto di prova e runtime di Luca
 
-Aggiornamento: il cockpit incluso è servito direttamente da Python, senza Vite
-o processi figli Node. L'arresto ordinato libera buffer CUDA e database.
-Vedere [memoria fisica](fase-1-sinapsi/09-memoria-fisica.md); la descrizione del
-processo frontend seguente è storica, non rappresenta l'avvio attuale.
+[English](../gui-runtime.md) · [Indice](INDICE.md)
 
-La dashboard è un frontend, non fa parte del runtime cognitivo di Luca.
+Guida attuale, 2026-10-22. Le precedenti istruzioni d'avvio sono
+[archiviate](../history/gui-runtime.it.md).
 
-```text
-browser GUI → API HTTP locale → LucaSession / MemorySearch / LLM Connector
-```
+Unico avvio applicativo: `python run_luca.py`. Python serve API e cockpit statico
+`luca_memory/web/` su `http://127.0.0.1:8765/`, aprendo il browser se
+`frontend.enabled` è true. Non servono runtime Node/Vite, processi figli
+frontend, porte frontend separate o ulteriori shell.
 
-L'API Python si avvia con:
+La GUI è un frontend di prova: invia richieste e mostra lo stato del Core.
+Navigazione, persistenza, revisioni, scelta del modello, budget e sonno sono
+nel backend. Ispezione della mappa e richiamo esplicito sono distinti.
+Titolo visibile, contenuto in cache o colore del nodo non dimostrano che
+l'LLM abbia letto o usato correttamente la conoscenza.
 
-```powershell
-python run_luca.py
-```
+## Endpoint locali
 
-Il percorso opzionale Gemma si seleziona impostando
-`runtime.language_adapter: gemma` in `config.yaml`; il punto di avvio resta lo stesso:
+- `GET /api/health`: disponibilità backend.
+- `GET /api/state`: snapshot di runtime/livelli/focus/rubrica/manutenzione.
+- `POST /api/chat` con `{"text":"..."}`: risposta LLM, traccia e stato. Il Core
+  convalida struttura e percorsi, non la verità fattuale della risposta.
+- `POST /api/recall` con `{"node_id":1}`: richiamo esplicito di un nodo noto.
+- `/api/memory/*` e `/api/maintenance/*`: operazioni Core nel
+  [contratto](fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
+- `POST /api/shutdown`: arresto ordinato, richiesto anche da **Esci**.
 
-```powershell
-python run_luca.py
-```
+Usare host/porta configurati anziché assumere i default. API locale, non
+servizio remoto/multiutente autenticato. Il frontend non modifica SQLite:
+richieste di modifica e conferma vengono convalidate dal Core proprietario.
+I limiti grafici non tagliano la rubrica completa di primo grado.
 
-Il punto di avvio avvia il frontend Vite come processo figlio e apre
-automaticamente l'URL configurato nel browser. Quando si chiude il punto di
-avvio, vengono chiusi runtime e frontend. Usare il pulsante `Esci`
-nell'intestazione per un arresto ordinato: l'API chiude sessione e database,
-poi arresta il processo figlio del frontend.
+## Ciclo di vita
 
-## Confine API
+Avviare il server LM Studio prima di usare il config LLM distribuito.
+Fermare con **Esci** o Ctrl+C nella shell d'avvio. Il worker del sonno viene
+arrestato e atteso con join; sessione, DB e allocazioni dei livelli vengono
+rilasciati. La richiesta al provider già in corso non è interrotta forzatamente
+e può ritardare l'arresto fino al timeout. Una transazione iniziata termina atomicamente.
 
-- `GET /api/health` segnala la disponibilità del backend.
-- `GET /api/state` restituisce uno snapshot del runtime in sola lettura.
-- `POST /api/chat` accetta `{ "text": "..." }` e restituisce risposta verificata,
-  traccia e snapshot aggiornato.
-- `POST /api/shutdown` richiede l'arresto ordinato dell'intero runtime.
-
-Il frontend non può accedere a SQLite, attraversare il grafo, scegliere un LLM
-o scrivere memoria. Invia il testo dell'utente e rende visibili le risposte del
-backend. Lo stesso Core resta così utilizzabile da CLI, test o altri frontend.
+Riavviare dopo modifiche Python/config/interfaccia e aggiornare il browser
+dopo modifiche agli asset. Documentazione e test non riavviano l'app dell'utente.

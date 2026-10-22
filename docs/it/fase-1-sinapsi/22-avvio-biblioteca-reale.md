@@ -1,5 +1,7 @@
 # Separazione della biblioteca reale dagli esperimenti sintetici
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 2026-10-22. [English](../../real-library-start.md).
 
 La configurazione principale usa ora `seed/library_empty_v1.json` e il nuovo

@@ -1,43 +1,46 @@
 # LLM Connector
 
-Luca usa `luca_memory.llm.LLMConnector` come confine unico tra Core e motori linguistici. Il Core non conosce URL, API key o protocolli dei provider.
+[English](../llm-connector.md) · [Indice](INDICE.md)
 
-## Configurazione
+Guida attuale del confine, verificata il 2026-10-22.
+L'esempio precedente è [archiviato](../history/llm-connector.it.md).
 
-La configurazione separa runtime attivo, provider e ruolo che sceglie il modello:
+`luca_memory.llm.LLMConnector` risolve un ruolo configurato in profilo
+provider/modello e crea un client chat. Client neutri e adapter applicativo sono
+livelli distinti: configurare un client non certifica navigazione strutturata,
+conteggio nativo dei token o gestione del modello per quel provider.
 
-```python
-config = {
-    "llm": {
-        "active_runtime": "local",
-        "runtimes": {
-            "local": {
-                "providers": {
-                    "lm_studio": {"kind": "openai_compatible", "base_url": "http://127.0.0.1:1234/v1"},
-                    "ollama": {"kind": "ollama", "base_url": "http://127.0.0.1:11434"},
-                },
-                "agents": {
-                    "orchestrator": {
-                        "provider": "lm_studio",
-                        "model": "google/gemma-3-1b",
-                        "temperature": 0.0,
-                        "timeout_seconds": 30,
-                    }
-                },
-            }
-        },
-    }
-}
-```
+L'app distribuita usa `LMStudioAdapter`, scelto dal nome storico
+`runtime.language_adapter: gemma`. Il modello configurato non deve
+necessariamente essere Gemma. L'adapter richiede attualmente provider di tipo
+`openai_compatible`, gestione modelli compatibile LM Studio e, con budget in
+token, tokenizer nativo. Le altre implementazioni del connector non sono
+automaticamente sostituti intercambiabili per questo percorso applicativo completo.
 
-I provider remoti OpenAI-compatible richiedono HTTPS e una chiave esplicita tramite `api_key` oppure `api_key_env`. Sono supportati `openai`, `xai`, `mistral`, `deepseek`, `qwen`, `moonshot` e `zhipu`.
+## Profilo distribuito
 
-## Confini
+`llm.active_runtime` è `local`. Sotto `llm.runtimes.local` il provider
+`lm_studio` usa `base_url: http://127.0.0.1:1234/v1` e
+`management_url: http://127.0.0.1:1234`. Il ruolo `orchestrator` sceglie quel
+provider, `google/gemma-4-e2b`, temperatura 0, timeout 180 secondi e
+`generation: {}`. Le scelte sono in `config.yaml`, non nel codice del consumer.
 
-- Il connector crea i client. L'adapter LM Studio individua inoltre il modello
-  configurato tramite `/api/v1/models` e chiede a LM Studio di caricarlo tramite
-  `/api/v1/models/load` quando è installato ma non residente.
-- Luca non scarica modelli e non avvia autonomamente l'applicazione LM Studio.
-- Il provider restituisce testo; l'adapter linguistico valida il JSON.
-- Il Core di Luca resta l'unico proprietario della memoria persistente.
-- Aggiungere un provider non richiede modifiche a memoria, pensiero o sessione.
+L'adapter individua modelli installati/residenti e chiede, se necessario,
+di caricare quello configurato già installato. Non scarica modelli, non avvia
+LM Studio e non certifica un modello solo perché compare nell'elenco.
+
+## Richieste e proprietà
+
+Le istruzioni arrivano da `runtime.bible`; fatti runtime, testo utente e
+cronologia sono dati. Navigazione e classificazione di manutenzione usano
+output strutturato; la risposta finale può essere parte del risultato di
+navigazione. Il JSON non è usato soltanto nell'acquisizione di fatti.
+
+Il classificatore etichetta la rubrica orientata completa; il Core calcola i
+gruppi e possiede le scritture. Vedere [classificazione](fase-1-sinapsi/32-classificazione-e-pianificazione-archi.md)
+e [API d'integrazione](fase-1-sinapsi/28-contratto-utilizzo-memoria.md).
+
+Gli errori del provider restano visibili, senza passaggio silenzioso alle regole.
+I profili remoti del connector devono rispettare autenticazione/HTTPS previsti:
+niente segreti nello YAML versionato. Provider diversi richiedono validazione
+esplicita di adapter e capacità prima dell'uso.

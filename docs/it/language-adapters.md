@@ -1,5 +1,7 @@
 # Adapter linguistici e conversazione libera
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 Il Core di Luca non deve dipendere da un particolare modello linguistico. L'interpretazione a regole resta un fallback deterministico, mentre l'LLM può conversare liberamente e ricevere memoria recuperata come contesto.
 
 ```text

@@ -1,43 +1,44 @@
-# Luca dashboard runtime
+# Luca test dashboard and runtime
 
-Current update: the bundled cockpit is served directly by Python, without Vite
-or a Node child process. Orderly shutdown releases CUDA buffers and the database.
-See [physical memory](physical-memory.md); the frontend process description below
-is retained as historical background, not current startup instructions.
+[Italiano](it/gui-runtime.md) · [Documentation index](README.md)
 
-The dashboard is a frontend, not part of Luca's cognitive runtime.
+Current guide, 2026-10-22. Previous startup instructions are
+[archived](history/gui-runtime.en.md).
 
-```text
-browser GUI → local HTTP API → LucaSession / MemorySearch / LLM Connector
-```
+The application has one entry point, `python run_luca.py`. Python serves both
+the local API and static `luca_memory/web/` cockpit at `http://127.0.0.1:8765/`.
+It opens the browser when `frontend.enabled` is true. No Node/Vite runtime,
+frontend child process, separate frontend port or extra shell is required.
 
-The Python API is started with:
+The GUI is a test frontend. It submits requests and renders Core state; graph
+navigation, persistence, revisions, model selection, budgets and sleep
+maintenance are implemented by the backend. Map inspection is distinct from
+explicit recall. A visible title, cached payload or colored node does not
+prove that the LLM read or correctly used its contents.
 
-```powershell
-python run_luca.py
-```
+## Local endpoints
 
-The optional Gemma path is selected by setting
-`runtime.language_adapter: gemma` in `config.yaml`; the same entry point is used:
+- `GET /api/health`: backend availability.
+- `GET /api/state`: runtime/tiers/focus/directory/maintenance snapshot.
+- `POST /api/chat` with `{"text":"..."}`: model reply, trace and state. The Core
+  validates routing and response structure, not the factual truth of the reply.
+- `POST /api/recall` with `{"node_id":1}`: explicit recall of a known node.
+- `/api/memory/*` and `/api/maintenance/*`: Core operations documented in the
+  [integration contract](memory-integration-contract.md).
+- `POST /api/shutdown`: orderly runtime shutdown, also requested by **Esci**.
 
-```powershell
-python run_luca.py
-```
+Use the configured host/port rather than assuming defaults. The API is local,
+not an authenticated remote/multi-user service. The frontend cannot mutate
+SQLite itself: editing and confirmation requests are validated by the owning
+Core. Display limits do not reduce the memory's complete first-degree directory.
 
-The entry point starts the Vite frontend as a child process and opens the
-configured browser URL automatically. Stopping the entry point stops both
-runtime and frontend. Use the `Esci` button in the header for an orderly
-shutdown; the API closes the session and database, then stops the frontend
-child process.
+## Lifecycle
 
-## API boundary
+Start LM Studio's server before the supplied LLM configuration. Stop with
+**Esci** (or Ctrl+C in the entry-point shell). The owned sleep worker is stopped
+and joined; session, database and tier allocations are released. An in-flight
+provider request is not forcibly cancelled and can delay shutdown until its
+timeout. A transaction already started finishes atomically.
 
-- `GET /api/health` reports backend availability.
-- `GET /api/state` returns a read-only runtime snapshot.
-- `POST /api/chat` accepts `{ "text": "..." }` and returns the verified reply,
-  trace, and updated snapshot.
-- `POST /api/shutdown` requests an orderly shutdown of the complete runtime.
-
-The frontend cannot access SQLite, traverse the graph, select an LLM, or write
-memory. It sends user text and renders backend responses. This keeps the same
-Core usable from the CLI, tests, or another frontend.
+Restart after Python/config/interface changes and reload the browser when
+frontend assets change. Documentation and tests do not restart a user's app.

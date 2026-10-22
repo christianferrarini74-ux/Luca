@@ -1,5 +1,7 @@
 # Luca: initial curriculum
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 ## Purpose
 
 Luca does not start with completely empty memory. It receives a limited, verifiable linguistic and conceptual seed that is separate from the reasoning engine.

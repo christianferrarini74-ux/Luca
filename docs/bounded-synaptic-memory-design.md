@@ -1,5 +1,7 @@
 # Phase 1.11 — Navigable, reorganizable synaptic memory
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 Date: 2026-10-20
 
 [Italiano](it/fase-1-sinapsi/11-memoria-sinaptica-riorganizzabile.md)

@@ -1,5 +1,7 @@
 # Indexed memory search
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 `MemorySearch` is Luca's first search layer above `MemoryStore`. It keeps the
 Core independent from SQLite details while exposing the retrieval paths needed
 by the future runtime.

@@ -1,5 +1,7 @@
 # Luca: logical architecture
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 ## Governing rule
 
 Luca works on cells. An edge is never a hidden claim, label, or unit of truth; it is only a stable directed address between two cells.

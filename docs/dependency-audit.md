@@ -1,5 +1,7 @@
 # Dependency audit — 2026-10-19
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 [Italiano](it/dependency-audit.md)
 
 The active application is Python plus a bundled HTML/CSS/JavaScript cockpit.

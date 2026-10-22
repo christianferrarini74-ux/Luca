@@ -1,5 +1,7 @@
 # Luca: experimental protocol
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 ## Method
 
 Every component begins as a controlled experiment. We define the data, expected outcome, comparison baseline, resource budget, and failure condition before calling it a part of Luca.

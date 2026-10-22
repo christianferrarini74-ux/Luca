@@ -1,5 +1,7 @@
 # Memory development roadmap — stages 1–5
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 Date: 2026-10-19. Scope: Luca only; integration with Cesare is deferred.
 
 Subsequent milestone: [physical memory](physical-memory.md) replaces the

@@ -1,5 +1,7 @@
 # Recovery with the desired outcome stated first
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 2026-10-22. [Italiano](it/fase-1-sinapsi/27-ripristino-obiettivo-esplicito.md).
 
 ## Controlled change

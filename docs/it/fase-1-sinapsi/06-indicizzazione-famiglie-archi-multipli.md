@@ -1,5 +1,7 @@
 # Fase 1.06 — La Famiglia come Dipendenza Diretta degli Archi `prefisso:suffisso`, Intersezione Vincolante vs Associativa e Analisi di Scalabilità
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 **Data:** 2026-10-18  
 **Stato:** Completato e Verificato (`50/50` test unitari + benchmark empirico su famiglie fino a $10\,000$ membri)  
 **Moduli coinvolti:** `luca_memory/tiers/graph_view.py`, `luca_memory/store.py`, `luca_memory/tiers/carousel.py`, `luca_memory/context_builder.py`, `luca_memory/api.py`, `luca_memory/web/app.js`, `seed/knowledge_base_v1.json`, `tests/test_carousel.py`, `tests/test_tier_slot.py`, `tests/test_seed_v1.py`

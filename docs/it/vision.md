@@ -1,5 +1,7 @@
 # LUCA: visione del progetto
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 ## Scopo
 
 LUCA è un esperimento su una forma diversa di intelligenza artificiale: un'architettura cognitiva persistente che apprende modificando la propria memoria esplicita, invece di modificare principalmente un insieme grande e opaco di pesi.

@@ -1,5 +1,7 @@
 # Fase 1.05 — La Bibbia Invisibile, il Gating Sinaptico (`[APERTA]` vs `[1° grado]`) e il Salto al Modello 2B (`google/gemma-4-e2b`)
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 > **Stato:** Completato e Validato (`45/45` test automatici + 5 sessioni di test dal vivo)
 > **Data:** Ottobre 2026
 > **File Coinvolti:** [`bible.md`](../../../bible.md), [`luca_memory/context_builder.py`](../../../luca_memory/context_builder.py), [`luca_memory/session.py`](../../../luca_memory/session.py), [`luca_memory/adapters.py`](../../../luca_memory/adapters.py), [`luca_memory/llm/providers.py`](../../../luca_memory/llm/providers.py), [`seed/knowledge_base_v1.json`](../../../seed/knowledge_base_v1.json), [`config.yaml`](../../../config.yaml)

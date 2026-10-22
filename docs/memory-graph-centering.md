@@ -1,5 +1,7 @@
 # Fix: centering after dragging
 
+> **Historical record — not current operating instructions.** Designs, defaults, results and next steps below belong to the recorded milestone. For current scope, APIs and behavior read the [current contract](memory-integration-contract.md). Original evidence is preserved.
+
 2026-10-22. [Italiano](it/fase-1-sinapsi/19-correzione-centratura-mappa.md).
 
 The reported page had `translate(NaN,NaN)` on every node and four `NaN` values

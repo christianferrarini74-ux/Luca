@@ -1,5 +1,7 @@
 # Fase 1.03 — Esperimento "Liquido di Contrasto" (Le Favole Sinaptiche)
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 ## 1. Razionale Scientifico: Perché usare concetti assurdi ("Favole")
 
 Se inseriamo nelle sinapsi di LUCA conoscenze reali e comuni (es. documentazione di Python, fisica di base o storia), non possiamo distinguere con certezza assoluta se il modello linguistico (es. `google/gemma-3-1b`) stia rispondendo grazie ai **nodi saliti nella VRAM di LUCA** oppure grazie alla **conoscenza pre-addestrata nei suoi pesi**.

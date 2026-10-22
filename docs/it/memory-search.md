@@ -1,5 +1,7 @@
 # Ricerca indicizzata della memoria
 
+> **Documento storico — non guida operativa attuale.** Specifiche, default, risultati e passi successivi qui descritti appartengono alla fase registrata. Per ambito, API e comportamento vigenti leggere il [contratto attuale](fase-1-sinapsi/28-contratto-utilizzo-memoria.md). Le evidenze originali sono conservate.
+
 `MemorySearch` è il primo livello di ricerca sopra `MemoryStore`. Mantiene il
 Core indipendente dai dettagli SQLite ed espone i percorsi che serviranno al
 runtime futuro.
